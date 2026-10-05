@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FitShare | 학교 의류 자원 순환</title>
+    <meta
+      name="description"
+      content="초등 코딩 페스티벌용 FitShare 공통 웹페이지 기본 틀"
+    />
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+
+    <header class="site-header container">
+      <div class="brand-row">
+        <span class="brand-badge">FitShare</span>
+        <p class="brand-caption">AI 기반 학교 의류 자원 순환 시스템</p>
+      </div>
+
+      <h1 class="hero-title">버려지는 아동복, 학교에서 다시 빛나다</h1>
+      <p class="hero-text">
+        학교 코드로 스마트 옷장에 입장하고, 의류 실측 데이터와 신체 매칭으로
+        맞춤 추천까지 연결하는 교육용 프로젝트입니다.
+      </p>
+
+      <form id="school-entry-form" class="entry-form" autocomplete="off">
+        <label for="school-code" class="entry-label">학교 코드 입력</label>
+        <div class="entry-row">
+          <input
+            id="school-code"
+            name="schoolCode"
+            type="text"
+            placeholder="예: seosol-elementary"
+            required
+          />
+          <button type="submit">스마트 옷장 입장</button>
+        </div>
+        <p id="entry-message" class="entry-message" aria-live="polite"></p>
+      </form>
+    </header>
+
+    <main class="container">
+      <section class="process-section" aria-labelledby="process-title">
+        <h2 id="process-title">스마트 옷장 핵심 흐름</h2>
+        <div id="process-list" class="process-grid"></div>
+      </section>
+
+      <section class="workspace-section" aria-labelledby="workspace-title">
+        <h2 id="workspace-title">모듈 작업 공간</h2>
+
+        <nav class="tab-nav" aria-label="기능 탭">
+          <button class="tab-button is-active" data-tab="measurement" type="button">
+            스마트 실측
+          </button>
+          <button class="tab-button" data-tab="recommendation" type="button">
+            맞춤 추천
+          </button>
+          <button class="tab-button" data-tab="ranking" type="button">
+            참여 랭킹
+          </button>
+        </nav>
+
+        <div id="module-root" class="module-root" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer container">
+      <p>개발팀: 초등 코딩 페스티벌 FitShare 팀</p>
+      <p>테스트 안내: 실제 AI/카메라/DB는 연결하지 않은 공통 템플릿입니다.</p>
+    </footer>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
