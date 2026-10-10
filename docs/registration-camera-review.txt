@@ -1,0 +1,696 @@
+노트북 카메라 촬영 변경 코드 전체 (2026-10-10)
+
+촬영 버튼 → 카메라 권한 → 영상 미리보기 → JPEG 촬영 → 기존 사진 분석 흐름.
+추천·랭킹, 공통 CSS/앱/상태, 서버 분석 로직은 수정하지 않았습니다.
+
+테스트: 카메라 동작 11개 통과. 등록 화면 연결 테스트 5개 통과. 전체 Python 테스트 52개 통과.
+실제 웹캠과 화면 배치는 연결된 브라우저가 없어 확인하지 못했습니다.
+
+
+========== measure/register.html ==========
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChArUco 교차점 매트로 옷을 살펴보고 스마트 옷장에 등록해요.">
+  <title>옷 등록 | FitShare</title>
+  <link rel="stylesheet" href="../css/styles.css?v=garment-registration-3">
+  <link rel="stylesheet" href="../css/measurement.css?v=garment-registration-3">
+  <link rel="stylesheet" href="../css/garment-registration.css?v=registration-camera-1">
+</head>
+<body class="measurement-page">
+  <div class="measurement-shell registration-shell">
+    <header class="measurement-header"><a href="../index.html" class="measurement-brand">← FitShare 홈</a><span>사진과 등록 정보는 서버 PC에 저장돼요</span></header>
+    <main id="garment-registration" aria-live="polite">
+      <section class="measurement-panel registration-panel">
+        <p class="eyebrow">SMART CLOSET</p>
+        <h1>사진으로 옷을 등록해요</h1>
+        <p class="measurement-intro">세 단계만 따라 하면 돼요. 컴퓨터가 찾아준 값은 저장하기 전에 꼭 살펴봐요.</p>
+        <ol class="registration-steps">
+          <li><b>1</b><span><strong>옷을 펴요</strong><small>ChArUco 교차점 매트 위에 한 벌만 놓아요.</small></span></li>
+          <li><b>2</b><span><strong>사진을 찍어요</strong><small>매트 바깥 표식과 옷 전체가 보이게 찍어요.</small></span></li>
+          <li><b>3</b><span><strong>확인하고 저장해요</strong><small>종류와 숫자를 고친 뒤 옷장에 넣어요.</small></span></li>
+        </ol>
+        <label class="registration-type-label" for="background-id">사진에 놓인 배경을 골라 주세요
+          <select id="background-id" required>
+            <option value="M1">점 배경</option>
+            <option value="M2">격자 배경</option>
+            <option value="M3">ChArUco 배경</option>
+            <option value="M4" selected>ChArUco 격자 (기본)</option>
+          </select>
+        </label>
+        <p class="registration-mat-note"><strong>고른 배경과 사진 속 배경이 같아야 길이를 잘 잴 수 있어요.</strong><span>옷 전체와 배경 매트의 바깥쪽이 사진에 모두 보이도록 찍어 주세요.</span></p>
+
+        <section class="registration-photo-area" aria-labelledby="registration-photo-title">
+          <h2 id="registration-photo-title">옷 사진을 골라 주세요</h2>
+          <label class="registration-type-label">옷 종류를 먼저 골라 주세요<select id="garment-type" required>
+            <option value="" selected disabled>종류를 선택해 주세요</option><option value="1">1. 상의 외투</option><option value="2">2. 크롭 티셔츠</option><option value="3">3. 원피스</option><option value="4">4. 점퍼</option><option value="5">5. 바지</option>
+          </select></label>
+          <p class="registration-help">종류마다 재는 위치가 달라요. 옷 종류를 골라야 실험과 같은 기준으로 측정할 수 있어요.</p>
+          <div class="registration-file-actions">
+            <button id="open-camera" class="registration-file-button" type="button" aria-controls="camera-panel">📷 카메라로 촬영</button>
+            <label class="registration-file-button">🖼️ 갤러리에서 사진 고르기<input id="gallery-photo" type="file" accept="image/*"></label>
+          </div>
+          <section id="camera-panel" class="registration-camera" aria-labelledby="camera-title" hidden>
+            <h3 id="camera-title">카메라로 옷 사진을 찍어요</h3>
+            <video id="camera-video" class="registration-preview" autoplay muted playsinline aria-label="카메라 영상 미리보기"></video>
+            <p id="camera-status" class="registration-status" role="status"></p>
+            <div class="registration-file-actions">
+              <button id="capture-camera" class="primary-action" type="button" disabled>사진 찍기</button>
+              <button id="close-camera" class="registration-file-button" type="button">카메라 닫기</button>
+            </div>
+          </section>
+          <label id="native-camera-action" class="registration-file-button" hidden>📷 휴대폰 기본 카메라로 촬영<input id="camera-photo" type="file" accept="image/*" capture="environment"></label>
+          <p class="registration-help">얼굴과 이름표는 사진에 나오지 않게 해요. 옷을 매트 가운데에 놓고 카메라는 위에서 찍어요.</p>
+          <img id="garment-preview" class="registration-preview" alt="선택한 옷 사진 미리보기" hidden>
+          <button id="analyze-garment" class="primary-action" type="button" disabled>사진 살펴보기</button>
+          <p id="analysis-status" class="registration-status" role="status"></p>
+        </section>
+
+        <form id="garment-form" class="registration-form" hidden>
+          <h2>찾은 내용을 확인해요</h2>
+          <p id="review-note" class="registration-help">초록 선은 옷 테두리, 주황 선은 길이, 파란 선은 너비예요. 틀린 값은 직접 바꿔도 돼요.</p>
+          <img id="analysis-preview" class="registration-preview analysis-preview" alt="컴퓨터가 찾은 옷 테두리와 측정선">
+          <label>옷 이름<input name="name" maxlength="60" placeholder="예: 파란 점퍼" required></label>
+          <p id="chosen-garment-type" class="registration-type-summary"></p>
+          <div class="registration-measurements">
+            <label><span id="width-label">가슴 너비(cm)</span><input name="widthCm" type="number" min="1" max="300" step="0.1" required></label>
+            <label>기장(cm)<input name="lengthCm" type="number" min="1" max="300" step="0.1" required></label>
+          </div>
+          <label>대표 색<input name="colorName" maxlength="30" required></label>
+          <label>이 옷은 어떤 옷인가요?<select name="gender" required>
+            <option value="" selected disabled>직접 골라 주세요</option><option value="male">남성용</option><option value="female">여성용</option><option value="unisex">공용</option><option value="unknown">잘 모르겠어요</option>
+          </select></label>
+          <p class="registration-help">옷 사진만으로 남성용·여성용을 정확히 나눌 수는 없어요. 옷의 표기를 보거나 어른과 함께 골라 주세요.</p>
+          <button class="primary-action" type="submit">이 옷을 저장하기</button>
+          <p id="save-status" class="registration-status" role="status"></p>
+        </form>
+      </section>
+
+      <section class="measurement-panel registered-garments" aria-labelledby="registered-garments-title">
+        <h2 id="registered-garments-title">우리 옷장에 등록한 옷</h2>
+        <p id="garment-list-status" class="registration-help" role="status">저장된 옷을 불러오고 있어요…</p>
+        <div id="garment-list" class="registered-garment-list"></div>
+        <nav id="garment-list-pages" class="closet-pagination" aria-label="옷장 페이지"></nav>
+      </section>
+    </main>
+    <footer class="measurement-footer">사진은 FitShare를 실행하는 서버 PC에 저장돼요. 선생님과 함께 사용해요.</footer>
+  </div>
+  <script type="module" src="../js/measurement/register.js?v=registration-camera-1"></script>
+</body>
+</html>
+
+
+========== js/measurement/register.js ==========
+﻿import { readRegistrationPhoto } from './registrationPhoto.js?v=garment-registration-2';
+import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-2';
+import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
+
+const photoInputs = [document.querySelector('#camera-photo'), document.querySelector('#gallery-photo')];
+const photoPreview = document.querySelector('#garment-preview');
+const analyzeButton = document.querySelector('#analyze-garment');
+const analysisStatus = document.querySelector('#analysis-status');
+const form = document.querySelector('#garment-form');
+const saveStatus = document.querySelector('#save-status');
+const listStatus = document.querySelector('#garment-list-status');
+const garmentList = document.querySelector('#garment-list');
+const garmentClosetView = createGarmentCloset({
+  list: garmentList,
+  status: listStatus,
+  pagination: document.querySelector('#garment-list-pages')
+});
+const garmentTypeInput = document.querySelector('#garment-type');
+const backgroundInput = document.querySelector('#background-id');
+let photoDataUrl = '';
+let closetImageDataUrl = '';
+const camera = createRegistrationCamera({
+  openButton: document.querySelector('#open-camera'),
+  panel: document.querySelector('#camera-panel'),
+  video: document.querySelector('#camera-video'),
+  captureButton: document.querySelector('#capture-camera'),
+  cancelButton: document.querySelector('#close-camera'),
+  status: document.querySelector('#camera-status'),
+  onPhoto: (file) => handlePhotoSelection({ files: [file] })
+});
+// HTTP로 접속한 휴대폰은 기존 기본 카메라 선택도 사용할 수 있습니다.
+document.querySelector('#native-camera-action').hidden = globalThis.isSecureContext ||
+  !/Android|iPhone|iPad/i.test(navigator.userAgent);
+
+async function handlePhotoSelection(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  camera.close();
+  if (photoPreview.src.startsWith('blob:')) URL.revokeObjectURL(photoPreview.src);
+  form.hidden = true;
+  photoDataUrl = '';
+  closetImageDataUrl = '';
+  analyzeButton.disabled = true;
+  analysisStatus.textContent = '';
+  photoPreview.hidden = true;
+  if (!file.type.startsWith('image/')) {
+    showStatus(analysisStatus, '사진 파일을 골라 주세요.', true);
+    return;
+  }
+  try {
+    photoDataUrl = await readRegistrationPhoto(file);
+    photoPreview.src = URL.createObjectURL(file);
+    photoPreview.hidden = false;
+    analyzeButton.disabled = !garmentTypeInput.value;
+    showStatus(analysisStatus, '사진을 골랐어요. 다음 버튼을 눌러 옷을 찾아봐요.');
+  } catch (error) {
+    showStatus(analysisStatus, error.message, true);
+  }
+}
+
+photoInputs.forEach((input) => input.addEventListener('change', () => handlePhotoSelection(input)));
+
+analyzeButton.addEventListener('click', runAnalysis);
+
+backgroundInput.addEventListener('change', () => {
+  if (!form.hidden && photoDataUrl) runAnalysis();
+});
+
+garmentTypeInput.addEventListener('change', () => {
+  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value;
+  if (!form.hidden && photoDataUrl) runAnalysis();
+});
+
+async function runAnalysis() {
+  analyzeButton.disabled = true;
+  form.hidden = true;
+  showStatus(analysisStatus, '고른 배경의 표시와 옷 모양을 찾고 있어요. 잠시 기다려 주세요.');
+  try {
+    const result = await requestJson('/api/garments/analyze', {
+      method: 'POST', body: JSON.stringify({ backgroundId: backgroundInput.value, garmentId: Number(garmentTypeInput.value), photoDataUrl })
+    });
+    fillForm(result);
+    form.hidden = false;
+    showStatus(analysisStatus, result.message);
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) {
+    showStatus(analysisStatus, error.message, true);
+  } finally {
+    analyzeButton.disabled = false;
+  }
+}
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!photoDataUrl) return showStatus(saveStatus, '저장할 사진을 먼저 골라 주세요.', true);
+  const values = new FormData(form);
+  const garmentTypeId = Number(garmentTypeInput.value);
+  const payload = {
+    name: values.get('name'), category: categoryForId(garmentTypeId), garmentTypeId, gender: values.get('gender'),
+    lengthCm: Number(values.get('lengthCm')), widthCm: Number(values.get('widthCm')),
+    colorName: values.get('colorName'), photoDataUrl, closetImageDataUrl, backgroundId: backgroundInput.value
+  };
+  const saveButton = form.querySelector('button[type="submit"]');
+  saveButton.disabled = true;
+  showStatus(saveStatus, '옷과 사진을 서버에 저장하고 있어요.');
+  try {
+    const saved = await requestJson('/api/garments', { method: 'POST', body: JSON.stringify(payload) });
+    showStatus(analysisStatus, `${saved.name}을(를) 옷장에 저장했어요!`);
+    await loadGarments();
+    form.reset();
+    form.hidden = true;
+    photoInputs.forEach((input) => { input.value = ''; });
+    photoDataUrl = '';
+    closetImageDataUrl = '';
+    backgroundInput.value = 'M4';
+    garmentTypeInput.value = '';
+    photoPreview.hidden = true;
+    analyzeButton.disabled = true;
+  } catch (error) {
+    showStatus(saveStatus, error.message, true);
+  } finally {
+    saveButton.disabled = false;
+  }
+});
+
+function fillForm(result) {
+  form.elements.lengthCm.value = result.lengthCm;
+  form.elements.widthCm.value = result.widthCm;
+  form.elements.colorName.value = result.colorName;
+  form.elements.name.value = '';
+  document.querySelector('#width-label').textContent = `${result.widthLabel}(cm)`;
+  document.querySelector('#chosen-garment-type').textContent = `선택한 종류: ${result.garmentName}`;
+  document.querySelector('#analysis-preview').src = result.analysisPhotoDataUrl;
+  closetImageDataUrl = result.closetImageDataUrl;
+  document.querySelector('#review-note').textContent = '초록 선은 옷 테두리, 주황 선은 길이, 파란 선은 너비예요. 사진과 숫자가 맞는지 살펴보고 필요하면 고쳐 주세요.';
+}
+
+async function loadGarments() {
+  return garmentClosetView.reload();
+}
+
+function categoryForId(garmentId) {
+  if (garmentId === 3) return 'dress';
+  if (garmentId === 5) return 'pants';
+  return 'top';
+}
+
+async function requestJson(url, options = {}) {
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...options.headers }
+    });
+  } catch {
+    throw new Error('저장 서버에 연결할 수 없어요. FitShare 서버가 켜져 있는지 확인해 주세요.');
+  }
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || '요청을 마치지 못했어요. 사진을 확인하고 다시 해 주세요.');
+  return result;
+}
+
+function showStatus(target, message, isError = false) {
+  target.textContent = message;
+  target.classList.toggle('is-error', isError);
+}
+
+loadGarments();
+
+
+
+========== js/measurement/registrationCamera.js ==========
+// 촬영한 JPEG를 기존 사진 선택 흐름에 넘깁니다. 분석·저장 방식은 바꾸지 않습니다.
+export function createRegistrationCamera(ui, browser = {}) {
+  const mediaDevices = browser.mediaDevices ?? globalThis.navigator?.mediaDevices;
+  const secureContext = browser.secureContext ?? globalThis.isSecureContext;
+  const documentRef = browser.documentRef ?? document;
+  const windowRef = browser.windowRef ?? window;
+  const FileClass = browser.FileClass ?? globalThis.File;
+  let stream = null;
+  let session = 0;
+
+  function showStatus(message, isError = false) {
+    ui.status.textContent = message;
+    ui.status.classList.toggle('is-error', isError);
+  }
+
+  function close() {
+    session += 1;
+    stream?.getTracks().forEach((track) => track.stop());
+    stream = null;
+    ui.video.pause();
+    ui.video.srcObject = null;
+    ui.panel.hidden = true;
+    ui.captureButton.disabled = true;
+    ui.openButton.disabled = false;
+  }
+
+  function ready() {
+    ui.captureButton.disabled = !stream || !ui.video.videoWidth || !ui.video.videoHeight;
+  }
+
+  async function open() {
+    close();
+    const currentSession = session;
+    ui.panel.hidden = false;
+    showStatus('카메라를 켜고 있어요. 카메라 사용 요청이 뜨면 허용해 주세요.');
+    ui.cancelButton.focus();
+    if (!secureContext) {
+      showStatus('노트북에서는 http://localhost:8000/measure/register.html 로 열어 주세요. 다른 기기에서 직접 촬영하려면 HTTPS 연결이 필요해요.', true);
+      return;
+    }
+    if (!mediaDevices?.getUserMedia) {
+      showStatus('이 브라우저는 직접 촬영을 지원하지 않아요. 최신 Chrome이나 Edge를 쓰거나 갤러리에서 사진을 골라 주세요.', true);
+      return;
+    }
+    ui.openButton.disabled = true;
+    try {
+      const openedStream = await mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+      });
+      // 권한 요청 중 닫았다면, 늦게 켜진 카메라도 바로 끕니다.
+      if (session !== currentSession) {
+        openedStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = openedStream;
+      ui.video.srcObject = stream;
+      stream.getTracks().forEach((track) => track.addEventListener('ended', () => {
+        if (session !== currentSession) return;
+        close();
+        ui.panel.hidden = false;
+        showStatus('카메라 연결이 끊겼어요. 카메라로 촬영 버튼을 다시 눌러 주세요.', true);
+      }));
+      await ui.video.play();
+      if (session !== currentSession) return;
+      ready();
+      showStatus('옷 전체와 매트가 화면에 보이면 사진 찍기를 눌러 주세요.');
+    } catch (error) {
+      if (session !== currentSession) return;
+      close();
+      ui.panel.hidden = false;
+      const messages = {
+        NotAllowedError: '카메라 권한이 꺼져 있어요. 주소창 옆 사이트 설정에서 카메라를 허용한 뒤 다시 눌러 주세요.',
+        NotFoundError: '사용할 카메라를 찾지 못했어요. 노트북 카메라가 연결되어 있는지 확인해 주세요.',
+        NotReadableError: '카메라를 켜지 못했어요. 다른 앱이 사용 중인지, 카메라 차단 스위치가 켜져 있는지 확인해 주세요.'
+      };
+      showStatus(messages[error.name] || '카메라를 켜지 못했어요. 연결과 권한을 확인하고 다시 시도해 주세요.', true);
+    }
+  }
+
+  async function capture() {
+    if (!stream || ui.captureButton.disabled || !ui.video.videoWidth || !ui.video.videoHeight) return;
+    const currentSession = session;
+    ui.captureButton.disabled = true;
+    try {
+      const canvas = documentRef.createElement('canvas');
+      canvas.width = ui.video.videoWidth;
+      canvas.height = ui.video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('사진을 만들지 못했어요. 다시 촬영해 주세요.');
+      context.drawImage(ui.video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 1));
+      if (session !== currentSession) return;
+      if (!blob) throw new Error('사진을 만들지 못했어요. 다시 촬영해 주세요.');
+      const file = new FileClass([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+      close();
+      await ui.onPhoto(file);
+      ui.openButton.focus();
+    } catch (error) {
+      if (session !== currentSession) return;
+      showStatus(error.message || '사진을 찍지 못했어요. 다시 촬영해 주세요.', true);
+      ready();
+    }
+  }
+
+  ui.openButton.addEventListener('click', open);
+  ui.captureButton.addEventListener('click', capture);
+  ui.cancelButton.addEventListener('click', () => { close(); ui.openButton.focus(); });
+  ui.video.addEventListener('loadeddata', ready);
+  windowRef.addEventListener('pagehide', close);
+  windowRef.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !ui.panel.hidden) { close(); ui.openButton.focus(); }
+  });
+  return { open, close, capture };
+}
+
+
+========== css/garment-registration.css ==========
+.registration-shell { max-width:920px; }
+.registration-panel h1 { margin-bottom:8px; }
+.registration-steps { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:20px 0; padding:0; list-style:none; }
+.registration-steps li { display:flex; align-items:center; gap:10px; padding:13px; border:1px solid #e3eaf5; border-radius:13px; background:#f8fbff; }
+.registration-steps li>b { display:grid; place-items:center; flex:none; width:28px; height:28px; border-radius:50%; color:white; background:#4b83f5; }
+.registration-steps strong,.registration-steps small { display:block; }
+.registration-steps strong { color:#294b78; font-size:13px; }
+.registration-steps small { margin-top:3px; color:#65738d; font-size:11px; line-height:1.5; }
+.registration-mat-note { display:grid; gap:5px; padding:13px 15px; border-radius:12px; color:#68582e; background:#fff5dd; font-size:12px; line-height:1.6; }
+.registration-photo-area,.registration-form { display:grid; gap:11px; margin-top:23px; padding-top:20px; border-top:1px solid #e7edf5; }
+.registration-photo-area h2,.registration-form h2,.registered-garments h2 { margin:0; color:#294b78; font:21px 'Jua','Noto Sans KR',sans-serif; }
+.registration-file-actions { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.registration-file-button { display:flex; justify-content:center; align-items:center; min-height:48px; border:1px solid #c7d7f6; border-radius:11px; color:#3768bb; background:#f3f7ff; font-size:13px; font-weight:800; cursor:pointer; }
+.registration-file-button input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+.registration-camera { display:grid; gap:11px; padding:15px; border:1px solid #c7d7f6; border-radius:13px; background:#f8fbff; }
+.registration-camera h3 { margin:0; color:#294b78; font-size:16px; }
+.registration-camera[hidden],.registration-file-button[hidden] { display:none; }
+.registration-file-button:disabled { opacity:.5; cursor:not-allowed; }
+.registration-file-button:focus-visible { outline:3px solid #4b83f5; outline-offset:3px; }
+.registration-help,.registration-status { margin:0; color:#65738d; font-size:12px; line-height:1.65; }
+.registration-status:empty { display:none; }
+.registration-status.is-error { color:#b34343; }
+.registration-preview { display:block; width:100%; max-height:440px; object-fit:contain; border:1px solid #e1e8f2; border-radius:13px; background:#f2f5fa; }
+.registration-preview[hidden],.registration-form[hidden] { display:none; }
+.registration-form label { display:grid; gap:6px; color:#41536e; font-size:12px; font-weight:700; }
+.registration-type-label { display:grid; gap:6px; color:#41536e; font-size:12px; font-weight:700; }
+.registration-type-label select { width:100%; min-height:42px; padding:9px 11px; border:1px solid #d9e2ef; border-radius:9px; color:#2e3d54; background:#fff; font:inherit; }
+.registration-type-summary { margin:0; padding:8px 10px; border-radius:8px; color:#315fae; background:#eef4ff; font-size:12px; font-weight:800; }
+.registration-form input,.registration-form select { width:100%; min-height:42px; padding:9px 11px; border:1px solid #d9e2ef; border-radius:9px; color:#2e3d54; background:#fff; font:inherit; }
+.registration-measurements { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.registration-form .primary-action,.registration-photo-area .primary-action { min-height:46px; border:0; border-radius:10px; color:#fff; background:#4b83f5; font-weight:800; }
+.registration-form .primary-action:disabled,.registration-photo-area .primary-action:disabled { opacity:.5; cursor:not-allowed; }
+.registered-garments { margin-top:16px; }
+.registered-garment-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+.registered-garment-card { display:grid; grid-template-columns:92px minmax(0,1fr); gap:12px; padding:10px; border:1px solid #e5ebf4; border-radius:13px; background:#fff; }
+.registered-garment-card img { width:92px; height:104px; object-fit:contain; border-radius:9px; background:linear-gradient(135deg,#f7f9fc,#eaf0f7); }
+.registered-garment-card strong { display:block; margin:3px 0 5px; color:#294b78; font-size:13px; }
+.registered-garment-card p { margin:3px 0; color:#65738d; font-size:11px; line-height:1.5; }
+@media(max-width:650px) { .registration-steps { grid-template-columns:1fr; gap:7px; }.registration-steps li { padding:10px; }.registered-garment-list { grid-template-columns:1fr; }.registration-preview { max-height:340px; } }
+
+
+========== tests/test_registration_pages.py ==========
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class RegistrationPageTests(unittest.TestCase):
+    def test_camera_action_opens_video_instead_of_only_a_file_picker(self):
+        from html.parser import HTMLParser
+
+        class Elements(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if 'id' in values:
+                    self.items[values['id']] = (tag, values)
+
+        parser = Elements()
+        parser.items = {}
+        parser.feed((ROOT / 'measure' / 'register.html').read_text(encoding='utf-8'))
+        self.assertIn('open-camera', parser.items, '촬영 버튼이 파일 선택창에만 연결되어 있습니다.')
+        self.assertEqual(parser.items['open-camera'][0], 'button')
+        self.assertEqual(parser.items['camera-video'][0], 'video')
+        self.assertIn('playsinline', parser.items['camera-video'][1])
+        self.assertIn('hidden', parser.items['camera-panel'][1])
+        self.assertEqual(parser.items['gallery-photo'][1]['type'], 'file')
+
+    def test_school_code_is_prefilled_and_selected_for_easy_replacement(self):
+        html = (ROOT / 'index.html').read_text(encoding='utf-8')
+        app = (ROOT / 'js' / 'app.js').read_text(encoding='utf-8')
+
+        self.assertIn('id="school-code"', html)
+        self.assertIn('value="대전서원초등학교"', html)
+        self.assertIn("addEventListener('focus', () => schoolInput.select())", app)
+        self.assertIn("addEventListener('click', () => schoolInput.select())", app)
+
+    def test_school_entry_shows_a_direct_registration_action(self):
+        html = (ROOT / 'index.html').read_text(encoding='utf-8')
+        app = (ROOT / 'js' / 'app.js').read_text(encoding='utf-8')
+        module = (ROOT / 'modules' / 'measurement.js').read_text(encoding='utf-8')
+
+        self.assertIn('id="entry-action"', html)
+        self.assertIn('href="measure/register.html"', html)
+        self.assertIn('createSchoolEntryResult(input.value)', app)
+        self.assertIn('action.hidden = !result.ok', app)
+        self.assertNotIn('scrollIntoView', app)
+        self.assertIn('href="measure/register.html"', module)
+        self.assertIn('href="measure/index.html"', module)
+
+    def test_registration_screen_offers_four_backgrounds_with_m4_selected(self):
+        html = (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8')
+        script = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        photo_helper = (ROOT / 'js' / 'measurement' / 'registrationPhoto.js').read_text(encoding='utf-8')
+
+        self.assertIn('id="background-id"', html)
+        for mat_id in ('M1', 'M2', 'M3', 'M4'):
+            self.assertIn(f'value="{mat_id}"', html)
+        self.assertIn('<option value="M4" selected>', html)
+        self.assertIn('value="male"', html)
+        self.assertIn('value="female"', html)
+        self.assertIn('value="unisex"', html)
+        self.assertIn('value="unknown"', html)
+        self.assertIn('id="garment-type"', html)
+        self.assertIn('backgroundId: backgroundInput.value', script)
+        self.assertIn('readRegistrationPhoto(file)', script)
+        self.assertIn('if (jpegFile)', photo_helper)
+        self.assertIn('resolve(reader.result)', photo_helper)
+        self.assertIn('image.naturalWidth || image.width', photo_helper)
+        self.assertIn('canvas.toDataURL(\'image/jpeg\', 1)', photo_helper)
+        self.assertIn('file.size > maxBytes', photo_helper)
+        self.assertIn('chosen-garment-type', script)
+        self.assertIn("/api/garments'", script)
+
+    def test_both_closet_pages_use_fast_paged_cards_with_edit_and_photo_toggle(self):
+        html = (ROOT / 'index.html').read_text(encoding='utf-8')
+        register_html = (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8')
+        closet = (ROOT / 'js' / 'measurement' / 'garmentCloset.js').read_text(encoding='utf-8')
+        app = (ROOT / 'js' / 'app.js').read_text(encoding='utf-8')
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+
+        self.assertIn('school-closet-pages', html)
+        self.assertIn('garment-list-pages', register_html)
+        self.assertIn('PAGE_SIZE = 10', closet)
+        self.assertIn('loading = \'lazy\'', closet)
+        self.assertIn('배경 포함 사진 보기', closet)
+        self.assertIn('정보 수정', closet)
+        self.assertIn('unknown', closet)
+        self.assertIn('createGarmentCloset', app)
+        self.assertIn('createGarmentCloset', registration)
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+========== tests/registration-camera.mjs ==========
+import assert from 'node:assert/strict';
+import { Blob, File } from 'node:buffer';
+
+export async function runCameraTests(createRegistrationCamera) {
+  const results = [];
+  function fixture(getUserMedia, secureContext = true) {
+    const element = () => ({ hidden: true, disabled: false, textContent: '',
+      listeners: {}, addEventListener(name, fn) { this.listeners[name] = fn; },
+      classList: { toggle() {} }, focus() {} });
+    const video = { ...element(), videoWidth: 1920, videoHeight: 1080,
+      srcObject: null, async play() {}, pause() {} };
+    const canvas = { getContext: () => ({ drawImage() {} }),
+      toBlob(callback) { callback(new Blob(['photo'], { type: 'image/jpeg' })); } };
+    const ui = { openButton: element(), panel: element(), video,
+      captureButton: element(), cancelButton: element(), status: element(),
+      onPhoto: async (file) => { ui.photo = file; } };
+    const windowListeners = {};
+    const camera = createRegistrationCamera(ui, { secureContext,
+      FileClass: File,
+      mediaDevices: { getUserMedia }, documentRef: { createElement: () => canvas },
+      windowRef: { addEventListener(name, action) { windowListeners[name] = action; } } });
+    return { ui, camera, canvas, windowListeners };
+  }
+  async function test(name, action) { await action(); results.push(name); }
+  const makeStream = () => {
+    const track = { stopped: false, stop() { this.stopped = true; }, addEventListener() {} };
+    return { track, getTracks: () => [track] };
+  };
+
+  await test('정상: 카메라 영상의 원래 크기로 JPEG 촬영하고 카메라 종료', async () => {
+    const stream = makeStream();
+    let constraints;
+    const { ui, camera, canvas } = fixture(async (value) => { constraints = value; return stream; });
+    await camera.open();
+    assert.equal(ui.panel.hidden, false);
+    assert.equal(ui.video.srcObject, stream);
+    assert.equal(constraints.audio, false);
+    assert.equal(constraints.video.facingMode.ideal, 'environment');
+    assert.equal(ui.captureButton.disabled, false);
+    await camera.capture();
+    assert.equal(ui.photo.type, 'image/jpeg');
+    assert.equal(canvas.width, 1920);
+    assert.equal(canvas.height, 1080);
+    assert.equal(stream.track.stopped, true);
+    assert.equal(ui.panel.hidden, true);
+  });
+  await test('경계: 영상 크기가 아직 없으면 촬영하지 않음', async () => {
+    const { ui, camera } = fixture(async () => makeStream());
+    ui.video.videoWidth = 0;
+    await camera.open();
+    await camera.capture();
+    assert.equal(ui.photo, undefined);
+    assert.equal(ui.captureButton.disabled, true);
+    camera.close();
+  });
+  await test('경계: 카메라 닫기 버튼과 페이지 이동에서 카메라 종료', async () => {
+    const stream = makeStream();
+    const { ui, camera, windowListeners } = fixture(async () => stream);
+    await camera.open();
+    ui.cancelButton.listeners.click();
+    assert.equal(stream.track.stopped, true);
+    assert.equal(ui.video.srcObject, null);
+    assert.equal(ui.panel.hidden, true);
+    stream.track.stopped = false;
+    await camera.open();
+    windowListeners.pagehide();
+    assert.equal(stream.track.stopped, true);
+    assert.equal(ui.video.srcObject, null);
+  });
+  await test('오류: 영상 재생 실패 시 켜진 카메라도 종료', async () => {
+    const stream = makeStream();
+    const { ui, camera } = fixture(async () => stream);
+    ui.video.play = async () => { throw new Error('play failed'); };
+    await camera.open();
+    assert.equal(stream.track.stopped, true);
+    assert.equal(ui.video.srcObject, null);
+    assert.equal(ui.captureButton.disabled, true);
+    assert.match(ui.status.textContent, /카메라/);
+  });
+  await test('오류: 권한 거부 안내 후 다시 시도 가능', async () => {
+    const { ui, camera } = fixture(async () => { throw { name: 'NotAllowedError' }; });
+    await camera.open();
+    assert.match(ui.status.textContent, /권한/);
+    assert.equal(ui.openButton.disabled, false);
+    assert.equal(ui.captureButton.disabled, true);
+  });
+  await test('오류: 카메라 없음 안내', async () => {
+    const { ui, camera } = fixture(async () => { throw { name: 'NotFoundError' }; });
+    await camera.open();
+    assert.match(ui.status.textContent, /카메라.*찾/);
+  });
+  await test('오류: HTTP IP 주소에서는 localhost 안내', async () => {
+    let requested = false;
+    const { ui, camera } = fixture(async () => { requested = true; }, false);
+    await camera.open();
+    assert.equal(requested, false);
+    assert.match(ui.status.textContent, /localhost/);
+  });
+  await test('오류: 카메라 API 없는 브라우저도 앱이 깨지지 않음', async () => {
+    const { ui, camera } = fixture(undefined);
+    await camera.open();
+    assert.match(ui.status.textContent, /브라우저/);
+    assert.equal(ui.captureButton.disabled, true);
+  });
+  await test('경계: 권한 응답 전에 취소해도 늦게 도착한 카메라 종료', async () => {
+    let resolve;
+    const stream = makeStream();
+    const { ui, camera } = fixture(() => new Promise((done) => { resolve = done; }));
+    const opening = camera.open();
+    camera.close();
+    resolve(stream);
+    await opening;
+    assert.equal(stream.track.stopped, true);
+    assert.equal(ui.video.srcObject, null);
+    assert.equal(ui.panel.hidden, true);
+  });
+  await test('오류: JPEG 변환 실패해도 다시 촬영 가능', async () => {
+    const { ui, camera, canvas } = fixture(async () => makeStream());
+    canvas.toBlob = (callback) => callback(null);
+    await camera.open();
+    await camera.capture();
+    assert.match(ui.status.textContent, /사진/);
+    assert.equal(ui.captureButton.disabled, false);
+    assert.equal(ui.photo, undefined);
+    camera.close();
+  });
+  await test('경계: JPEG 변환 중 닫으면 늦게 완성된 사진을 선택하지 않음', async () => {
+    const { ui, camera, canvas } = fixture(async () => makeStream());
+    let finish;
+    canvas.toBlob = (callback) => { finish = callback; };
+    await camera.open();
+    const capture = camera.capture();
+    camera.close();
+    finish(new Blob(['photo'], { type: 'image/jpeg' }));
+    await capture;
+    assert.equal(ui.photo, undefined);
+    assert.equal(ui.panel.hidden, true);
+  });
+  return results;
+}
+
+
+========== tests/run-registration-camera.mjs ==========
+import { createRegistrationCamera } from '../js/measurement/registrationCamera.js';
+import { runCameraTests } from './registration-camera.mjs';
+
+const results = await runCameraTests(createRegistrationCamera);
+console.log(`${results.length} camera tests passed\n${results.join('\n')}`);
+
+
+========== Handspff/진행상황.md 추가 기록 ==========
+
+
+## 2026-10-10 노트북 카메라로 옷 등록 촬영
+
+- 원인: 기존 촬영 버튼은 capture 속성이 붙은 파일 입력이라 노트북에서는 갤러리와 같은 파일 선택창이 열렸다.
+- 변경: 등록 화면에 실제 카메라 열기 버튼과 영상 미리보기, 사진 찍기, 닫기 버튼을 추가했다. 새 js/measurement/registrationCamera.js에서 getUserMedia로 카메라만 요청하고, 영상의 픽셀 크기를 유지한 JPEG를 기존 사진 분석·저장 흐름에 넘긴다.
+- 카메라는 촬영 완료, 닫기, Escape, 페이지 이동 때 종료한다. 권한 응답이나 JPEG 변환 중 닫아도 늦은 결과는 버린다. 카메라 없음, 권한 거부, 재생 실패, 미지원 브라우저를 안내한다.
+- 노트북 주소: http://localhost:8000/measure/register.html . HTTP IP 주소에서는 직접 카메라 사용이 차단되므로 localhost 안내를 보여준다. HTTP로 접속한 휴대폰에는 기존 기본 카메라 파일 입력도 제공한다.
+- 수정 범위: measure/register.html, js/measurement/register.js, 등록 전용 CSS, 새 카메라 모듈, 관련 테스트. 추천·랭킹과 공통 앱/상태/CSS, 서버 분석 코드는 수정하지 않았다.
+- 검증: 촬영 버튼이 파일 입력에만 연결된 기존 상태에서 새 연결 테스트 실패를 확인한 뒤 수정했다. 카메라 동작 테스트 11개 통과(정상 JPEG, 미준비 영상, 닫기/페이지 이동, 재생 실패, 권한 거부, 카메라 없음, HTTP IP, 미지원 API, 권한 응답 전 취소, JPEG 실패, JPEG 변환 중 취소). 도구의 Node 런타임으로 tests/registration-camera.mjs를 실행했다. 일반 터미널에는 node 명령이 없어 새 패키지나 런타임을 설치하지 않았다.
+- python -m unittest discover -s tests -v: 52개 통과. 등록 화면·카메라 JS·옷장 API HTTP 200 확인.
+- 전체 변경 코드: docs/registration-camera-review.txt . 실제 웹캠 영상·브라우저 화면·휴대폰 촬영은 연결된 브라우저가 없어 확인하지 못했다. 다음 행동: 노트북 localhost 등록 페이지에서 새로고침, 카메라 허용 후 촬영과 닫기 동작 확인.
+- Git: feature/measurement-comparison 브랜치지만 기존 커밋이 없고 프로젝트 파일 모두 미추적 상태다. 기존 파일 3개의 작업 전 사본과 git diff --no-index로 변경을 검토했다. 실제 웹캠 확인과 저장소 기준 상태 정리가 남아 commit/push는 하지 않았다.

@@ -1,103 +1,116 @@
-import { mockData } from "../data/mockData.js";
-import { createAppState } from "./state.js";
-import { renderMeasurement } from "../modules/measurement.js";
-import { renderRecommendation } from "../modules/recommendation.js";
-import { renderRanking } from "../modules/ranking.js";
+﻿import { state, markTabVisited } from './state.js';
+import { renderMeasurement } from '../modules/measurement.js?v=garment-registration-1';
+import { renderRecommendation } from '../modules/recommendation.js';
+import { renderRanking } from '../modules/ranking.js?v=ranking-5';
+import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-1';
+import { createSchoolEntryResult } from './schoolEntry.js';
+import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-3';
+import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-2';
 
-// 탭 이름과 모듈 렌더 함수를 연결합니다.
-const rendererMap = {
-  measurement: renderMeasurement,
-  recommendation: renderRecommendation,
-  ranking: renderRanking,
-};
+const root = document.querySelector('#module-root');
+const tabs = document.querySelectorAll('.tab');
+const schoolInput = document.querySelector('#school-code');
+const schoolCloset = document.querySelector('#school-closet');
+const schoolClosetStatus = document.querySelector('#school-closet-status');
+const schoolClosetList = document.querySelector('#school-closet-list');
+const schoolClosetView = createGarmentCloset({
+  list: schoolClosetList,
+  status: schoolClosetStatus,
+  pagination: document.querySelector('#school-closet-pages'),
+  onOpen: openGarmentDetail
+});
+const renderers = { measurement: renderMeasurement, recommendation: renderRecommendation, ranking: renderRanking };
 
-const appState = createAppState("measurement");
-
-const processListEl = document.getElementById("process-list");
-const moduleRootEl = document.getElementById("module-root");
-const entryFormEl = document.getElementById("school-entry-form");
-const schoolCodeEl = document.getElementById("school-code");
-const entryMessageEl = document.getElementById("entry-message");
-const tabButtons = Array.from(document.querySelectorAll(".tab-button"));
-
-function init() {
-  renderProcessCards();
-  bindEvents();
-
-  // 상태가 바뀔 때마다 현재 탭을 다시 그림니다.
-  appState.subscribe(() => {
-    updateTabStyle();
-    renderCurrentTab();
-  });
-
-  updateTabStyle();
-  renderCurrentTab();
+function selectTab(tabName) {
+  markTabVisited(tabName);
+  tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tab === tabName));
+  renderers[tabName](root, state);
+  document.querySelector('.progress-pill').textContent = `오늘의 탐험 ${state.visitedTabs.size}/3`;
 }
 
-function bindEvents() {
-  tabButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const tabKey = button.dataset.tab;
-      appState.setActiveTab(tabKey);
-    });
-  });
-
-  entryFormEl.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const code = schoolCodeEl.value.trim();
-    if (!code) {
-      entryMessageEl.textContent = "학교 코드를 입력해 주세요.";
-      return;
-    }
-
-    appState.setSchoolCode(code);
-    entryMessageEl.textContent = "학교 코드 " + code + " 확인! 이제 모듈 테스트를 진행해 보세요.";
-  });
+tabs.forEach((tab) => tab.addEventListener('click', () => selectTab(tab.dataset.tab)));
+function enterSchool() {
+  const input = document.querySelector('#school-code');
+  const message = document.querySelector('#entry-message');
+  const action = document.querySelector('#entry-action');
+  const result = createSchoolEntryResult(input.value);
+  state.schoolCode = result.code;
+  message.textContent = result.message;
+  message.classList.toggle('is-error', !result.ok);
+  action.hidden = !result.ok;
+  schoolCloset.hidden = !result.ok;
+  document.querySelector('.app-shell').classList.toggle('is-entered', result.ok);
+  if (result.ok) schoolClosetView.reload();
+  else input.focus();
 }
 
-function renderProcessCards() {
-  processListEl.innerHTML = "";
+// 칸에 들어오거나 클릭하면 학교 이름 전체를 선택해 바로 바꿀 수 있어요.
+schoolInput.addEventListener('focus', () => schoolInput.select());
+schoolInput.addEventListener('click', () => schoolInput.select());
+document.querySelector('#enter-button').addEventListener('click', enterSchool);
+schoolInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') enterSchool();
+});
 
-  mockData.processSteps.forEach((step) => {
-    const card = document.createElement("article");
-    card.className = "process-card";
+// 맨 처음에는 로그인부터 합니다. 로그인하기 전에는 옷장과 기능 탭을 보여 주지 않아요.
+const authPanel = document.querySelector('#auth-panel');
+const authForm = document.querySelector('#auth-form');
+const authMessage = document.querySelector('#auth-message');
+const appMain = document.querySelector('#app-main');
+const userBox = document.querySelector('#user-box');
+let signupMode = false;
 
-    const titleEl = document.createElement("h3");
-    titleEl.textContent = step.title;
-
-    const descEl = document.createElement("p");
-    descEl.textContent = step.description;
-
-    card.appendChild(titleEl);
-    card.appendChild(descEl);
-
-    processListEl.appendChild(card);
-  });
+function setAuthMode(isSignup) {
+  signupMode = isSignup;
+  document.querySelector('#auth-tab-login').setAttribute('aria-selected', String(!isSignup));
+  document.querySelector('#auth-tab-signup').setAttribute('aria-selected', String(isSignup));
+  document.querySelector('#auth-name-row').hidden = !isSignup;
+  document.querySelector('#auth-name').required = isSignup;
+  document.querySelector('#auth-submit').textContent = isSignup ? '회원가입하고 시작하기' : '로그인';
+  document.querySelector('#auth-password').autocomplete = isSignup ? 'new-password' : 'current-password';
+  authMessage.textContent = '';
 }
 
-function updateTabStyle() {
-  const { activeTab } = appState.getState();
-
-  tabButtons.forEach((button) => {
-    const isActive = button.dataset.tab === activeTab;
-    button.classList.toggle("is-active", isActive);
-  });
+function showApp() {
+  const user = getUser();
+  authPanel.hidden = Boolean(user);
+  appMain.hidden = !user;
+  userBox.hidden = !user;
+  document.querySelector('#user-name').textContent = user ? `${user.name} 님` : '';
+  if (user) selectTab(state.activeTab);
+  else document.querySelector('#auth-username').focus();
 }
 
-function renderCurrentTab() {
-  const state = appState.getState();
-  const renderFn = rendererMap[state.activeTab];
-
-  if (!renderFn) {
-    moduleRootEl.innerHTML = "<p>알 수 없는 탭입니다.</p>";
-    return;
+document.querySelector('#auth-tab-login').addEventListener('click', () => setAuthMode(false));
+document.querySelector('#auth-tab-signup').addEventListener('click', () => setAuthMode(true));
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const submitButton = document.querySelector('#auth-submit');
+  submitButton.disabled = true;
+  authMessage.classList.remove('is-error');
+  authMessage.textContent = '확인하고 있어요.';
+  try {
+    const username = document.querySelector('#auth-username').value;
+    const password = document.querySelector('#auth-password').value;
+    if (signupMode) await signup(username, password, document.querySelector('#auth-name').value);
+    else await login(username, password);
+    authForm.reset();
+    authMessage.textContent = '';
+    showApp();
+  } catch (error) {
+    authMessage.classList.add('is-error');
+    authMessage.textContent = error.message;
+  } finally {
+    submitButton.disabled = false;
   }
+});
+document.querySelector('#logout-button').addEventListener('click', async () => {
+  await logout();
+  schoolCloset.hidden = true;
+  document.querySelector('.app-shell').classList.remove('is-entered');
+  showApp();
+});
 
-  renderFn(moduleRootEl, {
-    ...state,
-    mockData,
-  });
-}
+appMain.hidden = true;
+fetchMe().then(showApp);
 
-init();

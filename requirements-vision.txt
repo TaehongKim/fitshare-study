@@ -1,0 +1,2 @@
+# ChArUco/ArUco 인식과 원근 보정에 필요한 OpenCV contrib 모듈입니다.
+opencv-contrib-python-headless==5.0.0.93

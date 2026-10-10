@@ -1,0 +1,103 @@
+{
+  "model": "HRNet-W48 fashion landmark estimation, DeepFashion2 checkpoint",
+  "checkpointSha256": "5b29ada40632cb5ce1aaa38e4896054329c42d0f6c6649a5b9d0b53e41ee04f6",
+  "sampleCount": 5,
+  "opencv": {
+    "widthMaeCm": 0.58,
+    "lengthMaeCm": 4.76,
+    "measuredCount": 5
+  },
+  "hrnet": {
+    "widthMaeCm": 10.24,
+    "lengthMaeCm": 11.14,
+    "measuredCount": 5
+  },
+  "averageInferenceMs": 582.0,
+  "rows": [
+    {
+      "photo": "chc_1_w55_h65.jpg",
+      "garmentId": 1,
+      "referenceWidthCm": 55.0,
+      "referenceLengthCm": 65.0,
+      "opencvWidthCm": 53.8,
+      "opencvLengthCm": 66.2,
+      "hrnetWidthCm": 45.8,
+      "hrnetLengthCm": 71.5,
+      "hrnetInferenceMs": 598.8,
+      "hrnetCategory": 2,
+      "hrnetLandmarkCount": 15,
+      "yoloClass": "long_sleeve_top",
+      "yoloConfidence": 0.818,
+      "overlay": "chc_1_w55_h65-hrnet.png",
+      "error": null
+    },
+    {
+      "photo": "chc_2_w54_h50.jpg",
+      "garmentId": 2,
+      "referenceWidthCm": 54.0,
+      "referenceLengthCm": 50.0,
+      "opencvWidthCm": 53.8,
+      "opencvLengthCm": 46.6,
+      "hrnetWidthCm": 55.6,
+      "hrnetLengthCm": 55.3,
+      "hrnetInferenceMs": 530.9,
+      "hrnetCategory": 1,
+      "hrnetLandmarkCount": 22,
+      "yoloClass": "short_sleeve_top",
+      "yoloConfidence": 0.957,
+      "overlay": "chc_2_w54_h50-hrnet.png",
+      "error": null
+    },
+    {
+      "photo": "chc_3_w40_h70.jpg",
+      "garmentId": 3,
+      "referenceWidthCm": 40.0,
+      "referenceLengthCm": 70.0,
+      "opencvWidthCm": 38.6,
+      "opencvLengthCm": 72.7,
+      "hrnetWidthCm": 26.8,
+      "hrnetLengthCm": 42.2,
+      "hrnetInferenceMs": 533.0,
+      "hrnetCategory": 11,
+      "hrnetLandmarkCount": 20,
+      "yoloClass": "long_sleeve_dress",
+      "yoloConfidence": 0.81,
+      "overlay": "chc_3_w40_h70-hrnet.png",
+      "error": null
+    },
+    {
+      "photo": "chc_4_w49_h53.jpg",
+      "garmentId": 4,
+      "referenceWidthCm": 49.0,
+      "referenceLengthCm": 53.0,
+      "opencvWidthCm": 48.9,
+      "opencvLengthCm": 62.6,
+      "hrnetWidthCm": 41.2,
+      "hrnetLengthCm": 61.6,
+      "hrnetInferenceMs": 619.7,
+      "hrnetCategory": 2,
+      "hrnetLandmarkCount": 26,
+      "yoloClass": "long_sleeve_top",
+      "yoloConfidence": 0.889,
+      "overlay": "chc_4_w49_h53-hrnet.png",
+      "error": null
+    },
+    {
+      "photo": "chc_5_w42_h90.jpg",
+      "garmentId": 5,
+      "referenceWidthCm": 42.0,
+      "referenceLengthCm": 90.0,
+      "opencvWidthCm": 42.0,
+      "opencvLengthCm": 96.9,
+      "hrnetWidthCm": 22.6,
+      "hrnetLengthCm": 97.5,
+      "hrnetInferenceMs": 627.4,
+      "hrnetCategory": 8,
+      "hrnetLandmarkCount": 14,
+      "yoloClass": "trousers",
+      "yoloConfidence": 0.83,
+      "overlay": "chc_5_w42_h90-hrnet.png",
+      "error": null
+    }
+  ]
+}

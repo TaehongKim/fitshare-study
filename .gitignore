@@ -1,0 +1,10 @@
+# 실험 참가자의 사진과 기록은 저장소에 올리지 않습니다.
+server-data/
+__pycache__/
+*.py[cod]
+
+# 실측 파이프라인의 중간 진단 이미지(용량 큼)는 올리지 않습니다. overlay/ 와 results.* 는 보관합니다.
+measure_pipeline/output/debug/
+measure_pipeline/output/seg/
+measure_pipeline/output/sweep/
+measure_pipeline/output/calib/

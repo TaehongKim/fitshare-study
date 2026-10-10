@@ -3,75 +3,78 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FitShare | 학교 의류 자원 순환</title>
-    <meta
-      name="description"
-      content="초등 코딩 페스티벌용 FitShare 공통 웹페이지 기본 틀"
-    />
-    <link rel="stylesheet" href="./css/styles.css" />
+    <meta name="description" content="학교 의류 자원 순환을 돕는 FitShare 공통 화면" />
+    <title>FitShare | 함께 입고, 함께 나누는 스마트 옷장</title>
+    <link rel="stylesheet" href="css/styles.css?v=auth-1" />
+    <link rel="stylesheet" href="css/measurement.css?v=school-closet-2" />
   </head>
   <body>
-    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
-    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+    <div class="app-shell">
+      <header class="site-header">
+        <a class="brand" href="index.html" aria-label="FitShare 홈">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span><strong>FitShare</strong><small>학교 의류 순환 놀이터</small></span>
+        </a>
+        <div class="header-badge"><span class="status-dot"></span> 우리 학교 스마트 옷장</div>
+        <div id="user-box" class="user-box" hidden><span id="user-name"></span><button id="logout-button" type="button">로그아웃</button></div>
+      </header>
 
-    <header class="site-header container">
-      <div class="brand-row">
-        <span class="brand-badge">FitShare</span>
-        <p class="brand-caption">AI 기반 학교 의류 자원 순환 시스템</p>
-      </div>
-
-      <h1 class="hero-title">버려지는 아동복, 학교에서 다시 빛나다</h1>
-      <p class="hero-text">
-        학교 코드로 스마트 옷장에 입장하고, 의류 실측 데이터와 신체 매칭으로
-        맞춤 추천까지 연결하는 교육용 프로젝트입니다.
-      </p>
-
-      <form id="school-entry-form" class="entry-form" autocomplete="off">
-        <label for="school-code" class="entry-label">학교 코드 입력</label>
-        <div class="entry-row">
-          <input
-            id="school-code"
-            name="schoolCode"
-            type="text"
-            placeholder="예: seosol-elementary"
-            required
-          />
-          <button type="submit">스마트 옷장 입장</button>
+      <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
+        <p class="eyebrow">WELCOME TO FITSHARE</p>
+        <h1 id="auth-title">먼저 로그인해 주세요</h1>
+        <p class="auth-help">옷을 올리고, 예약하고, 점수를 주고받으려면 내 계정이 필요해요. 처음이면 회원가입을 눌러 주세요.</p>
+        <div class="auth-tabs" role="tablist">
+          <button id="auth-tab-login" type="button" role="tab" aria-selected="true">로그인</button>
+          <button id="auth-tab-signup" type="button" role="tab" aria-selected="false">회원가입</button>
         </div>
-        <p id="entry-message" class="entry-message" aria-live="polite"></p>
-      </form>
-    </header>
-
-    <main class="container">
-      <section class="process-section" aria-labelledby="process-title">
-        <h2 id="process-title">스마트 옷장 핵심 흐름</h2>
-        <div id="process-list" class="process-grid"></div>
+        <form id="auth-form" autocomplete="on">
+          <label>아이디<input id="auth-username" name="username" maxlength="20" autocomplete="username" placeholder="영어 소문자, 숫자, _ (3~20글자)" required></label>
+          <label id="auth-name-row" hidden>이름(별명)<input id="auth-name" name="name" maxlength="10" autocomplete="nickname" placeholder="친구들에게 보이는 이름 (10글자까지)"></label>
+          <label>비밀번호<input id="auth-password" name="password" type="password" maxlength="64" autocomplete="current-password" placeholder="6글자 이상" required></label>
+          <button id="auth-submit" class="primary-action" type="submit">로그인</button>
+          <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
+        </form>
       </section>
 
-      <section class="workspace-section" aria-labelledby="workspace-title">
-        <h2 id="workspace-title">모듈 작업 공간</h2>
+      <main id="app-main">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow">WELCOME TO FITSHARE</p>
+            <h1 id="hero-title">입지 않는 옷이<br /><span>새로운 친구</span>를 만나요.</h1>
+            <p class="hero-text">학교 코드를 입력하고, 내 옷을 기록하고, 꼭 맞는 코디를 발견해 보세요.</p>
+            <div class="school-entry" aria-label="학교 스마트 옷장 입장">
+              <label for="school-code">학교 코드</label>
+              <div class="entry-row"><input id="school-code" value="대전서원초등학교" maxlength="30" autocomplete="off" placeholder="예: 대전서원초등학교" /><button id="enter-button" type="button">옷장 입장 <span aria-hidden="true">→</span></button></div>
+              <p id="entry-message" class="helper-text" role="status" aria-live="polite">체험 화면에서는 아무 코드나 입력해도 좋아요!</p>
+              <a id="entry-action" class="entry-action" href="measure/register.html" hidden>옷 등록 시작하기 <span aria-hidden="true">→</span></a>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="hanger">♧</div><div class="floating-card card-one">👕<span>공유해요</span></div><div class="floating-card card-two">✨<span>딱 맞아요</span></div></div>
+        </section>
 
-        <nav class="tab-nav" aria-label="기능 탭">
-          <button class="tab-button is-active" data-tab="measurement" type="button">
-            스마트 실측
-          </button>
-          <button class="tab-button" data-tab="recommendation" type="button">
-            맞춤 추천
-          </button>
-          <button class="tab-button" data-tab="ranking" type="button">
-            참여 랭킹
-          </button>
-        </nav>
+        <section id="school-closet" class="school-closet" aria-labelledby="school-closet-title" hidden>
+          <div class="school-closet-heading">
+            <div><p class="eyebrow">SCHOOL CLOSET</p><h2 id="school-closet-title">우리 학교에 등록된 옷</h2></div>
+            <a href="measure/register.html">옷 등록하기 <span aria-hidden="true">→</span></a>
+          </div>
+          <p id="school-closet-status" class="school-closet-status" role="status" aria-live="polite">등록한 옷을 불러오고 있어요.</p>
+          <div id="school-closet-list" class="school-closet-list"></div>
+          <nav id="school-closet-pages" class="closet-pagination" aria-label="옷장 페이지"></nav>
+        </section>
 
-        <div id="module-root" class="module-root" aria-live="polite"></div>
-      </section>
-    </main>
+        <section class="workspace" aria-labelledby="workspace-title">
+          <div class="section-heading"><div><p class="eyebrow">MY FITSHARE JOURNEY</p><h2 id="workspace-title">무엇을 해볼까요?</h2></div><span class="progress-pill">오늘의 탐험 0/3</span></div>
+          <nav class="tabs" aria-label="FitShare 기능 선택">
+            <button class="tab is-active" data-tab="measurement" type="button"><span class="tab-icon">📏</span><span>스마트 실측<small>내 정보 기록하기</small></span></button>
+            <button class="tab" data-tab="recommendation" type="button"><span class="tab-icon">🧥</span><span>맞춤 추천<small>나에게 맞는 코디</small></span></button>
+            <button class="tab" data-tab="ranking" type="button"><span class="tab-icon">🏆</span><span>참여 랭킹<small>함께 만드는 변화</small></span></button>
+          </nav>
+          <div id="module-root" class="module-root" tabindex="-1" aria-live="polite"></div>
+        </section>
+      </main>
 
-    <footer class="site-footer container">
-      <p>개발팀: 초등 코딩 페스티벌 FitShare 팀</p>
-      <p>테스트 안내: 실제 AI/카메라/DB는 연결하지 않은 공통 템플릿입니다.</p>
-    </footer>
-
-    <script type="module" src="./js/app.js"></script>
+      <footer class="site-footer"><p><strong>FitShare 개발팀</strong> · 초등 코딩 페스티벌 테스트 버전</p><p>아이디어를 나누고, 지구를 가볍게 🌱</p><p><a href="measure-dataset.html">실측 배경 비교 결과 보기</a></p></footer>
+    </div>
+    <script type="module" src="js/app.js?v=auth-1"></script>
   </body>
 </html>

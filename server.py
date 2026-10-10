@@ -1,0 +1,918 @@
+"""FitShare static site and local experiment/photo storage API (Python stdlib only)."""
+
+import base64
+import binascii
+import json
+import math
+import os
+import re
+import shutil
+import threading
+import uuid
+from datetime import datetime, timezone
+from http.cookies import SimpleCookie
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+from tools.accounts import SESSION_SECONDS, AccountStore, AuthError
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATA_DIR = PROJECT_ROOT / 'server-data'
+MAX_BODY_BYTES = 18 * 1024 * 1024
+MAX_PHOTO_BYTES = 12 * 1024 * 1024
+VALID_CATEGORIES = {'top', 'bottom', 'dress', 'pants', 'skirt', 'other'}
+VALID_GENDERS = {'male', 'female', 'unisex', 'unknown'}
+GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지'}
+VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
+SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
+SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
+
+
+def analyze_measure_dataset(output_dir):
+    """Run the OpenCV comparison for the included public sample set."""
+    from tools.measure_dataset import analyze_dataset
+
+    return analyze_dataset(PROJECT_ROOT / 'measure_dataset', output_dir)
+
+
+def now_text():
+    return datetime.now(timezone.utc).isoformat(timespec='seconds')
+
+
+def write_json_safely(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.tmp')
+    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+    temporary.replace(path)
+
+
+def read_json(path):
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def valid_run_id(value):
+    try:
+        return str(uuid.UUID(value)) == value
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def valid_garment_record_id(value):
+    return valid_run_id(value)
+
+
+def decode_photo_data(value):
+    if not isinstance(value, str) or not value.startswith('data:image/jpeg;base64,'):
+        return None
+    try:
+        return base64.b64decode(value.split(',', 1)[1], validate=True)
+    except (binascii.Error, ValueError):
+        return None
+
+
+def decode_png_data(value):
+    if not isinstance(value, str) or not value.startswith('data:image/png;base64,'):
+        return None
+    try:
+        photo = base64.b64decode(value.split(',', 1)[1], validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    return photo if photo.startswith(b'\x89PNG\r\n\x1a\n') else None
+
+
+def make_garment_thumbnail(png_bytes, maximum_side=320):
+    """Make a small transparent PNG for closet cards; keep the stored original cutout unchanged."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError as error:
+        raise RuntimeError('옷 사진을 줄이는 도구를 불러오지 못했어요.') from error
+    image = cv2.imdecode(np.frombuffer(png_bytes, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+    if image is None or image.ndim != 3 or image.shape[2] != 4:
+        raise ValueError('투명한 옷 사진이 올바르지 않아요.')
+    height, width = image.shape[:2]
+    scale = min(1, maximum_side / max(height, width))
+    if scale < 1:
+        image = cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode('.png', image, [cv2.IMWRITE_PNG_COMPRESSION, 9])
+    if not ok:
+        raise RuntimeError('작은 옷장 사진을 만들지 못했어요.')
+    return encoded.tobytes()
+
+
+def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
+    """Create a testable HTTP server; tests can pass a temporary data directory."""
+    storage = Path(data_dir).resolve()
+    storage.mkdir(parents=True, exist_ok=True)
+    lock = threading.Lock()
+    experiments_dir = storage / 'experiments'
+    garments_dir = storage / 'garments'
+    accounts = AccountStore(storage)
+
+    class FitShareHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(PROJECT_ROOT), **kwargs)
+
+        def log_message(self, format_string, *args):
+            # 기본 접속 기록은 간단한 상태 확인에만 사용합니다.
+            super().log_message(format_string, *args)
+
+        def translate_path(self, path):
+            parts = [unquote(part) for part in urlsplit(path).path.split('/') if part]
+            if any(part in {'.git', 'server-data', '__pycache__'} for part in parts):
+                return str(PROJECT_ROOT / '__blocked_file__')
+            return super().translate_path(path)
+
+        def do_GET(self):
+            parts = self.api_parts()
+            if parts is None:
+                return super().do_GET()
+            try:
+                if parts == ['experiments']:
+                    return self.list_experiments()
+                if parts == ['measure-dataset']:
+                    return self.get_measure_dataset_report()
+                if parts == ['measure-dataset', 'model-comparison']:
+                    return self.get_measure_dataset_model_comparison()
+                if parts == ['auth', 'me']:
+                    return self.send_json(200, {'user': self.current_user()})
+                if parts == ['ranking']:
+                    return self.get_ranking()
+                if parts == ['garments']:
+                    return self.list_garments()
+                if len(parts) == 2 and parts[0] == 'garments':
+                    return self.get_garment(parts[1])
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'photo':
+                    return self.get_garment_photo(parts[1])
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'closet-photo':
+                    return self.get_garment_closet_photo(parts[1])
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'thumbnail':
+                    return self.get_garment_thumbnail(parts[1])
+                if len(parts) == 2 and parts[0] == 'experiments':
+                    return self.get_experiment(parts[1])
+                if len(parts) == 4 and parts[0] == 'experiments' and parts[2] == 'photos':
+                    return self.get_photo(parts[1], parts[3])
+                return self.send_json(404, {'error': '찾는 API 주소가 없어요.'})
+            except OSError:
+                return self.send_json(500, {'error': '실험 기록을 읽지 못했어요.'})
+
+        def do_POST(self):
+            parts = self.api_parts()
+            if parts is None:
+                return self.send_json(404, {'error': '저장할 API 주소가 없어요.'})
+            payload = self.read_payload()
+            if payload is None:
+                return
+            try:
+                if parts == ['experiments']:
+                    return self.create_experiment(payload)
+                if parts == ['measure-dataset', 'run']:
+                    return self.run_measure_dataset_analysis()
+                if parts == ['measure-dataset', 'save-as-experiment']:
+                    return self.save_dataset_as_experiment()
+                if parts == ['measurements', 'automatic']:
+                    return self.measure_uploaded_photo(payload)
+                if parts and parts[0] == 'auth' and len(parts) == 2:
+                    return self.handle_auth(parts[1], payload)
+                if parts == ['ranking']:
+                    return self.save_ranking(payload)
+                if parts == ['garments', 'analyze']:
+                    return self.analyze_garment(payload)
+                if parts == ['garments']:
+                    return self.save_garment(payload)
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'update':
+                    return self.update_garment(parts[1], payload)
+                if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'records':
+                    return self.save_record(parts[1], payload)
+                if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'complete':
+                    return self.complete_experiment(parts[1])
+                return self.send_json(404, {'error': '저장할 API 주소가 없어요.'})
+            except OSError:
+                return self.send_json(500, {'error': 'PC에 파일을 저장하지 못했어요. 디스크 여유 공간을 확인해 주세요.'})
+
+        def api_parts(self):
+            path = urlsplit(self.path).path
+            if not path.startswith('/api/'):
+                return None
+            return [unquote(part) for part in path.strip('/').split('/')[1:]]
+
+        def read_payload(self):
+            try:
+                length = int(self.headers.get('Content-Length', '0'))
+            except ValueError:
+                self.send_json(400, {'error': '사진 요청 크기를 확인할 수 없어요.'})
+                return None
+            if length <= 0:
+                self.send_json(400, {'error': '저장할 내용이 비어 있어요.'})
+                return None
+            if length > MAX_BODY_BYTES:
+                self.send_json(413, {'error': '사진 전송 크기가 너무 커요. 사진 파일 크기를 줄여 다시 골라 주세요. 측정 전 자동 축소는 하지 않아요.'})
+                return None
+            try:
+                value = json.loads(self.rfile.read(length).decode('utf-8'))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self.send_json(400, {'error': '보내는 내용을 읽지 못했어요.'})
+                return None
+            if not isinstance(value, dict):
+                self.send_json(400, {'error': '저장 내용의 모양이 올바르지 않아요.'})
+                return None
+            return value
+
+        def session_token(self):
+            try:
+                cookie = SimpleCookie(self.headers.get('Cookie', ''))
+            except Exception:
+                return ''
+            return cookie['fitshare_session'].value if 'fitshare_session' in cookie else ''
+
+        def current_user(self):
+            return accounts.user_for_token(self.session_token())
+
+        def cookie_header(self, token, max_age):
+            return f'fitshare_session={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={max_age}'
+
+        def handle_auth(self, action, payload):
+            try:
+                if action == 'signup':
+                    user = accounts.signup(payload.get('username'), payload.get('password'), payload.get('name'))
+                    token = accounts.create_session(user['username'])
+                    return self.send_json(201, {'user': user}, {'Set-Cookie': self.cookie_header(token, SESSION_SECONDS)})
+                if action == 'login':
+                    user = accounts.login(payload.get('username'), payload.get('password'))
+                    token = accounts.create_session(user['username'])
+                    return self.send_json(200, {'user': user}, {'Set-Cookie': self.cookie_header(token, SESSION_SECONDS)})
+                if action == 'logout':
+                    accounts.destroy_session(self.session_token())
+                    return self.send_json(200, {'user': None}, {'Set-Cookie': self.cookie_header('', 0)})
+            except AuthError as error:
+                return self.send_json(error.status, {'error': str(error)})
+            return self.send_json(404, {'error': '찾는 API 주소가 없어요.'})
+
+        def send_json(self, status, value, headers=None):
+            body = json.dumps(value, ensure_ascii=False).encode('utf-8')
+            self.send_response(status)
+            for name, header_value in (headers or {}).items():
+                self.send_header(name, header_value)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(body)
+
+        def analyze_garment(self, payload):
+            background_id = payload.get('backgroundId')
+            if not isinstance(background_id, str) or background_id not in VALID_MATS:
+                return self.send_json(400, {'error': '배경 종류를 골라 주세요.'})
+            garment_id = payload.get('garmentId')
+            if isinstance(garment_id, bool) or garment_id not in GARMENT_TYPE_NAMES:
+                return self.send_json(400, {'error': '옷 종류를 먼저 골라 주세요.'})
+            photo_bytes = decode_photo_data(payload.get('photoDataUrl'))
+            if photo_bytes is None:
+                return self.send_json(400, {'error': 'JPG 사진을 선택해 주세요.'})
+            if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
+                return self.send_json(413, {'error': '원본 사진이 12MB를 넘었어요. 파일 크기를 줄여 다시 골라 주세요. 측정 전 자동 축소는 하지 않아요.'})
+            try:
+                from tools.vision_pipeline import image_to_data_url, measure_garment, rectify_photo
+
+                flattened = rectify_photo(photo_bytes, background_id)
+                if not flattened['ok']:
+                    return self.send_json(422, {'error': flattened['message']})
+                measured = measure_garment(flattened['image'], garment_id=garment_id, include_closet_image=True)
+            except (ImportError, RuntimeError) as error:
+                return self.send_json(503, {'error': str(error) or '사진 분석 도구를 준비하지 못했어요.'})
+            except (ValueError, OSError) as error:
+                message = str(error).strip() or '옷을 찾지 못했어요. 매트 전체와 옷이 보이게 다시 찍어 주세요.'
+                return self.send_json(422, {'error': message})
+            width_label = '허리 너비' if measured['widthKind'] == 'waist' else '가슴 너비'
+            return self.send_json(200, {
+                'ok': True,
+                'garmentId': garment_id,
+                'garmentName': GARMENT_TYPE_NAMES[garment_id],
+                'category': 'dress' if garment_id == 3 else 'pants' if garment_id == 5 else 'top',
+                'lengthCm': measured['measuredLengthCm'],
+                'widthCm': measured['measuredWidthCm'],
+                'widthKind': measured['widthKind'],
+                'widthLabel': width_label,
+                'colorName': measured['colorName'],
+                'box': measured['box'],
+                'confidence': measured['confidence'],
+                'analysisPhotoDataUrl': measured['overlayDataUrl'],
+                'closetImageDataUrl': measured['closetImageDataUrl'],
+                'fullPhotoDataUrl': image_to_data_url(flattened['image']),
+                'rectificationMethod': flattened['method'],
+                'message': measured['message'],
+            })
+
+        def get_ranking(self):
+            # 나눔·예약·점수 기록을 모든 접속자가 같이 보도록 PC(server-data)에 한 파일로 둡니다.
+            record = read_json(storage / 'ranking.json')
+            if not isinstance(record, dict) or not isinstance(record.get('state'), dict):
+                record = {'rev': 0, 'state': None}
+            return self.send_json(200, {'rev': record.get('rev', 0), 'state': record['state']})
+
+        def save_ranking(self, payload):
+            if self.current_user() is None:
+                return self.send_json(401, {'error': '로그인한 뒤에 나눔 기록을 저장할 수 있어요.'})
+            state = payload.get('state')
+            base_rev = payload.get('baseRev')
+            if (not isinstance(state, dict) or isinstance(base_rev, bool) or not isinstance(base_rev, int)
+                    or any(not isinstance(state.get(name), list) for name in ('users', 'exchanges', 'badges', 'finalizedMonths'))):
+                return self.send_json(400, {'error': '랭킹 기록의 모양이 올바르지 않아요.'})
+            with lock:
+                record = read_json(storage / 'ranking.json')
+                current = record.get('rev', 0) if isinstance(record, dict) else 0
+                if base_rev != current:
+                    # 다른 사람이 먼저 저장했어요. 화면이 최신 기록을 받아 다시 시도합니다.
+                    return self.send_json(409, {'error': '다른 친구가 먼저 저장했어요.', 'rev': current,
+                                                'state': record.get('state') if isinstance(record, dict) else None})
+                write_json_safely(storage / 'ranking.json', {'rev': current + 1, 'state': state})
+            return self.send_json(200, {'rev': current + 1})
+
+        def list_garments(self):
+            items = read_json(garments_dir / 'index.json') or []
+            return self.send_json(200, items if isinstance(items, list) else [])
+
+        def get_garment(self, garment_id):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '등록한 옷을 찾지 못했어요.'})
+            item = read_json(garments_dir / garment_id / 'garment.json')
+            if not item:
+                return self.send_json(404, {'error': '등록한 옷을 찾지 못했어요.'})
+            return self.send_json(200, item)
+
+        def get_garment_photo(self, garment_id):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '사진을 찾지 못했어요.'})
+            photo_path = garments_dir / garment_id / 'photo.jpg'
+            try:
+                photo = photo_path.read_bytes()
+            except OSError:
+                return self.send_json(404, {'error': '사진을 찾지 못했어요.'})
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/jpeg')
+            self.send_header('Content-Length', str(len(photo)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(photo)
+
+        def get_garment_closet_photo(self, garment_id):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷장 사진을 찾지 못했어요.'})
+            garment_dir = garments_dir / garment_id
+            cutout_path = garment_dir / 'closet.png'
+            try:
+                photo = cutout_path.read_bytes()
+            except OSError:
+                item = read_json(garment_dir / 'garment.json')
+                if not item:
+                    return self.send_json(404, {'error': '옷장 사진을 찾지 못했어요.'})
+                try:
+                    from tools.vision_pipeline import measure_garment, rectify_photo
+
+                    source = (garment_dir / 'photo.jpg').read_bytes()
+                    flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
+                    if not flattened.get('ok'):
+                        return self.send_json(422, {'error': flattened.get('message', '옷 이미지를 만들지 못했어요.')})
+                    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True)
+                    photo = decode_png_data(measured.get('closetImageDataUrl'))
+                    if photo is None:
+                        return self.send_json(500, {'error': '투명 옷장 사진을 만들지 못했어요.'})
+                    cutout_path.write_bytes(photo)
+                except (OSError, ValueError, RuntimeError, ImportError) as error:
+                    return self.send_json(422, {'error': str(error) or '투명 옷장 사진을 만들지 못했어요.'})
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Length', str(len(photo)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(photo)
+
+        def get_garment_thumbnail(self, garment_id):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
+            garment_dir = garments_dir / garment_id
+            thumbnail_path = garment_dir / 'closet-thumbnail.png'
+            try:
+                thumbnail = thumbnail_path.read_bytes()
+            except OSError:
+                try:
+                    if not (garment_dir / 'closet.png').exists():
+                        self.get_garment_closet_photo_bytes(garment_id)
+                    cutout = (garment_dir / 'closet.png').read_bytes()
+                    thumbnail = make_garment_thumbnail(cutout)
+                    thumbnail_path.write_bytes(thumbnail)
+                except (OSError, ValueError, RuntimeError, ImportError) as error:
+                    return self.send_json(422, {'error': str(error) or '작은 옷장 사진을 만들지 못했어요.'})
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Length', str(len(thumbnail)))
+            self.send_header('Cache-Control', 'public, max-age=604800')
+            self.end_headers()
+            self.wfile.write(thumbnail)
+
+        def get_garment_closet_photo_bytes(self, garment_id):
+            garment_dir = garments_dir / garment_id
+            cutout_path = garment_dir / 'closet.png'
+            try:
+                return cutout_path.read_bytes()
+            except OSError:
+                item = read_json(garment_dir / 'garment.json')
+                if not item:
+                    raise FileNotFoundError('옷장 사진을 찾지 못했어요.')
+                from tools.vision_pipeline import measure_garment, rectify_photo
+
+                source = (garment_dir / 'photo.jpg').read_bytes()
+                flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
+                if not flattened.get('ok'):
+                    raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
+                measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True)
+                photo = decode_png_data(measured.get('closetImageDataUrl'))
+                if photo is None:
+                    raise ValueError('투명 옷장 사진을 만들지 못했어요.')
+                cutout_path.write_bytes(photo)
+                return photo
+
+        def update_garment(self, garment_id, payload):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+            item_path = garments_dir / garment_id / 'garment.json'
+            item = read_json(item_path)
+            if not item:
+                return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+            updated = dict(item)
+            for key in ('name', 'category', 'gender', 'garmentTypeId', 'colorName', 'lengthCm', 'widthCm', 'ownerName'):
+                if key in payload:
+                    updated[key] = payload[key]
+            name = updated.get('name')
+            category = updated.get('category')
+            gender = updated.get('gender')
+            garment_type_id = updated.get('garmentTypeId')
+            color_name = updated.get('colorName')
+            length = updated.get('lengthCm')
+            width = updated.get('widthCm')
+            owner_name = updated.get('ownerName', '')
+            user = self.current_user()
+            if user is not None:
+                # 로그인했다면 내가 올린 옷(또는 아직 주인이 없는 옷)만 고칠 수 있고, 올린 사람은 나로 정해져요.
+                old_owner = item.get('ownerName', '')
+                if old_owner and old_owner != user['name']:
+                    return self.send_json(403, {'error': '내가 올린 옷만 고칠 수 있어요.'})
+                owner_name = user['name']
+                updated['ownerName'] = owner_name
+            if not isinstance(owner_name, str) or len(owner_name.strip()) > 10:
+                return self.send_json(400, {'error': '올린 사람 이름은 10글자까지 쓸 수 있어요.'})
+            expected_category = 'dress' if garment_type_id == 3 else 'pants' if garment_type_id == 5 else 'top'
+            if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
+                    or category != expected_category or category not in VALID_CATEGORIES
+                    or not isinstance(gender, str) or gender not in VALID_GENDERS
+                    or isinstance(garment_type_id, bool) or not isinstance(garment_type_id, int)
+                    or garment_type_id not in GARMENT_TYPE_NAMES
+                    or not isinstance(color_name, str) or not color_name.strip() or len(color_name) > 30
+                    or not valid_measurement(length) or not valid_measurement(width)):
+                return self.send_json(400, {'error': '이름, 종류, 용도, 색, 길이와 너비를 확인해 주세요.'})
+            updated['name'] = name.strip()
+            updated['ownerName'] = owner_name.strip()
+            updated['colorName'] = color_name.strip()
+            updated['lengthCm'] = round(float(length), 1)
+            updated['widthCm'] = round(float(width), 1)
+            updated['garmentTypeName'] = GARMENT_TYPE_NAMES[garment_type_id]
+            updated['photoUrl'] = f'/api/garments/{garment_id}/photo'
+            updated['closetPhotoUrl'] = f'/api/garments/{garment_id}/closet-photo'
+            with lock:
+                write_json_safely(item_path, updated)
+                garment_index = read_json(garments_dir / 'index.json') or []
+                list_item = {key: value for key, value in updated.items() if key != 'photoUrl'}
+                for position, old in enumerate(garment_index):
+                    if old.get('id') == garment_id:
+                        garment_index[position] = list_item
+                        break
+                else:
+                    garment_index.insert(0, list_item)
+                write_json_safely(garments_dir / 'index.json', garment_index)
+            return self.send_json(200, updated)
+
+        def save_garment(self, payload):
+            name = payload.get('name')
+            category = payload.get('category')
+            gender = payload.get('gender')
+            garment_type_id = payload.get('garmentTypeId')
+            color_name = payload.get('colorName')
+            length = payload.get('lengthCm')
+            width = payload.get('widthCm')
+            photo_bytes = decode_photo_data(payload.get('photoDataUrl'))
+            closet_image = decode_png_data(payload.get('closetImageDataUrl'))
+            background_id = payload.get('backgroundId', 'M4')
+            owner_name = payload.get('ownerName', '')
+            user = self.current_user()
+            if user is not None:
+                owner_name = user['name']  # 로그인했다면 올린 사람은 항상 나예요.
+            if not isinstance(owner_name, str) or len(owner_name.strip()) > 10:
+                return self.send_json(400, {'error': '올린 사람 이름은 10글자까지 쓸 수 있어요.'})
+            if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
+                    or category not in VALID_CATEGORIES or gender not in VALID_GENDERS
+                    or isinstance(garment_type_id, bool) or garment_type_id not in GARMENT_TYPE_NAMES
+                    or not isinstance(color_name, str) or not color_name.strip() or len(color_name) > 30
+                    or not valid_measurement(length) or not valid_measurement(width)
+                    or photo_bytes is None or not photo_bytes.startswith(b'\xff\xd8\xff')
+                    or len(photo_bytes) > MAX_PHOTO_BYTES or not isinstance(background_id, str) or background_id not in VALID_MATS
+                    or (payload.get('closetImageDataUrl') is not None and closet_image is None)):
+                return self.send_json(400, {'error': '이름, 종류, 용도, 색, 길이, 너비와 사진을 확인해 주세요.'})
+
+            thumbnail = None
+            if closet_image is not None:
+                try:
+                    thumbnail = make_garment_thumbnail(closet_image)
+                except (ValueError, RuntimeError) as error:
+                    return self.send_json(400, {'error': str(error)})
+
+            record_id = str(uuid.uuid4())
+            created_at = now_text()
+            item = {
+                'id': record_id, 'name': name.strip(), 'category': category, 'gender': gender,
+                'garmentTypeId': garment_type_id,
+                'garmentTypeName': GARMENT_TYPE_NAMES[garment_type_id],
+                'ownerName': owner_name.strip(),
+                'colorName': color_name.strip(), 'lengthCm': round(float(length), 1),
+                'widthCm': round(float(width), 1), 'createdAt': created_at,
+                'photoUrl': f'/api/garments/{record_id}/photo',
+                'closetPhotoUrl': f'/api/garments/{record_id}/closet-photo',
+                'backgroundId': background_id,
+            }
+            temporary_dir = garments_dir / f'.tmp-{record_id}'
+            final_dir = garments_dir / record_id
+            try:
+                temporary_dir.mkdir(parents=True, exist_ok=False)
+                (temporary_dir / 'photo.jpg').write_bytes(photo_bytes)
+                if closet_image is not None:
+                    (temporary_dir / 'closet.png').write_bytes(closet_image)
+                    (temporary_dir / 'closet-thumbnail.png').write_bytes(thumbnail)
+                write_json_safely(temporary_dir / 'garment.json', item)
+                with lock:
+                    temporary_dir.replace(final_dir)
+                    index = read_json(garments_dir / 'index.json') or []
+                    index.insert(0, {key: value for key, value in item.items() if key != 'photoUrl'})
+                    write_json_safely(garments_dir / 'index.json', index)
+            except OSError:
+                shutil.rmtree(temporary_dir, ignore_errors=True)
+                return self.send_json(500, {'error': '옷 사진을 저장하지 못했어요. 서버 저장 공간을 확인해 주세요.'})
+            return self.send_json(201, item)
+
+        def get_measure_dataset_report(self):
+            report_path = storage / 'measure-dataset-report' / 'report.json'
+            report = read_json(report_path)
+            if report is not None:
+                return self.send_json(200, report)
+            return self.run_measure_dataset_analysis()
+
+        def get_measure_dataset_model_comparison(self):
+            report_path = storage / 'measure-dataset-report' / 'report.json'
+            report = read_json(report_path)
+            if report is None:
+                try:
+                    report = analyze_measure_dataset(storage / 'measure-dataset-report')
+                except (ImportError, RuntimeError, OSError, ValueError) as error:
+                    return self.send_json(503, {'error': f'기본 측정 결과를 준비하지 못했어요: {error}'})
+
+            results_dir = PROJECT_ROOT / 'experiments' / 'garment_ai' / 'results'
+            model_results = read_json(results_dir / 'results.json')
+            hrnet_results = read_json(results_dir / 'hrnet_results.json')
+            if model_results is None or hrnet_results is None:
+                return self.send_json(503, {'error': 'SAM·YOLO·HRNet의 저장된 실험 결과를 찾지 못했어요.'})
+            try:
+                from tools.model_comparison import build_model_comparison
+
+                comparison = build_model_comparison(report, model_results, hrnet_results)
+            except ValueError as error:
+                return self.send_json(422, {'error': str(error)})
+            return self.send_json(200, comparison)
+
+        def run_measure_dataset_analysis(self):
+            try:
+                report = analyze_measure_dataset(storage / 'measure-dataset-report')
+            except (ImportError, RuntimeError) as error:
+                return self.send_json(503, {'error': str(error)})
+            except (OSError, ValueError) as error:
+                return self.send_json(500, {'error': f'사진 분석을 마치지 못했어요: {error}'})
+            return self.send_json(200, report)
+
+        def save_dataset_as_experiment(self):
+            report_path = storage / 'measure-dataset-report' / 'report.json'
+            report = read_json(report_path)
+            if report is None:
+                try:
+                    report = analyze_measure_dataset(storage / 'measure-dataset-report')
+                except (ImportError, RuntimeError) as error:
+                    return self.send_json(503, {'error': str(error)})
+                except (OSError, ValueError) as error:
+                    return self.send_json(500, {'error': f'사진 분석을 불러오지 못했어요: {error}'})
+
+            rows = report.get('rows') if isinstance(report, dict) else None
+            if not isinstance(rows, list) or len(rows) != 20:
+                return self.send_json(422, {'error': '사진 20장의 분석 결과가 모두 있어야 새 회차로 저장할 수 있어요. 먼저 사진을 다시 분석해 주세요.'})
+
+            background_ids = {
+                'point': 'M1', 'cross': 'M2', 'charuco': 'M3', 'chaaruco_cross': 'M4'
+            }
+            garment_info = {
+                1: ('상의 외투', 'top'), 2: ('하얀 크롭티셔츠', 'top'),
+                3: ('원피스', 'dress'), 4: ('점퍼', 'top'), 5: ('바지', 'pants')
+            }
+            validated_rows = []
+            seen_pairs = set()
+            dataset_root = (PROJECT_ROOT / 'measure_dataset').resolve()
+            for row in rows:
+                if not isinstance(row, dict) or row.get('status') != 'done':
+                    return self.send_json(422, {'error': '분석이 끝나지 않은 사진이 있어요. 모든 사진을 다시 분석한 뒤 저장해 주세요.'})
+                try:
+                    garment_number = int(row.get('garmentId'))
+                    garment_name, category = garment_info[garment_number]
+                    background_key = str(row.get('backgroundId', '')).casefold()
+                    mat_id = background_ids[background_key]
+                    width = row.get('referenceWidthCm')
+                    length = row.get('referenceLengthCm')
+                    measured_width = row.get('measuredWidthCm')
+                    measured_length = row.get('measuredLengthCm')
+                    image_name = Path(str(row.get('imagePath') or row.get('imageName') or '')).name
+                    source_path = (dataset_root / str(row.get('backgroundId')) / image_name).resolve()
+                except (KeyError, TypeError, ValueError):
+                    return self.send_json(422, {'error': '사진 이름이나 배경 정보를 읽지 못했어요. 데이터셋 파일을 확인해 주세요.'})
+                if (not valid_measurement(width) or not valid_measurement(length)
+                        or not valid_measurement(measured_width) or not valid_measurement(measured_length)):
+                    return self.send_json(422, {'error': '기준 크기나 자동 측정값이 비어 있어요. 사진을 다시 분석해 주세요.'})
+                pair = (mat_id, garment_number)
+                if pair in seen_pairs:
+                    return self.send_json(422, {'error': '같은 배경과 옷의 결과가 두 번 들어 있어요. 분석 결과를 확인해 주세요.'})
+                seen_pairs.add(pair)
+                if (source_path.parent != (dataset_root / str(row.get('backgroundId'))).resolve()
+                        or not source_path.is_file() or source_path.suffix.lower() != '.jpg'):
+                    return self.send_json(422, {'error': f'{image_name} 사진 파일을 찾지 못했어요.'})
+                validated_rows.append({
+                    'matId': mat_id, 'garmentNumber': garment_number, 'garmentName': garment_name,
+                    'category': category, 'referenceWidthCm': float(width), 'referenceLengthCm': float(length),
+                    'measuredWidthCm': float(measured_width), 'measuredLengthCm': float(measured_length),
+                    'imageName': image_name, 'sourcePath': source_path,
+                })
+            if len(seen_pairs) != 20:
+                return self.send_json(422, {'error': '배경 4종과 옷 5벌의 결과가 빠짐없이 있어야 저장할 수 있어요.'})
+
+            garments_by_number = {}
+            for row in validated_rows:
+                garments_by_number[row['garmentNumber']] = {
+                    'id': f"garment-{row['garmentNumber']}", 'name': row['garmentName'],
+                    'category': row['category'], 'referenceLengthCm': row['referenceLengthCm'],
+                    'referenceWidthCm': row['referenceWidthCm'],
+                }
+            for garment_number, garment in garments_by_number.items():
+                matching = [row for row in validated_rows if row['garmentNumber'] == garment_number]
+                if any(row['referenceLengthCm'] != garment['referenceLengthCm']
+                       or row['referenceWidthCm'] != garment['referenceWidthCm'] for row in matching):
+                    return self.send_json(422, {'error': '같은 옷의 기준 크기가 사진마다 달라요. 데이터셋을 확인해 주세요.'})
+
+            run_id = str(uuid.uuid4())
+            staging_dir = experiments_dir / f'.{run_id}.tmp'
+            final_dir = experiments_dir / run_id
+            records = []
+            try:
+                (staging_dir / 'photos').mkdir(parents=True, exist_ok=False)
+                for row in validated_rows:
+                    garment_id = f"garment-{row['garmentNumber']}"
+                    filename = f"{row['matId']}-{garment_id}.jpg"
+                    shutil.copyfile(row['sourcePath'], staging_dir / 'photos' / filename)
+                    records.append({
+                        'id': f"{row['matId']}-{garment_id}", 'matId': row['matId'],
+                        'garmentId': garment_id, 'status': 'done', 'edited': False,
+                        'measuredLengthCm': row['measuredLengthCm'], 'measuredWidthCm': row['measuredWidthCm'],
+                        'errorLengthCm': round(row['measuredLengthCm'] - row['referenceLengthCm'], 1),
+                        'errorWidthCm': round(row['measuredWidthCm'] - row['referenceWidthCm'], 1),
+                        'imageName': row['imageName'], 'photoFile': filename,
+                    })
+                with lock:
+                    rounds = []
+                    if experiments_dir.exists():
+                        for folder in experiments_dir.iterdir():
+                            item = read_json(folder / 'metadata.json') if folder.is_dir() else None
+                            if item and isinstance(item.get('round'), int):
+                                rounds.append(item['round'])
+                    item = {
+                        'id': run_id, 'round': max(rounds, default=0) + 1, 'createdAt': now_text(),
+                        'completedAt': now_text(), 'completed': True,
+                        'garments': [garments_by_number[number] for number in sorted(garments_by_number)],
+                        'records': records,
+                    }
+                    write_json_safely(staging_dir / 'metadata.json', item)
+                    staging_dir.replace(final_dir)
+            except OSError:
+                shutil.rmtree(staging_dir, ignore_errors=True)
+                raise
+            return self.send_json(201, {
+                'id': run_id, 'round': item['round'], 'completed': True,
+                'garmentCount': len(item['garments']), 'recordCount': len(records),
+                'resultUrl': f"/results/index.html?run={run_id}",
+            })
+
+        def measure_uploaded_photo(self, payload):
+            mat_id = payload.get('backgroundId')
+            category = payload.get('category')
+            photo_data = payload.get('photoDataUrl', '')
+            if mat_id not in VALID_MATS or category not in VALID_CATEGORIES:
+                return self.send_json(400, {'error': '배경과 옷 종류를 다시 확인해 주세요.'})
+            if not isinstance(photo_data, str) or not photo_data.startswith('data:image/jpeg;base64,'):
+                return self.send_json(400, {'error': '사진을 JPG 형식으로 보내 주세요.'})
+            try:
+                photo_bytes = base64.b64decode(photo_data.split(',', 1)[1], validate=True)
+            except (binascii.Error, ValueError):
+                return self.send_json(400, {'error': '사진을 읽지 못했어요. 다시 촬영해 주세요.'})
+            if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
+                return self.send_json(413, {'error': '사진이 너무 커요. 크기를 줄여 다시 시도해 주세요.'})
+
+            try:
+                from tools.vision_pipeline import measure_garment, rectify_photo, image_to_data_url
+
+                flattened = rectify_photo(photo_bytes, mat_id)
+                if not flattened['ok']:
+                    return self.send_json(422, {'error': flattened['message']})
+                measured = measure_garment(flattened['image'], category=category)
+            except (ImportError, RuntimeError) as error:
+                return self.send_json(503, {'error': str(error)})
+            except (ValueError, OSError) as error:
+                return self.send_json(422, {'error': str(error)})
+
+            return self.send_json(200, {
+                'ok': True,
+                'measuredLengthCm': measured['measuredLengthCm'],
+                'measuredWidthCm': measured['measuredWidthCm'],
+                'lengthCm': measured['measuredLengthCm'],
+                'widthCm': measured['measuredWidthCm'],
+                'widthKind': measured['widthKind'],
+                'box': measured['box'],
+                'confidence': measured['confidence'],
+                'photoDataUrl': measured['overlayDataUrl'],
+                'fullPhotoDataUrl': image_to_data_url(flattened['image']),
+                'rectificationMethod': flattened['method'],
+                'message': measured['message'],
+            })
+
+        def read_experiment(self, run_id):
+            if not valid_run_id(run_id):
+                return None
+            return read_json(experiments_dir / run_id / 'metadata.json')
+
+        def list_experiments(self):
+            rows = []
+            if experiments_dir.exists():
+                for folder in experiments_dir.iterdir():
+                    item = read_json(folder / 'metadata.json') if folder.is_dir() else None
+                    if not item:
+                        continue
+                    rows.append({
+                        'id': item['id'], 'round': item['round'], 'createdAt': item['createdAt'],
+                        'completedAt': item.get('completedAt'), 'completed': item.get('completed', False),
+                        'garmentCount': len(item.get('garments', [])), 'recordCount': len(item.get('records', []))
+                    })
+            rows.sort(key=lambda item: item['round'], reverse=True)
+            return self.send_json(200, rows)
+
+        def get_experiment(self, run_id):
+            item = self.read_experiment(run_id)
+            if not item:
+                return self.send_json(404, {'error': '해당 실험 회차를 찾지 못했어요.'})
+            result = dict(item)
+            result['records'] = [dict(record, photoUrl=f"/api/experiments/{run_id}/photos/{record['photoFile']}") for record in item.get('records', [])]
+            for record in result['records']:
+                record.pop('photoFile', None)
+            return self.send_json(200, result)
+
+        def get_photo(self, run_id, filename):
+            if not valid_run_id(run_id) or not SAFE_PHOTO_NAME.fullmatch(filename):
+                return self.send_json(404, {'error': '사진을 찾지 못했어요.'})
+            path = (experiments_dir / run_id / 'photos' / filename).resolve()
+            expected_parent = (experiments_dir / run_id / 'photos').resolve()
+            if path.parent != expected_parent or not path.is_file():
+                return self.send_json(404, {'error': '사진을 찾지 못했어요.'})
+            body = path.read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/jpeg')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Cache-Control', 'private, max-age=3600')
+            self.end_headers()
+            self.wfile.write(body)
+
+        def create_experiment(self, payload):
+            garments = payload.get('garments')
+            if not isinstance(garments, list) or not 1 <= len(garments) <= 30:
+                return self.send_json(400, {'error': '옷은 1벌부터 30벌까지 등록할 수 있어요.'})
+            clean_garments = []
+            for garment in garments:
+                if not isinstance(garment, dict):
+                    return self.send_json(400, {'error': '옷 정보를 다시 확인해 주세요.'})
+                name = str(garment.get('name', '')).strip()[:24]
+                category = garment.get('category', 'other')
+                length = garment.get('referenceLengthCm')
+                width = garment.get('referenceWidthCm')
+                if (not SAFE_GARMENT_ID.fullmatch(str(garment.get('id', ''))) or not name
+                        or category not in VALID_CATEGORIES or not valid_measurement(length) or not valid_measurement(width)):
+                    return self.send_json(400, {'error': '옷 이름, 종류, 줄자 기준 크기를 확인해 주세요.'})
+                clean_garments.append({'id': garment['id'], 'name': name, 'category': category,
+                                       'referenceLengthCm': float(length), 'referenceWidthCm': float(width)})
+            with lock:
+                rounds = []
+                if experiments_dir.exists():
+                    for folder in experiments_dir.iterdir():
+                        item = read_json(folder / 'metadata.json') if folder.is_dir() else None
+                        if item and isinstance(item.get('round'), int):
+                            rounds.append(item['round'])
+                run_id = str(uuid.uuid4())
+                item = {
+                    'id': run_id, 'round': max(rounds, default=0) + 1, 'createdAt': now_text(),
+                    'completed': False, 'garments': clean_garments, 'records': []
+                }
+                (experiments_dir / run_id / 'photos').mkdir(parents=True, exist_ok=True)
+                write_json_safely(experiments_dir / run_id / 'metadata.json', item)
+            return self.send_json(201, item)
+
+        def save_record(self, run_id, payload):
+            item = self.read_experiment(run_id)
+            record = payload.get('record')
+            photo_data = payload.get('photoDataUrl', '')
+            if not item:
+                return self.send_json(404, {'error': '실험 회차를 찾지 못했어요. 새 실험을 시작해 주세요.'})
+            if not isinstance(record, dict):
+                return self.send_json(400, {'error': '측정 결과가 비어 있어요.'})
+            mat_id = record.get('matId')
+            garment_id = record.get('garmentId')
+            if mat_id not in VALID_MATS or not any(g['id'] == garment_id for g in item['garments']):
+                return self.send_json(400, {'error': '배경 또는 옷 정보를 확인해 주세요.'})
+            if not isinstance(photo_data, str) or not photo_data.startswith('data:image/jpeg;base64,'):
+                return self.send_json(400, {'error': '사진을 JPG 형식으로 저장해 주세요.'})
+            try:
+                photo_bytes = base64.b64decode(photo_data.split(',', 1)[1], validate=True)
+            except (binascii.Error, ValueError):
+                return self.send_json(400, {'error': '사진을 읽지 못했어요. 다시 촬영해 주세요.'})
+            if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
+                return self.send_json(413, {'error': '사진이 너무 커요. 다시 촬영해 주세요.'})
+            filename = f'{mat_id}-{garment_id}.jpg'
+            clean_record = {key: value for key, value in record.items() if key not in {'photo', 'rawPhoto', 'photoUrl'}}
+            clean_record['photoFile'] = filename
+            with lock:
+                item = self.read_experiment(run_id)
+                if not item:
+                    return self.send_json(404, {'error': '실험 회차를 찾지 못했어요.'})
+                photo_path = experiments_dir / run_id / 'photos' / filename
+                photo_path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = photo_path.with_suffix('.jpg.tmp')
+                temporary.write_bytes(photo_bytes)
+                temporary.replace(photo_path)
+                records = item.setdefault('records', [])
+                replaced = False
+                for index, old in enumerate(records):
+                    if old.get('id') == clean_record.get('id'):
+                        records[index] = clean_record
+                        replaced = True
+                        break
+                if not replaced:
+                    records.append(clean_record)
+                write_json_safely(experiments_dir / run_id / 'metadata.json', item)
+            return self.send_json(200, dict(clean_record, photoUrl=f'/api/experiments/{run_id}/photos/{filename}'))
+
+        def complete_experiment(self, run_id):
+            with lock:
+                item = self.read_experiment(run_id)
+                if not item:
+                    return self.send_json(404, {'error': '실험 회차를 찾지 못했어요.'})
+                expected = len(item['garments']) * 4
+                if len(item.get('records', [])) < expected:
+                    return self.send_json(400, {'error': '사진을 모두 저장한 뒤 실험을 마칠 수 있어요.'})
+                item['completed'] = True
+                item['completedAt'] = now_text()
+                write_json_safely(experiments_dir / run_id / 'metadata.json', item)
+            return self.send_json(200, {'id': run_id, 'round': item['round'], 'completed': True})
+
+    return ThreadingHTTPServer((host, port), FitShareHandler)
+
+
+def valid_measurement(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and 0 < value <= 300
+
+
+def main():
+    host = os.environ.get('FITSHARE_HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', '8000'))
+    storage = Path(os.environ.get('FITSHARE_DATA_DIR', str(DEFAULT_DATA_DIR)))
+    httpd = create_server(host, port, storage)
+    print(f'FitShare is running: http://{host}:{httpd.server_address[1]}/')
+    print(f'Experiment photos and results are saved in: {storage.resolve()}')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\nFitShare server stopped.')
+    finally:
+        httpd.server_close()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,44 +1,16 @@
-// 스마트 실측 모듈 자리: 실측 팀 학생이 이 파일을 중심으로 개발하면 됩니다.
-export function renderMeasurement(root, state) {
-  const hints = state.mockData.measurementHints;
-  const schoolCodeText = state.schoolCode
-    ? "현재 학교 코드: " + state.schoolCode
-    : "현재 학교 코드가 아직 입력되지 않았어요.";
-
-  root.innerHTML = "";
-
-  const section = document.createElement("section");
-  section.className = "module-card";
-
-  const titleEl = document.createElement("h3");
-  titleEl.className = "module-title";
-  titleEl.textContent = "스마트 실측 모듈";
-
-  const subtitleEl = document.createElement("p");
-  subtitleEl.className = "module-subtitle";
-  subtitleEl.textContent = "의류 촬영, 치수 추출 기능이 들어올 영역입니다.";
-
-  const placeholderEl = document.createElement("div");
-  placeholderEl.className = "placeholder-box";
-  placeholderEl.innerHTML = "<strong>모듈 개발 상태:</strong> 개발 중 (UI 뼈대만 연결됨)";
-
-  const schoolCodeEl = document.createElement("p");
-  schoolCodeEl.className = "module-subtitle";
-  schoolCodeEl.textContent = schoolCodeText;
-
-  const listEl = document.createElement("ul");
-  listEl.className = "sample-list";
-  hints.forEach((hint) => {
-    const itemEl = document.createElement("li");
-    itemEl.textContent = hint;
-    listEl.appendChild(itemEl);
-  });
-
-  section.appendChild(titleEl);
-  section.appendChild(subtitleEl);
-  section.appendChild(placeholderEl);
-  section.appendChild(schoolCodeEl);
-  section.appendChild(listEl);
-
-  root.appendChild(section);
+// ChArUco 교차점 옷 등록으로 안내하고 비교 실험도 계속 열 수 있게 합니다.
+export function renderMeasurement(root) {
+  root.innerHTML = `
+    <article class="module-card measurement-entry">
+      <div class="module-emoji" aria-hidden="true">📏</div>
+      <div>
+        <h3>옷을 등록해 볼까요?</h3>
+        <p>ChArUco 교차점 매트에 옷을 놓고 사진을 찍으면 컴퓨터가 옷 종류와 색, 길이와 너비를 먼저 찾아요. 값을 확인하고 고친 다음 저장해요.</p>
+        <a class="measurement-start-link" href="measure/register.html">ChArUco로 옷 등록하기 <span aria-hidden="true">→</span></a>
+        <a class="measurement-history-link" href="measure/index.html">네 가지 배경 비교 실험</a>
+        <a class="measurement-history-link" href="results/sessions.html">저장된 실험 회차 보기</a>
+        <span class="module-tag">남녀용은 사진만으로 알 수 없어 직접 확인해요</span>
+      </div>
+    </article>`;
+  root.dataset.module = 'measurement';
 }

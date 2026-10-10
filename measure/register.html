@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ChArUco 교차점 매트로 옷을 살펴보고 스마트 옷장에 등록해요.">
+  <title>옷 등록 | FitShare</title>
+  <link rel="stylesheet" href="../css/styles.css?v=garment-registration-3">
+  <link rel="stylesheet" href="../css/measurement.css?v=garment-registration-3">
+  <link rel="stylesheet" href="../css/garment-registration.css?v=registration-camera-1">
+</head>
+<body class="measurement-page">
+  <div class="measurement-shell registration-shell">
+    <header class="measurement-header"><a href="../index.html" class="measurement-brand">← FitShare 홈</a><span>사진과 등록 정보는 서버 PC에 저장돼요</span></header>
+    <main id="garment-registration" aria-live="polite">
+      <section class="measurement-panel registration-panel">
+        <p class="eyebrow">SMART CLOSET</p>
+        <h1>사진으로 옷을 등록해요</h1>
+        <p class="measurement-intro">세 단계만 따라 하면 돼요. 컴퓨터가 찾아준 값은 저장하기 전에 꼭 살펴봐요.</p>
+        <ol class="registration-steps">
+          <li><b>1</b><span><strong>옷을 펴요</strong><small>ChArUco 교차점 매트 위에 한 벌만 놓아요.</small></span></li>
+          <li><b>2</b><span><strong>사진을 찍어요</strong><small>매트 바깥 표식과 옷 전체가 보이게 찍어요.</small></span></li>
+          <li><b>3</b><span><strong>확인하고 저장해요</strong><small>종류와 숫자를 고친 뒤 옷장에 넣어요.</small></span></li>
+        </ol>
+        <label class="registration-type-label" for="background-id">사진에 놓인 배경을 골라 주세요
+          <select id="background-id" required>
+            <option value="M1">점 배경</option>
+            <option value="M2">격자 배경</option>
+            <option value="M3">ChArUco 배경</option>
+            <option value="M4" selected>ChArUco 격자 (기본)</option>
+          </select>
+        </label>
+        <p class="registration-mat-note"><strong>고른 배경과 사진 속 배경이 같아야 길이를 잘 잴 수 있어요.</strong><span>옷 전체와 배경 매트의 바깥쪽이 사진에 모두 보이도록 찍어 주세요.</span></p>
+
+        <section class="registration-photo-area" aria-labelledby="registration-photo-title">
+          <h2 id="registration-photo-title">옷 사진을 골라 주세요</h2>
+          <label class="registration-type-label">옷 종류를 먼저 골라 주세요<select id="garment-type" required>
+            <option value="" selected disabled>종류를 선택해 주세요</option><option value="1">1. 상의 외투</option><option value="2">2. 크롭 티셔츠</option><option value="3">3. 원피스</option><option value="4">4. 점퍼</option><option value="5">5. 바지</option>
+          </select></label>
+          <p class="registration-help">종류마다 재는 위치가 달라요. 옷 종류를 골라야 실험과 같은 기준으로 측정할 수 있어요.</p>
+          <div class="registration-file-actions">
+            <button id="open-camera" class="registration-file-button" type="button" aria-controls="camera-panel">📷 카메라로 촬영</button>
+            <label class="registration-file-button">🖼️ 갤러리에서 사진 고르기<input id="gallery-photo" type="file" accept="image/*"></label>
+          </div>
+          <section id="camera-panel" class="registration-camera" aria-labelledby="camera-title" hidden>
+            <h3 id="camera-title">카메라로 옷 사진을 찍어요</h3>
+            <video id="camera-video" class="registration-preview" autoplay muted playsinline aria-label="카메라 영상 미리보기"></video>
+            <p id="camera-status" class="registration-status" role="status"></p>
+            <div class="registration-file-actions">
+              <button id="capture-camera" class="primary-action" type="button" disabled>사진 찍기</button>
+              <button id="close-camera" class="registration-file-button" type="button">카메라 닫기</button>
+            </div>
+          </section>
+          <label id="native-camera-action" class="registration-file-button" hidden>📷 휴대폰 기본 카메라로 촬영<input id="camera-photo" type="file" accept="image/*" capture="environment"></label>
+          <p class="registration-help">얼굴과 이름표는 사진에 나오지 않게 해요. 옷을 매트 가운데에 놓고 카메라는 위에서 찍어요.</p>
+          <img id="garment-preview" class="registration-preview" alt="선택한 옷 사진 미리보기" hidden>
+          <button id="analyze-garment" class="primary-action" type="button" disabled>사진 살펴보기</button>
+          <p id="analysis-status" class="registration-status" role="status"></p>
+        </section>
+
+        <form id="garment-form" class="registration-form" hidden>
+          <h2>찾은 내용을 확인해요</h2>
+          <p id="review-note" class="registration-help">초록 선은 옷 테두리, 주황 선은 길이, 파란 선은 너비예요. 틀린 값은 직접 바꿔도 돼요.</p>
+          <img id="analysis-preview" class="registration-preview analysis-preview" alt="컴퓨터가 찾은 옷 테두리와 측정선">
+          <label>옷 이름<input name="name" maxlength="60" placeholder="예: 파란 점퍼" required></label>
+          <p id="chosen-garment-type" class="registration-type-summary"></p>
+          <div class="registration-measurements">
+            <label><span id="width-label">가슴 너비(cm)</span><input name="widthCm" type="number" min="1" max="300" step="0.1" required></label>
+            <label>기장(cm)<input name="lengthCm" type="number" min="1" max="300" step="0.1" required></label>
+          </div>
+          <label>대표 색<input name="colorName" maxlength="30" required></label>
+          <p id="owner-note" class="registration-help">올린 사람은 로그인한 내 이름으로 자동으로 적혀요.</p>
+          <label>이 옷은 어떤 옷인가요?<select name="gender" required>
+            <option value="" selected disabled>직접 골라 주세요</option><option value="male">남성용</option><option value="female">여성용</option><option value="unisex">공용</option><option value="unknown">잘 모르겠어요</option>
+          </select></label>
+          <p class="registration-help">옷 사진만으로 남성용·여성용을 정확히 나눌 수는 없어요. 옷의 표기를 보거나 어른과 함께 골라 주세요.</p>
+          <button class="primary-action" type="submit">이 옷을 저장하기</button>
+          <p id="save-status" class="registration-status" role="status"></p>
+        </form>
+      </section>
+
+      <section class="measurement-panel registered-garments" aria-labelledby="registered-garments-title">
+        <h2 id="registered-garments-title">우리 옷장에 등록한 옷</h2>
+        <p id="garment-list-status" class="registration-help" role="status">저장된 옷을 불러오고 있어요…</p>
+        <div id="garment-list" class="registered-garment-list"></div>
+        <nav id="garment-list-pages" class="closet-pagination" aria-label="옷장 페이지"></nav>
+      </section>
+    </main>
+    <footer class="measurement-footer">사진은 FitShare를 실행하는 서버 PC에 저장돼요. 선생님과 함께 사용해요.</footer>
+  </div>
+  <script type="module" src="../js/measurement/register.js?v=registration-camera-1"></script>
+</body>
+</html>

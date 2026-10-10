@@ -1,0 +1,76 @@
+/* 참여 랭킹 화면 전용 스타일입니다. 공통 변수(--ink, --blue 등)는 styles.css 것을 그대로 씁니다. */
+.ranking-panel { padding:24px; border:1px solid var(--line); border-radius:20px; background:#fff; }
+.ranking-intro { display:flex; align-items:center; gap:18px; }
+.ranking-intro h3 { margin:0 0 5px; font:24px 'Jua'; }
+.ranking-intro p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }
+.rk-month { margin-left:6px; padding:3px 9px; border-radius:999px; color:#438772; background:#e9faf5; font:700 12px 'Noto Sans KR'; vertical-align:middle; }
+.rk-message { min-height:20px; margin:14px 0 4px; color:#368c71; font-size:12px; font-weight:700; }
+.rk-message.is-error { color:#d4493d; }
+.rk-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:8px 0 12px; }
+.rk-grid-wide { grid-template-columns:1.2fr .8fr; margin-bottom:12px; }
+.rk-box { padding:15px; border:1px solid #edf0f5; border-radius:15px; background:#fbfcff; }
+.rk-box h4 { margin:0 0 11px; font:18px 'Jua'; }
+.rk-box h4 small { color:var(--muted); font:11px 'Noto Sans KR'; }
+.rk-label { display:block; margin:9px 0 5px; color:var(--muted); font-size:11px; font-weight:700; }
+.rk-box select, .rk-box input { width:100%; padding:9px 10px; border:1px solid #dce5f2; border-radius:9px; color:var(--ink); background:#fff; font-size:13px; }
+.rk-box button[type=submit], .rk-ghost { padding:9px 13px; border:0; border-radius:9px; color:#fff; background:var(--blue); font-size:12px; font-weight:800; white-space:nowrap; }
+.rk-ghost { margin-top:10px; border:1px solid #c7d7f6; color:var(--blue); background:#fff; }
+.rk-ghost[hidden] { display:none; }
+.rk-row { display:flex; gap:8px; margin-top:10px; }
+.rk-row input, .rk-row select { flex:1; min-width:0; }
+.rk-stack button { margin-top:12px; width:100%; }
+.rk-empty { margin:0; padding:14px 10px; border-radius:11px; color:var(--muted); background:#f4f7fc; text-align:center; font-size:12px; list-style:none; }
+.rk-pending-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid #edf0f5; }
+.rk-pending-item:last-child { border-bottom:0; }
+.rk-pending-item span { display:block; margin-top:3px; color:var(--muted); font-size:11px; }
+.rk-pending-item .rk-row { margin:0; flex:none; }
+.rk-pending-item select { width:84px; flex:none; }
+.rk-wait { margin:0; color:#8a6b14; font-size:12px; font-weight:700; }
+.rk-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.rk-board { display:flex; flex-direction:column; gap:7px; margin:0; padding:0; list-style:none; }
+.rk-rank { display:grid; grid-template-columns:34px 1fr auto; align-items:center; gap:2px 8px; padding:10px 12px; border:1px solid #edf0f5; border-radius:12px; background:#fff; }
+.rk-rank-1 { border-color:#ffe29a; background:#fffaf0; }
+.rk-rank-2 { border-color:#d9dfeb; background:#f8f9fc; }
+.rk-rank-3 { border-color:#f2d3b8; background:#fff8f3; }
+.rk-place { grid-row:span 2; font-size:22px; text-align:center; }
+.rk-name { padding:0; border:0; color:var(--ink); background:none; text-align:left; font-size:14px; font-weight:800; text-decoration:underline dotted; }
+.rk-pts { color:var(--blue); font:20px 'Jua'; }
+.rk-sub { grid-column:2 / 4; color:var(--muted); font-size:11px; }
+.rk-profile-name { margin:0 0 10px; font:20px 'Jua'; }
+.rk-stats { display:grid; gap:7px; margin:0; }
+.rk-stats div { display:flex; justify-content:space-between; padding:8px 10px; border-radius:9px; background:#f4f7fc; font-size:12px; }
+.rk-stats dt { color:var(--muted); }.rk-stats dd { margin:0; font-weight:800; }
+.rk-badges { display:flex; flex-wrap:wrap; gap:7px; margin:0; padding:0; list-style:none; }
+.rk-badges li { display:flex; align-items:center; gap:5px; padding:6px 9px; border-radius:999px; background:#fff3cf; font-size:18px; }
+.rk-badges span { color:#7a5c0b; font-size:11px; font-weight:800; }
+.rk-recent { display:flex; flex-direction:column; gap:7px; margin:0; padding:0; list-style:none; font-size:12px; }
+.rk-recent li:not(.rk-empty) { padding:9px 11px; border-radius:10px; background:#f4f7fc; }
+.rk-recent span { display:block; margin-top:3px; color:#368c71; font-weight:700; }
+@media (max-width:700px) {
+  .ranking-panel { padding:16px; }
+  .ranking-intro { gap:11px; }.ranking-intro h3 { font-size:20px; }.ranking-intro p { font-size:11px; }
+  .rk-grid, .rk-grid-wide { grid-template-columns:1fr; }
+  .rk-pending-item { flex-direction:column; align-items:stretch; }
+}
+
+.rk-review-form { display:flex; flex-direction:column; gap:5px; margin-bottom:9px; }
+.rk-review-form input { flex:1; min-width:0; }
+.rk-reviews { display:flex; flex-direction:column; gap:6px; margin:0 0 10px; padding:0; list-style:none; font-size:12px; }
+.rk-reviews li { padding:8px 10px; border-radius:10px; background:#f4f7fc; }
+.rk-reviews span { display:block; margin-top:3px; color:#33415c; overflow-wrap:anywhere; }
+
+.school-closet-card.is-openable { cursor:pointer; }
+.school-closet-card.is-openable:focus-visible { outline:3px solid #3b6fd8; outline-offset:2px; }
+.garment-detail { width:min(92vw,420px); max-height:90vh; padding:18px; border:0; border-radius:16px; box-shadow:0 12px 40px rgba(20,30,60,.3); }
+.garment-detail::backdrop { background:rgba(20,30,60,.45); }
+.garment-detail h2 { margin:0 0 10px; font-size:18px; overflow-wrap:anywhere; }
+.garment-detail-photo { display:block; width:100%; max-height:260px; object-fit:contain; border-radius:12px; background:#f4f7fc; }
+.garment-detail-info { margin:12px 0; display:flex; flex-direction:column; gap:6px; font-size:13px; }
+.garment-detail-info div { display:flex; gap:10px; }
+.garment-detail-info dt { flex:0 0 96px; color:#5b6b86; font-weight:700; }
+.garment-detail-info dd { margin:0; overflow-wrap:anywhere; }
+.garment-detail-status { margin:6px 0; font-weight:800; font-size:14px; }
+.garment-detail label input { display:block; width:100%; margin-top:4px; box-sizing:border-box; }
+.garment-detail-message { min-height:1.2em; margin:6px 0; font-size:12px; font-weight:700; color:#368c71; }
+.garment-detail-message.is-error { color:#c0392b; }
+.garment-detail-buttons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="실측 배경 네 종류의 자동 옷 치수 측정 결과 비교" />
+    <title>실측 배경 비교 | FitShare</title>
+    <link rel="stylesheet" href="css/styles.css?v=pipeline-guide-2" />
+    <link rel="stylesheet" href="css/measurement.css?v=pipeline-guide-4" />
+  </head>
+  <body class="measurement-page">
+    <main class="measurement-shell dataset-shell">
+      <header class="measurement-header">
+        <a class="measurement-brand" href="index.html">← FitShare 홈</a>
+        <span>실측 배경 비교 실험</span>
+      </header>
+      <section class="measurement-panel dataset-panel" aria-labelledby="dataset-title">
+        <p class="eyebrow">MEASURE DATASET LAB</p>
+        <h1 id="dataset-title">어떤 배경이 옷 치수를 잘 찾을까요?</h1>
+        <p class="measurement-intro">같은 다섯 벌의 옷을 네 가지 배경에서 찍었어요. 컴퓨터가 사진을 펴고 옷의 길이와 너비를 찾은 다음, 파일에 적힌 기준 치수와 비교해요.</p>
+        <div class="kid-help"><strong>결과 읽는 법</strong><br />오차가 작을수록 기준 치수와 비슷해요. 초록색 선은 컴퓨터가 찾은 옷 부분이고, 파란 선은 너비, 주황 선은 기장이에요.</div>
+        <section class="pipeline-guide" aria-labelledby="pipeline-guide-title">
+          <p class="eyebrow">사진 분석 순서</p>
+          <h2 id="pipeline-guide-title">컴퓨터는 사진을 이렇게 살펴봐요</h2>
+          <p class="pipeline-guide-intro">사진에서 배경과 옷을 차례로 찾아요. 그림을 따라가며 어떤 일이 일어나는지 확인해 봐요.</p>
+          <div class="pipeline-steps">
+            <article class="pipeline-step">
+              <div class="pipeline-illustration">
+                <svg viewBox="0 0 120 88" role="img" aria-label="옷이 놓인 사진을 컴퓨터에 넣는 그림">
+                  <rect x="24" y="10" width="72" height="66" rx="8" fill="#ffffff" stroke="#b8c9e3" stroke-width="3" transform="rotate(-7 60 43)" />
+                  <path d="M49 28l-11 7 6 11 6-3v21h24V43l6 3 6-11-11-7-7 5h-12z" fill="#8eb8ff" stroke="#4776c6" stroke-width="2" stroke-linejoin="round" />
+                  <circle cx="88" cy="65" r="12" fill="#e6f6f0" stroke="#4ba98a" stroke-width="2" />
+                  <path d="M88 58v14m-7-7h14" stroke="#318366" stroke-width="2.5" stroke-linecap="round" />
+                </svg>
+              </div>
+              <span class="pipeline-number">1</span>
+              <h3>사진을 준비해요</h3>
+              <p class="pipeline-step-copy">사진 크기를 알맞게 줄여서 컴퓨터가 빠르게 살펴볼 수 있게 해요.</p>
+              <div class="pipeline-technique"><span>사용 도구</span><strong>OpenCV (cv2)</strong><small>이미지 읽기 · cv2.resize · INTER_AREA</small></div>
+            </article>
+            <article class="pipeline-step">
+              <div class="pipeline-illustration">
+                <svg viewBox="0 0 120 88" role="img" aria-label="사진의 점, 격자, ChArUco 표식을 찾는 그림">
+                  <rect x="15" y="10" width="90" height="68" rx="8" fill="#fbfdff" stroke="#9eb3d1" stroke-width="2" />
+                  <path d="M37 11v66m22-66v66m22-66v66M16 32h88M16 54h88" stroke="#d7e1ef" stroke-width="1.5" />
+                  <g fill="#355477"><circle cx="26" cy="21" r="2.4"/><circle cx="48" cy="21" r="2.4"/><circle cx="70" cy="21" r="2.4"/><circle cx="92" cy="21" r="2.4"/><circle cx="26" cy="43" r="2.4"/><circle cx="92" cy="43" r="2.4"/><circle cx="26" cy="65" r="2.4"/><circle cx="48" cy="65" r="2.4"/><circle cx="70" cy="65" r="2.4"/><circle cx="92" cy="65" r="2.4"/></g>
+                  <circle cx="59" cy="43" r="13" fill="#e8f2ff" stroke="#4b83f5" stroke-width="2.5" />
+                  <path d="M53 43l4 4 8-9" fill="none" stroke="#3470da" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <span class="pipeline-number">2</span>
+              <h3>배경 표식을 찾아요</h3>
+              <p class="pipeline-step-copy">점, 격자, ChArUco 무늬 중 사진에 있는 표식을 찾아요.</p>
+              <div class="pipeline-technique"><span>사용 패키지 · OpenCV contrib · NumPy</span><ul><li><b>점:</b> 임계값 찾기 · 연결 요소</li><li><b>격자:</b> Canny 선 찾기 · Hough 선 검출</li><li><b>ChArUco:</b> ArUco 표식 검출기</li></ul><small>ArUco는 opencv-contrib-python-headless에 포함돼요.</small></div>
+            </article>
+            <article class="pipeline-step">
+              <div class="pipeline-illustration">
+                <svg viewBox="0 0 120 88" role="img" aria-label="기울어진 사진을 네모난 사진으로 펴는 그림">
+                  <path d="M14 25l32-10 13 48-32 10z" fill="#eaf2ff" stroke="#7497cb" stroke-width="2.5" />
+                  <path d="M24 34l11-4 4 15-11 4z" fill="#80aef3" />
+                  <path d="M53 43h17m-6-6 6 6-6 6" fill="none" stroke="#4b83f5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                  <rect x="77" y="15" width="31" height="58" rx="3" fill="#fff" stroke="#4c77b9" stroke-width="2.5" />
+                  <path d="M85 26h15M85 35h15M85 44h15M85 53h15M85 62h15" stroke="#c8d8ee" stroke-width="2" />
+                  <path d="M92 15v58" stroke="#8eb8ff" stroke-width="1.5" />
+                </svg>
+              </div>
+              <span class="pipeline-number">3</span>
+              <h3>사진을 반듯하게 펴요</h3>
+              <p class="pipeline-step-copy">표식의 위치를 기준으로 비스듬한 사진을 위에서 본 것처럼 바꿔요.</p>
+              <div class="pipeline-technique"><span>사용 도구</span><strong>OpenCV · 원근 변환</strong><small>getPerspectiveTransform · warpPerspective<br />ChArUco는 RANSAC 평면 변환도 사용해요.</small></div>
+            </article>
+            <article class="pipeline-step">
+              <div class="pipeline-illustration">
+                <svg viewBox="0 0 120 88" role="img" aria-label="옷 윤곽을 찾고 너비와 기장을 재는 그림">
+                  <path d="M48 15l-18 10-9 17 13 7 7-9v32h38V40l7 9 13-7-9-17-18-10-8 7h-8z" fill="#eaf2ff" stroke="#4b83f5" stroke-width="2.5" stroke-linejoin="round" />
+                  <path d="M38 48h44" stroke="#286fce" stroke-width="3" stroke-linecap="round" />
+                  <path d="M38 44v8m44-8v8" stroke="#286fce" stroke-width="2" />
+                  <path d="M94 22v48" stroke="#ef9c3b" stroke-width="3" stroke-linecap="round" />
+                  <path d="M90 22h8m-8 48h8" stroke="#ef9c3b" stroke-width="2" />
+                </svg>
+              </div>
+              <span class="pipeline-number">4</span>
+              <h3>옷의 너비와 기장을 재요</h3>
+              <p class="pipeline-step-copy">옷의 바깥 모양을 찾고, 가로 너비와 세로 길이를 재요.</p>
+              <div class="pipeline-technique"><span>사용 도구 · OpenCV / NumPy</span><small>GrabCut 영역 분리 · CIELAB 색 비교 · 모양 다듬기 · 연결 요소</small></div>
+            </article>
+            <article class="pipeline-step">
+              <div class="pipeline-illustration">
+                <svg viewBox="0 0 120 88" role="img" aria-label="기준 크기와 측정 크기를 비교하는 그림">
+                  <rect x="16" y="13" width="88" height="62" rx="10" fill="#fff" stroke="#c4d2e6" stroke-width="2" />
+                  <text x="28" y="32" fill="#60728e" font-size="10" font-family="sans-serif">기준</text>
+                  <text x="28" y="54" fill="#60728e" font-size="10" font-family="sans-serif">측정</text>
+                  <path d="M58 28h27" stroke="#7ca6e8" stroke-width="7" stroke-linecap="round" />
+                  <path d="M58 50h20" stroke="#58b694" stroke-width="7" stroke-linecap="round" />
+                  <circle cx="91" cy="57" r="9" fill="#e7f7f1" />
+                  <path d="M87 57l3 3 5-6" fill="none" stroke="#318366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <span class="pipeline-number">5</span>
+              <h3>기준 크기와 비교해요</h3>
+              <p class="pipeline-step-copy">파일 이름에 적힌 기준 크기와 재어 본 값을 비교해 차이를 보여줘요.</p>
+              <div class="pipeline-technique"><span>사용 도구</span><strong>Python re · 평균 절대 오차(MAE)</strong><small>파일 이름의 w(너비), h(기장)를 읽어 차이의 평균을 계산해요.</small></div>
+            </article>
+          </div>
+          <p class="pipeline-guide-note">이 과정은 OpenCV 이미지 처리 규칙을 사용하는 컴퓨터 비전이에요. 학습된 AI 모델은 사용하지 않아요. 측정은 예상값이므로 옷 모양과 사진에 따라 실제 줄자 값과 다를 수 있어요.</p>
+        </section>
+        <div class="dataset-toolbar">
+          <p id="dataset-status" role="status" aria-live="polite">저장된 실험 결과를 불러오고 있어요.</p>
+          <button class="secondary-action" id="dataset-rerun" type="button">사진 다시 분석하기</button>
+        </div>
+        <div class="dataset-save-row">
+          <button class="primary-action" id="dataset-save-round" type="button" disabled>새 회차로 저장</button>
+          <a class="secondary-action" href="results/sessions.html">저장된 회차 보기</a>
+          <p id="dataset-save-status" role="status" aria-live="polite">분석이 모두 끝나면 결과를 새 회차로 저장할 수 있어요.</p>
+        </div>
+        <section id="dataset-summary" class="dataset-summary" aria-label="전체 결과"></section>
+        <section id="ai-model-comparison" class="dataset-section model-comparison-section" aria-labelledby="ai-model-heading">
+          <h2 id="ai-model-heading">AI 실험 결과 비교</h2>
+          <p>같은 ChArUco 격자 사진 5장을 여러 방법으로 재어 봤어요. 위의 전체 20장 결과와 사진 수가 다르니 따로 살펴봐 주세요.</p>
+          <p id="ai-model-status" class="analysis-note" role="status" aria-live="polite">저장된 AI 실험 결과를 불러오고 있어요.</p>
+          <div id="ai-model-summary" class="dataset-table-wrap"></div>
+          <div id="ai-model-details" class="model-comparison-list"></div>
+          <div class="model-comparison-notes">
+            <p id="deepfashion2-note"></p>
+            <p id="model-provenance-warning" hidden></p>
+          </div>
+        </section>
+        <section class="dataset-section" aria-labelledby="background-heading">
+          <h2 id="background-heading">배경별 결과</h2>
+          <p>배경마다 너비와 기장의 평균 오차가 어떻게 다른지 살펴봐요.</p>
+          <div id="background-results" class="dataset-table-wrap"></div>
+        </section>
+        <section class="dataset-section" aria-labelledby="garment-heading">
+          <h2 id="garment-heading">옷 종류별 결과</h2>
+          <p>옷 모양에 따라 측정이 달라지는지도 비교해요.</p>
+          <div id="garment-results" class="dataset-table-wrap"></div>
+        </section>
+        <section class="dataset-section" aria-labelledby="photos-heading">
+          <h2 id="photos-heading">사진과 측정값 자세히 보기</h2>
+          <div class="dataset-filters">
+            <label>배경
+              <select id="filter-background"><option value="all">모든 배경</option></select>
+            </label>
+            <label>옷
+              <select id="filter-garment"><option value="all">모든 옷</option></select>
+            </label>
+          </div>
+          <div id="dataset-photos" class="dataset-photo-list"></div>
+        </section>
+        <p class="dataset-footnote">이 숫자는 이 실험 사진에서 컴퓨터가 찾은 결과예요. 사진을 놓은 방법과 옷의 주름에 따라 달라질 수 있어요. 기준 치수는 파일 이름의 w(너비), h(기장)를 cm로 읽었고, 바지는 허리 너비를 비교했어요.</p>
+      </section>
+    </main>
+    <script type="module" src="js/measurement/datasetReport.js?v=model-comparison-1"></script>
+  </body>
+</html>

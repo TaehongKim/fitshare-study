@@ -1,35 +1,15 @@
-// 공통 데모 데이터: 실제 서버 없이도 화면이 바로 보이도록 사용합니다.
+// 실제 서버 대신 화면을 채워 주는 연습용 데이터입니다.
 export const mockData = {
-  processSteps: [
-    {
-      title: "1. 의류 촬영 및 데이터화",
-      description:
-        "기부할 옷 사진을 등록하면 치수 추출 모듈이 연결될 자리를 준비합니다.",
-    },
-    {
-      title: "2. 키/몸무게 기반 매칭",
-      description:
-        "학생 신체 정보로 맞는 사이즈를 찾는 로직이 들어갈 자리를 분리해 둡니다.",
-    },
-    {
-      title: "3. 맞춤 코디 추천",
-      description:
-        "교복/체육복/일상복 추천 모듈이 결과를 렌더링할 영역을 제공합니다.",
-    },
-  ],
-  measurementHints: [
-    "카메라 업로드 UI 연결 예정",
-    "어깨너비/가슴단면/총기장 자동 추출 예정",
-    "학생이 이해하기 쉬운 안내 문구 우선 적용",
-  ],
-  recommendationHints: [
-    "신체 데이터 기반 사이즈 점수 계산 예정",
-    "색상/스타일 조합 추천 카드 출력 예정",
-    "학부모용 설명 모드(쉬운 문장) 연결 예정",
-  ],
-  rankingHints: [
-    "반별 참여 점수 집계 예정",
-    "기부 횟수/수령 횟수 배지 시스템 예정",
-    "월별 챌린지 순위판 연결 예정",
-  ],
+  measurement: { emoji: '📏', title: '스마트 실측', description: '키와 몸무게를 기록하면 나에게 잘 맞는 옷을 찾는 데 도움을 줄 수 있어요.', tag: '실측 모듈 준비 중' },
+  recommendation: {
+    emoji: '🧥', title: '맞춤 추천', description: '내 정보와 옷장 속 아이템을 바탕으로 즐거운 코디를 추천해 드릴게요.', tag: '가상 데이터로 체험하기',
+    items: [
+      { id: 1, name: '햇살 노랑 후드티', emoji: '👕', gender: '남학생', category: '상의', season: '봄', size: '150', style: '편한 스타일', color: '밝은 색', condition: '좋음', description: '가볍고 활동하기 편한 후드티예요.' },
+      { id: 2, name: '구름빛 조거 바지', emoji: '👖', gender: '남학생', category: '하의', season: '봄', size: '150', style: '활동적인 스타일', color: '밝은 색', condition: '좋음', description: '친구들과 뛰어놀 때 잘 어울려요.' },
+      { id: 3, name: '포근한 민트 가디건', emoji: '🧥', gender: '여학생', category: '외투', season: '봄', size: '145', style: '편한 스타일', color: '밝은 색', condition: '좋음', description: '아침저녁 쌀쌀할 때 걸치기 좋아요.' },
+      { id: 4, name: '활기찬 파랑 반팔', emoji: '👚', gender: '여학생', category: '상의', season: '여름', size: '150', style: '활동적인 스타일', color: '밝은 색', condition: '보통', description: '더운 날 시원하게 입을 수 있어요.' },
+      { id: 5, name: '단정한 네이비 셔츠', emoji: '👔', gender: '남학생', category: '상의', season: '봄', size: '155', style: '편한 스타일', color: '어두운 색', condition: '좋음', description: '발표나 특별한 날에 잘 어울려요.' }
+    ]
+  },
+  ranking: { emoji: '🏆', title: '참여 랭킹', description: '친구들과 함께 나눈 옷과 절약한 자원을 확인할 수 있어요.', tag: '랭킹 모듈 준비 중' }
 };
