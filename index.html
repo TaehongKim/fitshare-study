@@ -1,77 +1,95 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FitShare | 학교 의류 자원 순환</title>
-    <meta
-      name="description"
-      content="초등 코딩 페스티벌용 FitShare 공통 웹페이지 기본 틀"
-    />
-    <link rel="stylesheet" href="./css/styles.css" />
-  </head>
-  <body>
-    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
-    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitShare · 학교 스마트 옷장</title>
+  <meta name="description" content="AI 기반 학교 의류 자원 순환 시스템 FitShare" />
 
-    <header class="site-header container">
-      <div class="brand-row">
-        <span class="brand-badge">FitShare</span>
-        <p class="brand-caption">AI 기반 학교 의류 자원 순환 시스템</p>
+  <!-- 공통 디자인은 모두 이 파일에 있어요 -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ① 헤더: 로고와 서비스 설명 -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-top">
+        <span class="logo">🌱 FitShare</span>
+        <!-- 입장한 학교 이름은 app.js가 채워 넣어요. 누르면 학교를 바꿀 수 있어요 -->
+        <button id="school-badge" class="school-badge" type="button" hidden>🎒 학교 바꾸기</button>
       </div>
 
-      <h1 class="hero-title">버려지는 아동복, 학교에서 다시 빛나다</h1>
-      <p class="hero-text">
-        학교 코드로 스마트 옷장에 입장하고, 의류 실측 데이터와 신체 매칭으로
-        맞춤 추천까지 연결하는 교육용 프로젝트입니다.
-      </p>
+      <h1 class="hero-title">fitshare,<br />AI로 옷을 나눔하다</h1>
+      <p class="hero-desc">작아진 옷은 학교 스마트 옷장에 맡기고, 내 몸에 맞는 옷을 다시 찾아가요.</p>
 
-      <form id="school-entry-form" class="entry-form" autocomplete="off">
-        <label for="school-code" class="entry-label">학교 코드 입력</label>
-        <div class="entry-row">
-          <input
-            id="school-code"
-            name="schoolCode"
-            type="text"
-            placeholder="예: seosol-elementary"
-            required
-          />
-          <button type="submit">스마트 옷장 입장</button>
+      <!-- FitShare가 움직이는 3단계 -->
+      <ol class="flow">
+        <li><span class="flow-icon">📷</span>옷 촬영</li>
+        <li><span class="flow-icon">📏</span>신체 매칭</li>
+        <li><span class="flow-icon">✨</span>코디 추천</li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- ⓪ 학교 이름 입력: 학교에 입장하기 전에만 보여요 -->
+  <section id="school-gate" class="container gate">
+    <div class="card">
+      <h2 class="card-title">🎒 스마트 옷장 입장하기</h2>
+      <p class="card-desc">우리 학교 이름을 한글로 입력해 주세요.</p>
+      <form id="school-form" novalidate>
+        <label class="field-label" for="school-code">학교 이름</label>
+        <div class="input-row">
+          <input id="school-code" class="text-input" type="text" autocomplete="off"
+                 maxlength="20" placeholder="예: 푸른숲초등학교" />
+          <button class="btn" type="submit">입장하기</button>
         </div>
-        <p id="entry-message" class="entry-message" aria-live="polite"></p>
+        <p id="school-message" class="form-message is-error" role="alert" hidden></p>
       </form>
-    </header>
+      <p class="form-message">연습용 학교: 대전전민초등학교 · 푸른숲초등학교 · 햇살초등학교 · 햇살마루초등학교 · 별빛초등학교</p>
+    </div>
+  </section>
 
-    <main class="container">
-      <section class="process-section" aria-labelledby="process-title">
-        <h2 id="process-title">스마트 옷장 핵심 흐름</h2>
-        <div id="process-list" class="process-grid"></div>
-      </section>
+  <!-- ② 탭 메뉴: 누르면 아래 모듈 영역이 바뀌어요 (입장한 뒤에 보여요) -->
+  <nav id="tabs" class="tabs" aria-label="FitShare 기능 메뉴" hidden>
+    <div class="container tab-list" role="tablist">
+      <button class="tab" type="button" role="tab" data-tab="measurement" aria-selected="true">📏 스마트 실측</button>
+      <button class="tab" type="button" role="tab" data-tab="recommendation" aria-selected="false">👕 맞춤 추천</button>
+      <button class="tab" type="button" role="tab" data-tab="sharing" aria-selected="false">🤝 나눔</button>
+      <button class="tab" type="button" role="tab" data-tab="ranking" aria-selected="false">🏆 참여 랭킹</button>
+    </div>
+  </nav>
 
-      <section class="workspace-section" aria-labelledby="workspace-title">
-        <h2 id="workspace-title">모듈 작업 공간</h2>
+  <!-- ③ 모듈 영역: 학생들이 만든 모듈이 이 안에 그려져요 -->
+  <main id="main" class="container" hidden>
+    <section id="module-root" class="module-root" role="tabpanel" aria-live="polite"></section>
+  </main>
 
-        <nav class="tab-nav" aria-label="기능 탭">
-          <button class="tab-button is-active" data-tab="measurement" type="button">
-            스마트 실측
-          </button>
-          <button class="tab-button" data-tab="recommendation" type="button">
-            맞춤 추천
-          </button>
-          <button class="tab-button" data-tab="ranking" type="button">
-            참여 랭킹
-          </button>
-        </nav>
+  <!-- ④ 하단: 개발팀과 테스트 안내 -->
+  <footer class="footer">
+    <div class="container">
+      <h2 class="footer-title">👩‍💻 개발팀</h2>
+      <ul class="team-list">
+        <li><strong>스마트 실측</strong> · 학생 A · <code>modules/measurement.js</code></li>
+        <li><strong>맞춤 추천</strong> · 학생 B · <code>modules/recommendation.js</code></li>
+        <li><strong>나눔</strong> · 담당 정하기 · <code>modules/sharing.js</code></li>
+        <li><strong>참여 랭킹</strong> · 학생 C · <code>modules/ranking.js</code></li>
+      </ul>
 
-        <div id="module-root" class="module-root" aria-live="polite"></div>
-      </section>
-    </main>
+      <h2 class="footer-title">🧪 테스트 안내</h2>
+      <ol class="test-list">
+        <li>터미널에서 <code>python -m http.server 8000</code> 실행</li>
+        <li>브라우저에서 <code>http://localhost:8000</code> 접속</li>
+        <li>학교 이름 <code>푸른숲초등학교</code>를 입력하고 입장</li>
+        <li>탭을 하나씩 눌러 화면이 바뀌는지 확인</li>
+        <li>화면이 이상하면 <kbd>F12</kbd> → Console에서 빨간 글씨 확인</li>
+      </ol>
 
-    <footer class="site-footer container">
-      <p>개발팀: 초등 코딩 페스티벌 FitShare 팀</p>
-      <p>테스트 안내: 실제 AI/카메라/DB는 연결하지 않은 공통 템플릿입니다.</p>
-    </footer>
+      <p class="footer-note">초등 코딩 페스티벌 교육용 프로젝트 · 실제 AI·카메라·DB는 아직 연결되지 않았어요.</p>
+    </div>
+  </footer>
 
-    <script type="module" src="./js/app.js"></script>
-  </body>
+  <!-- type="module"이 있어야 import/export를 쓸 수 있어요 -->
+  <script type="module" src="js/app.js"></script>
+</body>
 </html>
