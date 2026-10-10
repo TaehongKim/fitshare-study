@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="매트가 비스듬할 때만 사진을 평판화하는 3차 실측 비교 실험" />
+    <title>실측 3차 실험 | FitShare</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/measurement.css" />
+    <link rel="stylesheet" href="css/measurement-round3.css" />
+  </head>
+  <body class="measurement-page">
+    <main class="measurement-shell round3-shell">
+      <header class="measurement-header">
+        <a class="measurement-brand" href="measure-dataset.html">← 1차 실험 결과</a>
+        <span>MEASURE DATASET LAB · 3차 실험</span>
+      </header>
+      <section class="measurement-panel round3-panel" aria-labelledby="round3-title">
+        <p class="eyebrow">ROUND 3 · 사진 평판화가 꼭 필요할까요?</p>
+        <h1 id="round3-title">필요할 때만 사진을 평판화해요</h1>
+        <p class="measurement-intro">같은 옷 사진 20장을 두 방법으로 분석해요. 한 방법은 늘 사진을 평판화하고, 다른 방법은 매트가 원근 때문에 많이 찌그러졌을 때만 평판화해요.</p>
+        <div class="kid-help"><strong>평판화란?</strong><br />비스듬히 찍힌 매트를 종이처럼 반듯하게 펴는 일이에요. 카메라가 정면에 가까우면 많이 펴지 않아도 되는지 확인해요.</div>
+
+        <section class="round3-methods" aria-label="실험 방법">
+          <article class="round3-method round3-method-old">
+            <span class="round3-method-number">방법 A</span>
+            <h2>항상 평판화</h2>
+            <p>현재 방식처럼 사진마다 원근 변환을 해요.</p>
+          </article>
+          <article class="round3-method round3-method-new">
+            <span class="round3-method-number">방법 B</span>
+            <h2>필요할 때만 평판화</h2>
+            <p>정면 사진은 비율을 지키며 맞추고, 많이 비스듬한 사진만 원근 변환해요.</p>
+          </article>
+        </section>
+
+        <section class="round3-pipeline" aria-labelledby="round3-how-title">
+          <h2 id="round3-how-title">컴퓨터가 고르는 방법</h2>
+          <ol>
+            <li>점·모눈·ChArUco 표식의 위치를 찾아요.</li>
+            <li>매트의 네 모서리가 얼마나 비스듬한지 계산해요.</li>
+            <li>차이가 작으면 단순히 돌리고 크기만 맞춰요. 차이가 크면 원근을 펴요.</li>
+            <li>두 방법의 잰 길이와 실제 기준값 차이를 비교해요.</li>
+          </ol>
+          <p class="round3-caution">점 배경은 점 격자 위치를 새 기준으로 사용해요. 기존 점 배경 코드의 좌표 하나가 맞지 않아, 새 방법에서는 인쇄된 점 간격에 맞게 고쳤어요. 그래서 방법 B는 평판화 선택과 점 기준 수정이 함께 반영된 실험이에요.</p>
+          <p class="round3-caution"><strong>배경 간격:</strong> 점 10cm · 모눈 5cm · ChArUco와 ChArUco 격자 2.5cm. 이 간격을 눈금자처럼 써서 사진의 실제 크기를 계산해요.</p>
+        </section>
+
+        <p class="round3-repeat-explanation">같은 사진 20장을 방법마다 100회씩 다시 분석해요. 그래서 방법하나당 2,000회 분석해요. Gemini는 사진마다 최대 3회만 요청해요.</p>
+        <div class="round3-toolbar">
+          <p id="round3-status" role="status" aria-live="polite">공개된 3차 실험 결과를 불러오고 있어요.</p>
+
+        </div>
+        <section id="round3-summary" class="round3-summary" aria-label="전체 비교"></section>
+
+        <section class="round3-section" aria-labelledby="round3-background-heading">
+          <h2 id="round3-background-heading">배경별로 비교해요</h2>
+          <div id="round3-backgrounds" class="round3-table-wrap"></div>
+        </section>
+
+        <section class="round3-section" aria-labelledby="round3-photos-heading">
+          <h2 id="round3-photos-heading">옷 사진과 잰 결과</h2>
+          <p>오차는 컴퓨터가 잰 값과 파일에 적힌 기준값의 차이예요. 오차가 작을수록 기준값에 가까워요.</p>
+          <div id="round3-photos" class="round3-photo-list"></div>
+        </section>
+        <p class="round3-footnote">이번 실험은 사진 20장으로 확인했어요. 이 사진들에서 잘 된 방법이 모든 카메라와 촬영 환경에서도 항상 가장 정확하다는 뜻은 아니에요.</p>
+      </section>
+    </main>
+    <script type="module" src="js/measurement/publicRound3Report.js"></script>
+  </body>
+</html>
