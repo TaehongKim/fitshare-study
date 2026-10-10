@@ -81,7 +81,45 @@ def _warp_with_correspondences(image, source_points, target_points):
     return flattened, matrix
 
 
-def _detect_dot_mat(image):
+PERSPECTIVE_ERROR_THRESHOLD = 0.005
+
+
+def choose_rectification_mode(source_points, target_points, threshold=PERSPECTIVE_ERROR_THRESHOLD):
+    """Use perspective correction only when an affine map misses the fourth corner."""
+    cv2, np = _cv2_modules()
+    source = np.asarray(source_points, dtype=np.float32).reshape(-1, 2)
+    target = np.asarray(target_points, dtype=np.float32).reshape(-1, 2)
+    if len(source) != len(target) or len(source) < 4:
+        raise ValueError('원근 보정 여부를 확인하려면 표식 위치가 네 개 이상 필요해요.')
+    if len(source) == 4:
+        affine = cv2.getAffineTransform(source[:3], target[:3])
+    else:
+        affine, _ = cv2.estimateAffine2D(source, target, method=cv2.RANSAC, ransacReprojThreshold=3.5)
+        if affine is None:
+            raise ValueError('표식 위치로 사진의 원근을 확인하지 못했어요.')
+    predicted = cv2.transform(source.reshape(-1, 1, 2), affine).reshape(-1, 2)
+    errors = np.linalg.norm(predicted - target, axis=1)
+    diagonal = max(float(np.linalg.norm(target.max(axis=0) - target.min(axis=0))), 1.0)
+    score = float(np.sqrt(np.mean(np.square(errors))) / diagonal)
+    return {
+        'mode': 'perspective' if score >= threshold else 'affine',
+        'perspectiveScore': score,
+        'threshold': threshold,
+        'affineMatrix': affine.tolist(),
+    }
+
+
+def _warp_affine_with_correspondences(image, source_points, target_points):
+    cv2, np = _cv2_modules()
+    source = np.asarray(source_points, dtype=np.float32).reshape(-1, 2)
+    target = np.asarray(target_points, dtype=np.float32).reshape(-1, 2)
+    matrix = cv2.getAffineTransform(source[:3], target[:3])
+    aligned = cv2.warpAffine(image, matrix, (OUTPUT_WIDTH, OUTPUT_HEIGHT), flags=cv2.INTER_CUBIC,
+                             borderMode=cv2.BORDER_REPLICATE)
+    return aligned, matrix
+
+
+def _detect_dot_mat(image, accurate_grid=False):
     cv2, np = _cv2_modules()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     _, dark = cv2.threshold(gray, 110, 255, cv2.THRESH_BINARY_INV)
@@ -97,14 +135,25 @@ def _detect_dot_mat(image):
     if len(points) < 24:
         raise ValueError('동그란 점을 충분히 못 찾았어요. 옷을 조금 옮기고 점 배경이 더 보이게 찍어 주세요.')
 
-    rectangle = cv2.boxPoints(cv2.minAreaRect(np.asarray(points, dtype=np.float32)))
-    source = _ordered_quad(rectangle)
+    point_array = np.asarray(points, dtype=np.float32)
+    if accurate_grid:
+        hull = cv2.convexHull(point_array.reshape(-1, 1, 2))
+        perimeter = cv2.arcLength(hull, True)
+        corners = cv2.approxPolyDP(hull, max(2.0, perimeter * .035), True).reshape(-1, 2)
+    else:
+        corners = np.empty((0, 2), dtype=np.float32)
+    if len(corners) == 4:
+        source = _ordered_quad(corners)
+    else:
+        rectangle = cv2.boxPoints(cv2.minAreaRect(point_array))
+        source = _ordered_quad(rectangle)
     if np.linalg.norm(source[3] - source[0]) < np.linalg.norm(source[1] - source[0]):
         raise ValueError('점 배경이 옆으로 누워 보여요. 매트가 세로가 되게 사진을 돌려 주세요.')
 
     # 인쇄 도면의 9×12 점은 10cm 간격이며, 바깥 점은 종이 모서리에서 일정하게 떨어져 있어요.
+    left_top_cm = 2.05 if accurate_grid else 20.5
     target = np.array([
-        [20.5 / A0_WIDTH_CM * OUTPUT_WIDTH, 4.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
+        [left_top_cm / A0_WIDTH_CM * OUTPUT_WIDTH, 4.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
         [82.05 / A0_WIDTH_CM * OUTPUT_WIDTH, 4.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
         [82.05 / A0_WIDTH_CM * OUTPUT_WIDTH, 114.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
         [2.05 / A0_WIDTH_CM * OUTPUT_WIDTH, 114.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
@@ -215,7 +264,7 @@ def _charuco_reference(background_id):
         raise RuntimeError(f'{background_id} 표식 기준표를 읽지 못했어요.') from error
 
 
-def _detect_charuco_mat(image, background_id):
+def _detect_charuco_mat(image, background_id, perspective_policy='always'):
     cv2, np = _cv2_modules()
     if not hasattr(cv2, 'aruco'):
         raise RuntimeError('이 OpenCV에는 ArUco 표식 인식 기능이 없어요. contrib 버전을 설치해 주세요.')
@@ -247,12 +296,26 @@ def _detect_charuco_mat(image, background_id):
     inlier_markers = int(inliers.reshape(-1, 4).all(axis=1).sum())
     if inlier_markers < 8 or inlier_ratio < .25:
         raise ValueError('표식이 서로 맞지 않아요. 사진 배경 종류를 확인해 주세요.')
-    flattened = cv2.warpPerspective(image, matrix, (OUTPUT_WIDTH, OUTPUT_HEIGHT), flags=cv2.INTER_CUBIC,
-                                    borderMode=cv2.BORDER_REPLICATE)
-    return flattened, matrix, min(.99, .55 + inlier_ratio * .42), matched_markers
+    source_array = np.asarray(source_points, dtype=np.float32)
+    target_array = np.asarray(target_points, dtype=np.float32)
+    decision = choose_rectification_mode(source_array, target_array)
+    affine_matrix = np.asarray(decision['affineMatrix'], dtype=np.float32)
+    perspective_score = decision['perspectiveScore']
+    use_affine = perspective_policy == 'conditional' and decision['mode'] == 'affine'
+    if use_affine:
+        flattened = cv2.warpAffine(image, affine_matrix, (OUTPUT_WIDTH, OUTPUT_HEIGHT), flags=cv2.INTER_CUBIC,
+                                   borderMode=cv2.BORDER_REPLICATE)
+        applied_matrix = affine_matrix
+        mode = 'affine'
+    else:
+        flattened = cv2.warpPerspective(image, matrix, (OUTPUT_WIDTH, OUTPUT_HEIGHT), flags=cv2.INTER_CUBIC,
+                                        borderMode=cv2.BORDER_REPLICATE)
+        applied_matrix = matrix
+        mode = 'perspective'
+    return flattened, applied_matrix, min(.99, .55 + inlier_ratio * .42), matched_markers, mode, perspective_score
 
 
-def rectify_photo(source, background_id):
+def rectify_photo(source, background_id, perspective_policy='always'):
     """Orient and perspective-correct one calibration-mat photograph to A0."""
     cv2, np = _cv2_modules()
     canonical_background = MAT_ALIASES.get(str(background_id))
@@ -261,22 +324,50 @@ def rectify_photo(source, background_id):
     try:
         image = _resize_long_side(_read_image(source))
         cv2.setRNGSeed(0)
+        if perspective_policy not in {'always', 'conditional'}:
+            raise ValueError('사진 보정 방식이 올바르지 않아요.')
+        perspective_score = None
         if canonical_background == 'point':
-            source_points, target_points, confidence = _detect_dot_mat(image)
-            flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+            source_points, target_points, confidence = _detect_dot_mat(image, accurate_grid=perspective_policy == 'conditional')
+            if perspective_policy == 'conditional':
+                decision = choose_rectification_mode(source_points, target_points)
+                perspective_score = decision['perspectiveScore']
+                if decision['mode'] == 'affine':
+                    flattened, matrix = _warp_affine_with_correspondences(image, source_points, target_points)
+                    mode = 'affine'
+                else:
+                    flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+                    mode = 'perspective'
+            else:
+                flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+                mode = 'perspective'
             method = '10cm 점 격자'
             detected_markers = None
         elif canonical_background == 'cross':
             source_points, target_points, confidence = _detect_cross_mat(image)
-            flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+            if perspective_policy == 'conditional':
+                decision = choose_rectification_mode(source_points, target_points)
+                perspective_score = decision['perspectiveScore']
+                if decision['mode'] == 'affine':
+                    flattened, matrix = _warp_affine_with_correspondences(image, source_points, target_points)
+                    mode = 'affine'
+                else:
+                    flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+                    mode = 'perspective'
+            else:
+                flattened, matrix = _warp_with_correspondences(image, source_points, target_points)
+                mode = 'perspective'
             method = '5cm 모눈 선'
             detected_markers = None
         else:
-            flattened, matrix, confidence, detected_markers = _detect_charuco_mat(image, canonical_background)
+            flattened, matrix, confidence, detected_markers, mode, perspective_score = _detect_charuco_mat(
+                image, canonical_background, perspective_policy=perspective_policy
+            )
             method = 'ChArUco ID 표식'
         return {
             'ok': True, 'image': flattened, 'matrix': matrix.tolist(),
             'confidence': float(confidence), 'method': method,
+            'rectificationMode': mode, 'perspectiveScore': perspective_score,
             'detectedMarkers': detected_markers,
             'message': f'{method}을 찾아 사진을 A0 정면 모양으로 펼쳤어요.'
         }

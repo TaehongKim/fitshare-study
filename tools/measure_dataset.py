@@ -4,6 +4,9 @@ from pathlib import Path
 import re
 import argparse
 import json
+import math
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 try:
@@ -137,11 +140,183 @@ def analyze_dataset(dataset_root, output_dir=None):
     return report
 
 
+def _round3_method_trials(task):
+    image_path, label, method, policy, repeat_count = task
+    trials = []
+    preview = None
+    for _ in range(repeat_count):
+        try:
+            rectified = rectify_photo(image_path, label['backgroundId'], perspective_policy=policy)
+            if not rectified['ok']:
+                raise ValueError(rectified['message'])
+            measured = measure_garment(rectified['image'], garment_id=label['garmentId'])
+            width = float(measured['measuredWidthCm'])
+            length = float(measured['measuredLengthCm'])
+            trials.append({
+                'widthCm': width,
+                'lengthCm': length,
+                'widthErrorCm': abs(width - label['referenceWidthCm']),
+                'lengthErrorCm': abs(length - label['referenceLengthCm']),
+                'rectificationMode': rectified['rectificationMode'],
+                'perspectiveScore': rectified['perspectiveScore'],
+            })
+            if preview is None:
+                preview = {
+                    'message': measured['message'],
+                    'rectificationMethod': rectified['method'],
+                    'overlayDataUrl': measured['overlayDataUrl'],
+                }
+        except (ValueError, RuntimeError) as error:
+            trials.append({'message': str(error)})
+
+    successful = [trial for trial in trials if 'widthCm' in trial]
+
+    def average(key):
+        return sum(item[key] for item in successful) / len(successful) if successful else None
+
+    def spread(key):
+        values = [item[key] for item in successful]
+        if not values:
+            return None
+        mean = sum(values) / len(values)
+        return math.sqrt(sum((value - mean) ** 2 for value in values) / len(values))
+
+    return method, {
+        'status': 'done' if successful else 'failed',
+        'message': (preview or {}).get('message') or next(
+            (trial.get('message', '') for trial in trials if trial.get('message')), ''),
+        'successCount': len(successful),
+        'failureCount': repeat_count - len(successful),
+        'widthCm': round(average('widthCm'), 2) if successful else None,
+        'lengthCm': round(average('lengthCm'), 2) if successful else None,
+        'widthStdDevCm': round(spread('widthCm'), 3) if successful else None,
+        'lengthStdDevCm': round(spread('lengthCm'), 3) if successful else None,
+        'widthErrorCm': round(average('widthErrorCm'), 2) if successful else None,
+        'lengthErrorCm': round(average('lengthErrorCm'), 2) if successful else None,
+        'rectificationMode': successful[0].get('rectificationMode') if successful else None,
+        'perspectiveScore': successful[0].get('perspectiveScore') if successful else None,
+        'rectificationMethod': (preview or {}).get('rectificationMethod'),
+        'overlayDataUrl': (preview or {}).get('overlayDataUrl'),
+    }
+
+
+def analyze_round3_dataset(dataset_root, output_path=None, repeat_count=100, workers=1):
+    """Rerun both photo pipelines for each image and summarize repeat stability."""
+    if isinstance(repeat_count, bool) or not isinstance(repeat_count, int) or not 1 <= repeat_count <= 100:
+        raise ValueError('반복 횟수는 1~100 사이의 정수로 입력해 주세요.')
+    if isinstance(workers, bool) or not isinstance(workers, int) or not 1 <= workers <= 16:
+        raise ValueError('동시 작업 수는 1~16 사이의 정수로 입력해 주세요.')
+    root = Path(dataset_root)
+    image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
+    labels = {path: read_dataset_label(path) for path in image_paths}
+    tasks = [
+        (str(path), labels[path], method, policy, repeat_count)
+        for path in image_paths
+        for method, policy in (('always', 'always'), ('conditional', 'conditional'))
+    ]
+    results = {}
+    if workers == 1:
+        for index, task in enumerate(tasks, start=1):
+            method, result = _round3_method_trials(task)
+            results[(Path(task[0]), method)] = result
+            if repeat_count >= 10 and (index % 2 == 0 or index == len(tasks)):
+                print(f'[round3] {index}/{len(tasks)} photo/method jobs complete', flush=True)
+    else:
+        with ProcessPoolExecutor(max_workers=min(workers, os.cpu_count() or 1)) as executor:
+            futures = {executor.submit(_round3_method_trials, task): task for task in tasks}
+            for index, future in enumerate(as_completed(futures), start=1):
+                method, result = future.result()
+                task = futures[future]
+                results[(Path(task[0]), method)] = result
+                if repeat_count >= 10 and (index % 2 == 0 or index == len(tasks)):
+                    print(f'[round3] {index}/{len(tasks)} photo/method jobs complete', flush=True)
+
+    rows = []
+    for path in image_paths:
+        label = labels[path]
+        rows.append({
+            **label,
+            'sourceUrl': f"/measure_dataset/{label['backgroundId']}/{path.name}",
+            'always': results[(path, 'always')],
+            'conditional': results[(path, 'conditional')],
+        })
+
+    def summarize(items, method):
+        completed = [row[method] for row in items if row[method]['successCount']]
+        width_mae = [result['widthErrorCm'] for result in completed]
+        length_mae = [result['lengthErrorCm'] for result in completed]
+
+        def stats(values):
+            if not values:
+                return {'mean': None, 'stdDev': None, 'min': None, 'max': None}
+            mean = sum(values) / len(values)
+            return {
+                'mean': round(mean, 2),
+                'stdDev': round(math.sqrt(sum((value - mean) ** 2 for value in values) / len(values)), 3),
+                'min': round(min(values), 2), 'max': round(max(values), 2),
+            }
+
+        return {
+            'imageCount': len(items),
+            'trialCount': repeat_count,
+            'successCount': len(completed),
+            'failureCount': len(items) - len(completed),
+            'successfulImageCount': len(completed),
+            'failedImageCount': len(items) - len(completed),
+            'totalSuccessfulRuns': sum(row[method]['successCount'] for row in items),
+            'widthMaeCm': stats(width_mae)['mean'],
+            'lengthMaeCm': stats(length_mae)['mean'],
+            'widthMaeStdDevCm': stats(width_mae)['stdDev'],
+            'lengthMaeStdDevCm': stats(length_mae)['stdDev'],
+            'widthMaeStability': stats(width_mae),
+            'lengthMaeStability': stats(length_mae),
+            'averageWithinPhotoWidthStdDevCm': round(sum(result['widthStdDevCm'] for result in completed) / len(completed), 3) if completed else None,
+            'averageWithinPhotoLengthStdDevCm': round(sum(result['lengthStdDevCm'] for result in completed) / len(completed), 3) if completed else None,
+        }
+
+    background_ids = ('point', 'cross', 'ChArUco', 'ChaArUco_Cross')
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'imageCount': len(rows),
+        'repeatCount': repeat_count,
+        'trialCountPerMethod': len(rows) * repeat_count,
+        'workers': min(workers, os.cpu_count() or 1),
+        'methods': {method: summarize(rows, method) for method in ('always', 'conditional')},
+        'byBackground': {
+            background: {
+                method: summarize([row for row in rows if row['backgroundId'] == background], method)
+                for method in ('always', 'conditional')
+            }
+            for background in background_ids
+        },
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description='measure_dataset 사진의 자동 측정값을 비교합니다.')
     parser.add_argument('--dataset', default=str(Path(__file__).resolve().parents[1] / 'measure_dataset'))
     parser.add_argument('--output', default=str(Path(__file__).resolve().parents[1] / 'server-data' / 'measure-dataset-report'))
+    parser.add_argument('--round3', action='store_true', help='compare the two correction methods')
+    parser.add_argument('--repeat-count', type=int, default=100)
+    parser.add_argument('--workers', type=int, default=8)
     args = parser.parse_args()
+    if args.round3:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round3.json'
+        report = analyze_round3_dataset(args.dataset, report_path, args.repeat_count, args.workers)
+        print(f"[round3] {report['imageCount']} images, {report['repeatCount']} repeats, "
+              f"{report['trialCountPerMethod']} runs per method; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round3] {method}: MAE width={result['widthMaeCm']}cm, "
+                  f"length={result['lengthMaeCm']}cm, successful={result['totalSuccessfulRuns']}", flush=True)
+        return
     report = analyze_dataset(args.dataset, args.output)
     summary = report['summary']
     print(f"사진 {summary['imageCount']}장 · 자동 측정 {summary['successCount']}장 · 실패 {summary['failureCount']}장")

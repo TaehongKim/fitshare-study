@@ -169,6 +169,14 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.get_measure_dataset_report()
                 if parts == ['measure-dataset', 'model-comparison']:
                     return self.get_measure_dataset_model_comparison()
+                if parts == ['measure-dataset', 'round3']:
+                    report = read_json(storage / 'measure-dataset-report' / 'round3.json')
+                    if report is None:
+                        return self.send_json(404, {'error': '3차 실험 결과가 아직 없어요. 먼저 전체 실험을 실행해 주세요.'})
+                    gemini_report = read_json(storage / 'measure-dataset-report' / 'gemini-results.json')
+                    if gemini_report is not None:
+                        report['gemini'] = gemini_report
+                    return self.send_json(200, report)
                 if parts == ['auth', 'me']:
                     return self.send_json(200, {'user': self.current_user()})
                 if parts == ['ranking']:
@@ -203,6 +211,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.create_experiment(payload)
                 if parts == ['measure-dataset', 'run']:
                     return self.run_measure_dataset_analysis()
+                if parts == ['measure-dataset', 'round3', 'run']:
+                    return self.run_measure_dataset_round3()
                 if parts == ['measure-dataset', 'save-as-experiment']:
                     return self.save_dataset_as_experiment()
                 if parts == ['measure-dataset', 'gemini']:
@@ -652,6 +662,23 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 return self.send_json(503, {'error': str(error)})
             except (OSError, ValueError) as error:
                 return self.send_json(500, {'error': f'사진 분석을 마치지 못했어요: {error}'})
+            return self.send_json(200, report)
+
+        def run_measure_dataset_round3(self):
+            report_path = storage / 'measure-dataset-report' / 'round3.json'
+            try:
+                from tools.measure_dataset import analyze_round3_dataset
+
+                report = analyze_round3_dataset(
+                    PROJECT_ROOT / 'measure_dataset', report_path, repeat_count=100, workers=8
+                )
+            except (ImportError, RuntimeError) as error:
+                return self.send_json(503, {'error': str(error)})
+            except (OSError, ValueError) as error:
+                return self.send_json(500, {'error': f'3차 실험을 실행하지 못했어요: {error}'})
+            gemini_report = read_json(storage / 'measure-dataset-report' / 'gemini-results.json')
+            if gemini_report is not None:
+                report['gemini'] = gemini_report
             return self.send_json(200, report)
 
         def save_dataset_as_experiment(self):

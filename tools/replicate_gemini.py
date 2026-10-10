@@ -245,20 +245,24 @@ def parse_measurement_output(text, required_fields=('width', 'length')):
 def analyze_photo(image_path, label, token):
     started = time.perf_counter()
     file_id = None
+    prediction_calls = 0
     try:
         file_id, file_url = upload_replicate_file(image_path, token)
         measured = {}
         for dimension in ('width', 'length'):
             last_error = None
-            for _ in range(3):
+            # Width and length share a strict limit of three model predictions per photo.
+            while prediction_calls < 3:
                 try:
                     answer = create_gemini_prediction(file_url, build_measurement_prompt(label, dimension), token)
+                    prediction_calls += 1
                     measured[dimension] = parse_measurement_output(answer, (dimension,))
                     break
                 except ValueError as error:
+                    prediction_calls += 1
                     last_error = error
-            else:
-                raise last_error or ValueError('Gemini 응답에서 측정값을 찾지 못했어요.')
+            if dimension not in measured:
+                raise last_error or ValueError('응답에서 측정값을 찾지 못했어요.')
         width = measured['width']
         length = measured['length']
         measurements = {
@@ -271,6 +275,7 @@ def analyze_photo(image_path, label, token):
             'garmentId': label['garmentId'],
             'status': 'done',
             **measurements,
+            'predictionCalls': prediction_calls,
             'inferenceMs': round((time.perf_counter() - started) * 1000, 1),
         }
     except ReplicateAPIError as error:
@@ -280,12 +285,14 @@ def analyze_photo(image_path, label, token):
             'photo': label['imageName'], 'backgroundId': label['backgroundId'],
             'garmentId': label['garmentId'], 'status': 'failed', 'widthCm': None,
             'lengthCm': None, 'confidence': None, 'note': '', 'message': str(error),
+            'predictionCalls': prediction_calls,
         }
     except (OSError, ValueError) as error:
         return {
             'photo': label['imageName'], 'backgroundId': label['backgroundId'],
             'garmentId': label['garmentId'], 'status': 'failed', 'widthCm': None,
             'lengthCm': None, 'confidence': None, 'note': '', 'message': str(error),
+            'predictionCalls': prediction_calls,
         }
     finally:
         if file_id:
@@ -315,6 +322,8 @@ def run_dataset_analysis(dataset_root, token):
         'model': MODEL_ID,
         'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
         'sampleCount': len(results),
+        'predictionLimitPerPhoto': 3,
+        'maximumPredictionCalls': len(results) * 3,
         'successCount': len(completed),
         'failureCount': len(results) - len(completed),
         'averageInferenceMs': round(sum(row['inferenceMs'] for row in completed) / len(completed), 1) if completed else None,
