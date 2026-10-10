@@ -85,3 +85,48 @@ export function renderModelComparisonError(elements, message) {
   elements.deepFashion2.textContent = 'DeepFashion2는 의류 데이터셋이며, 측정 알고리즘 자체는 아니에요.';
   elements.warning.hidden = true;
 }
+
+// 20장 Gemini 실험은 M4의 다른 모델 비교와 나눠서 보여줘요.
+export function renderGeminiComparison(elements, comparison) {
+  const names = {
+    point: '점 배경', cross: '격자 배경',
+    ChArUco: 'ChArUco 배경', ChaArUco_Cross: 'ChArUco 격자 배경'
+  };
+  if (!comparison || !Array.isArray(comparison.rows) || comparison.rows.length === 0) {
+    elements.summary.replaceChildren();
+    elements.details.replaceChildren();
+    elements.status.textContent = '아직 저장된 Gemini 결과가 없어요. 버튼을 눌러 20장을 분석해 보세요.';
+    return;
+  }
+
+  const methods = comparison.methods || [];
+  const metricTable = (items, heading) => `<h3>${safeText(heading)}</h3><table class="dataset-table">
+    <thead><tr><th>측정 방법</th><th>측정 성공</th><th>너비 평균 오차</th><th>기장 평균 오차</th></tr></thead>
+    <tbody>${items.map((item) => `<tr><th>${safeText(item.name)}</th><td>${item.successCount}/${item.sampleCount ?? comparison.sampleCount}장</td><td>${displayMae(item.widthMaeCm)}</td><td>${displayMae(item.lengthMaeCm)}</td></tr>`).join('')}</tbody></table>`;
+  elements.summary.innerHTML = metricTable(methods, '전체 20장 결과') +
+    Object.entries(comparison.byBackground || {}).map(([id, group]) => metricTable(group.methods || [], `${names[id] || id} · ${group.sampleCount}장`)).join('');
+
+  const grouped = new Map();
+  for (const row of comparison.rows) {
+    if (!grouped.has(row.backgroundId)) grouped.set(row.backgroundId, []);
+    grouped.get(row.backgroundId).push(row);
+  }
+  elements.details.innerHTML = [...grouped.entries()].map(([backgroundId, rows]) => `<section class="gemini-background-group">
+    <h3>${safeText(names[backgroundId] || backgroundId)} 사진 결과 (${rows.length}장)</h3>
+    <div class="gemini-photo-grid">${rows.map((row) => {
+      const fit = row.measurements?.fitshare || {};
+      const gemini = row.measurements?.gemini || {};
+      const widthLabel = row.widthKind === 'waist' ? '허리 너비' : '가슴 너비';
+      const note = row.measurements?.geminiNote;
+      return `<article class="gemini-photo-card"><img src="${safeText(row.sourceUrl)}" alt="${safeText(row.garmentName)} 원본 사진" loading="lazy" decoding="async" />
+        <h4>${safeText(row.garmentName)}</h4><dl>
+        <div><dt>기준 ${widthLabel}</dt><dd>${displayCm(row.referenceWidthCm)}</dd></div>
+        <div><dt>FitShare ${widthLabel}</dt><dd>${displayCm(fit.widthCm)}</dd></div>
+        <div><dt>Gemini ${widthLabel}</dt><dd>${displayCm(gemini.widthCm)}</dd></div>
+        <div><dt>기준 기장</dt><dd>${displayCm(row.referenceLengthCm)}</dd></div>
+        <div><dt>FitShare 기장</dt><dd>${displayCm(fit.lengthCm)}</dd></div>
+        <div><dt>Gemini 기장</dt><dd>${displayCm(gemini.lengthCm)}</dd></div>
+        </dl>${note ? `<p class="gemini-photo-note">${safeText(note)}</p>` : ''}</article>`;
+    }).join('')}</div></section>`).join('');
+  elements.status.textContent = `${comparison.sampleCount}장 비교 결과예요. Gemini의 숫자는 추정값이며, 오차가 작을수록 기준 크기에 가까워요.`;
+}

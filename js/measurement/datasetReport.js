@@ -1,4 +1,4 @@
-import { renderModelComparison, renderModelComparisonError } from './modelComparison.js?v=model-comparison-1';
+import { renderModelComparison, renderModelComparisonError, renderGeminiComparison } from './modelComparison.js?v=gemini-comparison-1';
 
 const BACKGROUND_NAMES = {
   point: '점 배경', cross: '격자 배경', ChArUco: 'ChArUco 테두리', ChaArUco_Cross: 'ChArUco 격자'
@@ -19,7 +19,11 @@ const elements = {
   modelSummary: document.querySelector('#ai-model-summary'),
   modelDetails: document.querySelector('#ai-model-details'),
   deepFashion2Note: document.querySelector('#deepfashion2-note'),
-  modelWarning: document.querySelector('#model-provenance-warning')
+  modelWarning: document.querySelector('#model-provenance-warning'),
+  geminiRun: document.querySelector('#gemini-run'),
+  geminiStatus: document.querySelector('#gemini-status'),
+  geminiSummary: document.querySelector('#gemini-summary'),
+  geminiDetails: document.querySelector('#gemini-details')
 };
 
 let report = null;
@@ -107,6 +111,11 @@ async function loadModelComparison() {
       deepFashion2: elements.deepFashion2Note,
       warning: elements.modelWarning
     }, result);
+    renderGeminiComparison({
+      status: elements.geminiStatus,
+      summary: elements.geminiSummary,
+      details: elements.geminiDetails
+    }, result.geminiComparison);
   } catch (error) {
     renderModelComparisonError({
       status: elements.modelStatus,
@@ -115,6 +124,28 @@ async function loadModelComparison() {
       deepFashion2: elements.deepFashion2Note,
       warning: elements.modelWarning
     }, error.message);
+    elements.geminiStatus.textContent = error.message;
+  }
+}
+
+async function runGeminiMeasurement() {
+  elements.geminiRun.disabled = true;
+  elements.geminiStatus.textContent = '사진 20장을 Gemini에 보내고 있어요. 끝날 때까지 이 페이지를 열어 두세요.';
+  try {
+    const response = await fetch('/api/measure-dataset/gemini', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Gemini 분석을 끝내지 못했어요.');
+    elements.geminiStatus.textContent = `Gemini 분석 완료: ${result.successCount}/${result.sampleCount}장 성공, ${result.failureCount}장 실패. 결과를 불러오는 중이에요.`;
+    await loadModelComparison();
+    if (result.failureCount) {
+      elements.geminiStatus.textContent = `분석 완료: ${result.successCount}/${result.sampleCount}장 성공, ${result.failureCount}장은 실패했어요. 성공한 사진의 결과를 비교해 보세요.`;
+    }
+  } catch (error) {
+    elements.geminiStatus.textContent = error.message;
+  } finally {
+    elements.geminiRun.disabled = false;
   }
 }
 
@@ -180,4 +211,5 @@ elements.rerun.addEventListener('click', () => loadReport({ rerun: true }));
 elements.saveRound.addEventListener('click', saveAsExperimentRound);
 elements.backgroundFilter.addEventListener('change', renderPhotoRows);
 elements.garmentFilter.addEventListener('change', renderPhotoRows);
+elements.geminiRun.addEventListener('click', runGeminiMeasurement);
 loadReport();

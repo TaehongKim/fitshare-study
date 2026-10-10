@@ -125,6 +125,16 @@
             <p id="model-provenance-warning" hidden></p>
           </div>
         </section>
+        <section id="gemini-comparison" class="dataset-section gemini-comparison-section" aria-labelledby="gemini-heading">
+          <h2 id="gemini-heading">Gemini로 네 가지 배경 20장 비교</h2>
+          <p>같은 사진 20장을 FitShare와 Gemini가 각각 재서 결과를 비교해요. 점, 격자, ChArUco, ChArUco 격자 배경마다 5장씩 있어요. AI가 알려주는 숫자는 예상값이므로 기준 치수와 꼭 비교해 보세요.</p>
+          <div class="gemini-run-row">
+            <button class="primary-action" id="gemini-run" type="button">Gemini로 20장 재기</button>
+            <p id="gemini-status" class="analysis-note" role="status" aria-live="polite">저장된 Gemini 비교 결과를 확인하고 있어요.</p>
+          </div>
+          <div id="gemini-summary" class="dataset-table-wrap"></div>
+          <div id="gemini-details" class="gemini-comparison-list"></div>
+        </section>
         <section class="dataset-section" aria-labelledby="background-heading">
           <h2 id="background-heading">배경별 결과</h2>
           <p>배경마다 너비와 기장의 평균 오차가 어떻게 다른지 살펴봐요.</p>
@@ -150,6 +160,6 @@
         <p class="dataset-footnote">이 숫자는 이 실험 사진에서 컴퓨터가 찾은 결과예요. 사진을 놓은 방법과 옷의 주름에 따라 달라질 수 있어요. 기준 치수는 파일 이름의 w(너비), h(기장)를 cm로 읽었고, 바지는 허리 너비를 비교했어요.</p>
       </section>
     </main>
-    <script type="module" src="js/measurement/datasetReport.js?v=model-comparison-1"></script>
+    <script type="module" src="js/measurement/datasetReport.js?v=gemini-comparison-1"></script>
   </body>
 </html>

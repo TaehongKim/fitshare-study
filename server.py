@@ -30,6 +30,36 @@ SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
 
 
+def load_env_file(path=None, environ=None):
+    """Load simple KEY=VALUE settings from .env without replacing shell settings."""
+    target = os.environ if environ is None else environ
+    env_path = Path(path) if path is not None else PROJECT_ROOT / '.env'
+    try:
+        lines = env_path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return target
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith('#') or '=' not in stripped:
+            continue
+        key, value = stripped.split('=', 1)
+        key = key.strip()
+        value = value.strip()
+        if key == 'REPLICATE_API_TOKEN' and key not in target:
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+                value = value[1:-1]
+            if value:
+                target[key] = value
+    return target
+
+
+load_env_file()
+
+
+def get_replicate_api_token():
+    return os.environ.get('REPLICATE_API_TOKEN', '').strip()
+
+
 def analyze_measure_dataset(output_dir):
     """Run the OpenCV comparison for the included public sample set."""
     from tools.measure_dataset import analyze_dataset
@@ -175,6 +205,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.run_measure_dataset_analysis()
                 if parts == ['measure-dataset', 'save-as-experiment']:
                     return self.save_dataset_as_experiment()
+                if parts == ['measure-dataset', 'gemini']:
+                    return self.run_gemini_dataset_analysis()
                 if parts == ['measurements', 'automatic']:
                     return self.measure_uploaded_photo(payload)
                 if parts and parts[0] == 'auth' and len(parts) == 2:
@@ -581,15 +613,37 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             results_dir = PROJECT_ROOT / 'experiments' / 'garment_ai' / 'results'
             model_results = read_json(results_dir / 'results.json')
             hrnet_results = read_json(results_dir / 'hrnet_results.json')
+            gemini_results = read_json(storage / 'measure-dataset-report' / 'gemini-results.json')
             if model_results is None or hrnet_results is None:
                 return self.send_json(503, {'error': 'SAM·YOLO·HRNet의 저장된 실험 결과를 찾지 못했어요.'})
             try:
                 from tools.model_comparison import build_model_comparison
 
-                comparison = build_model_comparison(report, model_results, hrnet_results)
+                comparison = build_model_comparison(report, model_results, hrnet_results, gemini_results)
             except ValueError as error:
                 return self.send_json(422, {'error': str(error)})
             return self.send_json(200, comparison)
+
+        def run_gemini_dataset_analysis(self):
+            token = get_replicate_api_token()
+            if not token:
+                return self.send_json(503, {'error': '서버에 REPLICATE_API_TOKEN 환경 변수를 설정한 뒤 다시 눌러 주세요.'})
+
+            try:
+                from tools.replicate_gemini import run_dataset_analysis
+
+                result = run_dataset_analysis(PROJECT_ROOT / 'measure_dataset', token)
+            except (OSError, RuntimeError, ValueError) as error:
+                return self.send_json(502, {'error': f'Gemini 실험을 마치지 못했어요: {error}'})
+            report_dir = storage / 'measure-dataset-report'
+            write_json_safely(report_dir / 'gemini-results.json', result)
+            return self.send_json(200, {
+                'model': result.get('model'),
+                'sampleCount': result.get('sampleCount', 0),
+                'successCount': result.get('successCount', 0),
+                'failureCount': result.get('failureCount', 0),
+                'generatedAt': result.get('generatedAt'),
+            })
 
         def run_measure_dataset_analysis(self):
             try:

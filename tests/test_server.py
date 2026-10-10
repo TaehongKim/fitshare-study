@@ -141,6 +141,13 @@ class ExperimentServerTests(unittest.TestCase):
                 'overlayDataUrl': 'data:image/jpeg;base64,',
             })
         (report_dir / 'report.json').write_text(json.dumps({'rows': rows}), encoding='utf-8')
+        gemini_rows = [
+            {'photo': photo, 'status': 'done', 'widthCm': width + 1, 'lengthCm': length - 2}
+            for photo, (width, length) in zip(photos, reference)
+        ]
+        (report_dir / 'gemini-results.json').write_text(
+            json.dumps({'model': 'google/gemini-2.5-flash', 'rows': gemini_rows}), encoding='utf-8'
+        )
 
         status, comparison = self.request_json('/api/measure-dataset/model-comparison')
 
@@ -151,6 +158,8 @@ class ExperimentServerTests(unittest.TestCase):
         self.assertEqual(methods['yolo']['widthMaeCm'], 3.4)
         self.assertEqual(methods['sam']['lengthMaeCm'], 11.48)
         self.assertEqual(methods['hrnet']['widthMaeCm'], 10.24)
+        self.assertEqual(comparison['geminiComparison']['sampleCount'], 5)
+        self.assertEqual(comparison['geminiComparison']['methods'][1]['widthMaeCm'], 1)
 
     def test_ai_model_comparison_api_explains_when_m4_measurements_are_missing(self):
         report_dir = Path(self.temp_dir.name) / 'measure-dataset-report'
@@ -162,6 +171,52 @@ class ExperimentServerTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 422)
         self.assertIn('M4', error.exception.read().decode('utf-8'))
+
+    def test_gemini_dataset_api_explains_when_replicate_token_is_missing(self):
+        with mock.patch('server.get_replicate_api_token', return_value=''):
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                self.request_json('/api/measure-dataset/gemini', 'POST', {})
+
+        self.assertEqual(error.exception.code, 503)
+        message = error.exception.read().decode('utf-8')
+        self.assertIn('REPLICATE_API_TOKEN', message)
+        self.assertNotIn('r8_', message)
+
+    def test_env_file_loads_a_token_without_overriding_the_process_environment(self):
+        env_file = Path(self.temp_dir.name) / '.env'
+        env_file.write_text('# private token\nREPLICATE_API_TOKEN="sample-token"\n', encoding='utf-8')
+        values = {}
+
+        server.load_env_file(env_file, values)
+
+        self.assertEqual(values['REPLICATE_API_TOKEN'], 'sample-token')
+        server.load_env_file(env_file, {'REPLICATE_API_TOKEN': 'already-set'})
+
+    def test_env_file_does_not_replace_an_existing_token(self):
+        env_file = Path(self.temp_dir.name) / '.env'
+        env_file.write_text('REPLICATE_API_TOKEN=file-token\n', encoding='utf-8')
+        values = {'REPLICATE_API_TOKEN': 'process-token'}
+
+        server.load_env_file(env_file, values)
+
+        self.assertEqual(values['REPLICATE_API_TOKEN'], 'process-token')
+
+    def test_gemini_dataset_api_saves_measurements_without_returning_the_token(self):
+        result = {
+            'model': 'google/gemini-2.5-flash', 'sampleCount': 20,
+            'successCount': 19, 'failureCount': 1, 'rows': [{'photo': 'p_1_w55_h65.jpg'}],
+        }
+        with mock.patch('server.get_replicate_api_token', return_value='private-test-token'), \
+                mock.patch('tools.replicate_gemini.run_dataset_analysis', return_value=result) as run:
+            status, response = self.request_json('/api/measure-dataset/gemini', 'POST', {})
+
+        self.assertEqual(status, 200)
+        self.assertEqual(response['sampleCount'], 20)
+        self.assertEqual(response['successCount'], 19)
+        self.assertNotIn('token', response)
+        run.assert_called_once()
+        saved = Path(self.temp_dir.name) / 'measure-dataset-report' / 'gemini-results.json'
+        self.assertEqual(json.loads(saved.read_text(encoding='utf-8'))['failureCount'], 1)
 
     def write_dataset_report_fixture(self, failed_index=None):
         from tools.measure_dataset import read_dataset_label

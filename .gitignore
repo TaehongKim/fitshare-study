@@ -1,5 +1,8 @@
 # 실험 참가자의 사진과 기록은 저장소에 올리지 않습니다.
 server-data/
+.env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 

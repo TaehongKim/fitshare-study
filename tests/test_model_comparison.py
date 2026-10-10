@@ -39,6 +39,47 @@ class ModelComparisonTests(unittest.TestCase):
         self.assertEqual(methods['sam']['widthMaeCm'], 12.88)
         self.assertEqual(methods['hrnet']['lengthMaeCm'], 11.14)
 
+    def test_gemini_comparison_includes_twenty_photos_from_all_four_backgrounds(self):
+        background_folders = {
+            'point': ('point', 'p'),
+            'cross': ('cross', 'c'),
+            'ChArUco': ('ChArUco', 'ch'),
+            'ChaArUco_Cross': ('ChaArUco_Cross', 'chc'),
+        }
+        dataset_rows = []
+        gemini_rows = []
+        for background_id, (_, prefix) in background_folders.items():
+            for garment_id, (width, length) in enumerate(((55, 65), (54, 50), (40, 70), (49, 53), (42, 90)), start=1):
+                photo = f'{prefix}_{garment_id}_w{width}_h{length}.jpg'
+                dataset_rows.append({
+                    'backgroundId': background_id, 'imageName': photo,
+                    'garmentId': garment_id, 'garmentName': f'옷 {garment_id}',
+                    'widthKind': 'waist' if garment_id == 5 else 'chest',
+                    'status': 'done', 'referenceWidthCm': width, 'referenceLengthCm': length,
+                    'measuredWidthCm': width + 0.5, 'measuredLengthCm': length - 1.5,
+                })
+                gemini_rows.append({
+                    'photo': photo, 'status': 'done',
+                    'widthCm': width + 1, 'lengthCm': length - 2,
+                    'inferenceMs': 1000,
+                })
+
+        comparison = build_model_comparison(
+            {'rows': dataset_rows}, {'rows': []}, {'rows': []},
+            {'model': 'google/gemini-2.5-flash', 'rows': gemini_rows},
+        )
+
+        gemini = comparison['geminiComparison']
+        methods = {item['id']: item for item in gemini['methods']}
+        self.assertEqual(gemini['sampleCount'], 20)
+        self.assertEqual({row['backgroundId'] for row in gemini['rows']}, set(background_folders))
+        self.assertEqual(methods['fitshare']['successCount'], 20)
+        self.assertEqual(methods['gemini']['successCount'], 20)
+        self.assertEqual(methods['gemini']['widthMaeCm'], 1)
+        self.assertEqual(methods['gemini']['lengthMaeCm'], 2)
+        self.assertEqual(methods['gemini']['averageInferenceMs'], 1000)
+        self.assertEqual(set(gemini['byBackground']), set(background_folders))
+
     def test_a_missing_or_unmeasured_model_row_does_not_count_as_success(self):
         comparison = build_model_comparison(
             {'rows': [

@@ -23,6 +23,20 @@ class DatasetModelComparisonPageTests(unittest.TestCase):
         self.assertIn('HRNet-W48 기준점', comparison_source)
         self.assertIn('loading="lazy"', renderer)
 
+    def test_gemini_experiment_can_run_and_compare_all_twenty_dataset_photos(self):
+        html = (ROOT / 'measure-dataset.html').read_text(encoding='utf-8')
+        script = (ROOT / 'js' / 'measurement' / 'datasetReport.js').read_text(encoding='utf-8')
+        renderer = (ROOT / 'js' / 'measurement' / 'modelComparison.js').read_text(encoding='utf-8')
+
+        self.assertIn('id="gemini-run"', html)
+        self.assertIn('id="gemini-status"', html)
+        self.assertIn('id="gemini-summary"', html)
+        self.assertIn('id="gemini-details"', html)
+        self.assertIn("'/api/measure-dataset/gemini'", script)
+        self.assertIn('geminiComparison', script)
+        self.assertIn('renderGeminiComparison', renderer)
+        self.assertIn('byBackground', renderer)
+
 
 if __name__ == '__main__':
     unittest.main()
