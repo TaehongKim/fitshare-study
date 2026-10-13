@@ -117,6 +117,37 @@ class MeasurementProcessPageTests(unittest.TestCase):
         self.assertIn('상의 외투</th><td>40%</td>', html)
         self.assertIn('흰 크롭티셔츠</th><td>32.5%</td>', html)
 
+    def test_background_scale_explains_reference_board_and_pixel_conversion(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('scale-example-title', html)
+        self.assertIn('scale-example-desc', html)
+        self.assertIn('기울어진 기준판', html)
+        self.assertIn('실제 크기가 알려진 A0', html)
+        self.assertIn('84.1cm', html)
+        self.assertIn('118.9cm', html)
+        self.assertIn('600px', html)
+        self.assertIn('848px', html)
+        self.assertIn('240px', html)
+        self.assertIn('33.6cm', html)
+
+    def test_kind_specific_width_ratios_have_an_illustrated_comparison(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('kind-ratio-title', html)
+        self.assertIn('kind-ratio-desc', html)
+        for garment, ratio in (
+            ('상의 외투', '40%'),
+            ('흰 크롭티셔츠', '32.5%'),
+            ('원피스', '15%'),
+            ('점퍼', '20%'),
+            ('바지', '10%'),
+        ):
+            with self.subTest(garment=garment):
+                self.assertIn(garment, html)
+                self.assertIn(ratio, html)
+        self.assertIn('실제 봉제선을 찾아 정한 위치가 아니에요', html)
+
 
 if __name__ == '__main__':
     unittest.main()
