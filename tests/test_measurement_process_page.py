@@ -108,6 +108,15 @@ class MeasurementProcessPageTests(unittest.TestCase):
         self.assertEqual(round(240 * 84.1 / 600, 1), 33.6)
         self.assertEqual(round(450 * 118.9 / 848, 1), 63.1)
 
+    def test_width_ratio_is_explained_as_a_fraction_of_the_detected_garment_height(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('옷으로 고른 영역의 위쪽부터 아래쪽까지', html)
+        self.assertIn('100px 높이의 40%는 40px', html)
+        self.assertIn('겨드랑이 봉제선을 찾아 정한 숫자가 아니에요', html)
+        self.assertIn('상의 외투</th><td>40%</td>', html)
+        self.assertIn('흰 크롭티셔츠</th><td>32.5%</td>', html)
+
 
 if __name__ == '__main__':
     unittest.main()

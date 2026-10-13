@@ -181,6 +181,19 @@
       }
 
       .worked-example ul { margin-bottom: 0; }
+      .ratio-example {
+        margin: 14px 20px 18px;
+        padding: 16px;
+        border: 1px solid #cbdde6;
+        border-radius: 12px;
+        background: #f3f9fc;
+      }
+
+      .ratio-example svg { display: block; width: min(100%, 540px); height: auto; margin: 0 auto; }
+      .ratio-example p { color: var(--muted); }
+      .ratio-table { width: 100%; border-collapse: collapse; }
+      .ratio-table th, .ratio-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+      .ratio-table th { background: #f5f9fb; }
 
       .code-card {
         overflow: hidden;
@@ -572,7 +585,7 @@
 <span class="tok-comment"># 옷의 폭이 충분한 가로줄만 골라 위와 아래 끝을 정해요.</span>
 
 <span class="tok-variable">target_y</span> = <span class="tok-function">int</span>(<span class="tok-variable">width_top</span> + <span class="tok-variable">width_height</span> * <span class="tok-variable">profile</span>[<span class="tok-string">"widthRatio"</span>])
-<span class="tok-comment"># 옷 종류에 적힌 비율을 이용해 너비를 잴 높이를 골라요.</span>
+<span class="tok-comment"># width_top에서 옷 높이의 widthRatio만큼 내려온 곳이에요.</span>
 
 <span class="tok-variable">width_pixels</span> = <span class="tok-function">float</span>(<span class="tok-function">np.median</span>(<span class="tok-variable">valid_spans</span>))
 <span class="tok-comment"># 그 높이 주변의 폭 중간값을 사용해 작은 흔들림을 줄여요.</span></code></pre>
@@ -583,16 +596,64 @@
               <dt><code>lengthSpanRatio</code> / <code>widthRatio</code></dt><dd>기장 끝과 너비선을 찾을 때 쓰는 옷 종류별 비율이에요.</dd>
               <dt><code>base_threshold</code></dt><dd>기장 끝을 고를 때 기준으로 삼는 최소 가로 폭이에요.</dd>
               <dt><code>active_rows</code></dt><dd>옷의 위아래 끝을 정할 만큼 폭이 충분한 가로줄 번호들이에요.</dd>
+              <dt><code>width_top</code> / <code>width_bottom</code></dt><dd>너비선을 고르기 위해 만든 높이 범위의 맨 위와 맨 아래 줄이에요.</dd>
+              <dt><code>width_height</code></dt><dd><code>width_bottom - width_top</code>으로 구한 범위의 높이예요. 이 높이에 비율을 곱해요.</dd>
+              <dt><code>target_y</code></dt><dd><code>width_top + width_height × widthRatio</code>로 정한 너비선의 세로 위치예요. 봉제선을 직접 찾은 위치는 아니에요.</dd>
               <dt><code>top</code> / <code>bottom</code></dt><dd>기장에 쓸 가장 위와 아래의 가로줄 번호예요.</dd>
-              <dt><code>target_y</code></dt><dd>너비를 재려고 고른 사진 속 세로 위치예요. 겨드랑이 봉제선을 찾아 만든 위치는 아니에요.</dd>
               <dt><code>np.flatnonzero</code> / <code>int</code></dt><dd>조건에 맞는 줄 번호를 찾고, 그 번호를 정수로 바꾸는 도구예요.</dd>
               <dt><code>np.median</code> / <code>float</code></dt><dd>폭의 가운데 값을 구하고, 소수점 계산이 가능한 숫자로 바꾸는 도구예요.</dd>
               <dt><code>valid_spans</code> / <code>width_pixels</code></dt><dd>너비선 주변에서 쓸 수 있는 폭 목록과, 그 폭의 대표 픽셀 값이에요.</dd>
             </dl>
+            <div class="ratio-example">
+              <h3>40%는 위에서 얼마나 내려올까요?</h3>
+              <p>
+                비율의 기준은 <strong>옷으로 고른 영역의 위쪽부터 아래쪽까지</strong>예요.
+                그 높이가 100px이면 40%는 <strong>100px 높이의 40%는 40px</strong>이라는 뜻이에요.
+                그래서 맨 위에서 40px 내려온 곳에 가로선을 놓아요.
+              </p>
+              <svg viewBox="0 0 540 250" role="img" aria-labelledby="ratio-title ratio-desc">
+                <title id="ratio-title">높이 100픽셀 중 위에서 40퍼센트 위치</title>
+                <desc id="ratio-desc">세로 100픽셀인 옷 영역의 맨 위에서 40픽셀 내려온 곳에 파란 너비선을 표시합니다. 아래쪽까지 60픽셀이 남습니다.</desc>
+                <rect x="205" y="35" width="130" height="180" rx="8" fill="#e8f6ef" stroke="#16745d" stroke-width="3" />
+                <text x="270" y="25" text-anchor="middle" fill="#16745d" font-size="14" font-weight="700">위쪽 0px</text>
+                <line x1="190" y1="107" x2="350" y2="107" stroke="#0877ae" stroke-width="5" />
+                <circle cx="205" cy="107" r="5" fill="#0877ae" /><circle cx="335" cy="107" r="5" fill="#0877ae" />
+                <text x="270" y="98" text-anchor="middle" fill="#075c87" font-size="15" font-weight="700">너비선: 40px 내려옴</text>
+                <text x="270" y="235" text-anchor="middle" fill="#16745d" font-size="14" font-weight="700">아래쪽까지 60px 남음</text>
+                <line x1="375" y1="38" x2="375" y2="104" stroke="#526575" stroke-width="2" />
+                <path d="M369 46 L375 36 L381 46 M369 96 L375 106 L381 96" fill="none" stroke="#526575" stroke-width="2" />
+                <text x="390" y="76" fill="#526575" font-size="14">40px</text>
+                <line x1="375" y1="110" x2="375" y2="212" stroke="#526575" stroke-width="2" />
+                <text x="390" y="168" fill="#526575" font-size="14">60px</text>
+                <text x="120" y="125" text-anchor="end" fill="#526575" font-size="14">전체 높이 100px</text>
+              </svg>
+              <p>
+                반대로 말하면, 비율 40%는 아래에서 재는 게 아니라 <strong>위에서 40% 내려오는 규칙</strong>이에요.
+                이것은 코드가 위치를 고르는 약속이에요. <strong>겨드랑이 봉제선을 찾아 정한 숫자가 아니에요.</strong>
+              </p>
+              <h3>코드에 적힌 옷 종류별 예시 비율</h3>
+              <div class="mat-table-wrap">
+                <table class="ratio-table">
+                  <thead><tr><th scope="col">코드의 옷 이름</th><th scope="col">위에서 내려오는 비율</th><th scope="col">높이가 100px일 때</th></tr></thead>
+                  <tbody>
+                    <tr><th scope="row">상의 외투</th><td>40%</td><td>위에서 40px</td></tr>
+                    <tr><th scope="row">흰 크롭티셔츠</th><td>32.5%</td><td>위에서 32.5px</td></tr>
+                    <tr><th scope="row">원피스</th><td>15%</td><td>위에서 15px</td></tr>
+                    <tr><th scope="row">점퍼</th><td>20%</td><td>위에서 20px</td></tr>
+                    <tr><th scope="row">바지</th><td>10%</td><td>위에서 10px</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                이 숫자들은 코드에 미리 적힌 위치 규칙이에요. 서로 다른 옷에서 재어 알아낸
+                겨드랑이·허리 봉제선의 정확한 위치라고 보면 안 돼요.
+              </p>
+            </div>
             <p class="code-note">
               여기서 <code>profile</code>은 옷 종류별 규칙표예요.
-              현재 코드는 “겨드랑이 선”을 눈으로 찾아 기준점으로 쓰지 않고,
-              옷의 세로 범위에서 정해 둔 비율을 이용해 선을 놓습니다.
+              <code>width_top</code>과 <code>width_bottom</code> 사이의 높이를 계산한 뒤,
+              그 높이에 <code>widthRatio</code>를 곱해 너비선을 놓아요.
+              이 방법은 단순한 위치 추정이며 “겨드랑이 선”을 눈으로 찾는 방법은 아닙니다.
             </p>
           </article>
 
