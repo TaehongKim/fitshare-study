@@ -1,0 +1,113 @@
+import unittest
+from html.parser import HTMLParser
+from pathlib import Path
+
+
+PAGE = Path(__file__).resolve().parents[1] / 'docs' / 'measurement-process.html'
+
+
+class MeasurementProcessPageParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.headings = []
+        self.current_heading = None
+        self.code_blocks = 0
+        self.code_comments = 0
+        self.in_code = False
+        self.token_classes = set()
+        self.glossary_terms = 0
+        self.glossary_definitions = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag in {'h1', 'h2'}:
+            self.current_heading = tag
+            self.headings.append('')
+        elif tag == 'pre':
+            self.code_blocks += 1
+        elif tag == 'code':
+            self.in_code = True
+        elif tag == 'span' and self.in_code:
+            classes = dict(attrs).get('class', '').split()
+            self.token_classes.update(name for name in classes if name.startswith('tok-'))
+        elif tag == 'dt':
+            self.glossary_terms += 1
+        elif tag == 'dd':
+            self.glossary_definitions += 1
+
+    def handle_endtag(self, tag):
+        if tag == self.current_heading:
+            self.current_heading = None
+        elif tag == 'code':
+            self.in_code = False
+
+    def handle_data(self, data):
+        if self.current_heading:
+            self.headings[-1] += data
+        if self.in_code:
+            self.code_comments += sum(
+                line.lstrip().startswith('#') for line in data.splitlines()
+            )
+
+
+class MeasurementProcessPageTests(unittest.TestCase):
+    def test_guide_is_reachable_from_the_published_docs_home(self):
+        index = (PAGE.parent / 'index.html').read_text(encoding='utf-8')
+
+        self.assertIn('href="measurement-process.html"', index)
+
+    def test_page_explains_the_full_flow_and_its_limits(self):
+        html = PAGE.read_text(encoding='utf-8')
+        parser = MeasurementProcessPageParser()
+        parser.feed(html)
+        parser.close()
+
+        self.assertIn('사진 보정', html)
+        self.assertIn('옷 영역', html)
+        self.assertIn('cm', ' '.join(parser.headings))
+        self.assertIn('겨드랑이 봉제선을 직접 찾지 않아요', html)
+        self.assertIn('옷 주름을 자동으로 펴지 못해요', html)
+
+    def test_code_examples_have_explanatory_comments_for_children(self):
+        html = PAGE.read_text(encoding='utf-8')
+        parser = MeasurementProcessPageParser()
+        parser.feed(html)
+        parser.close()
+
+        self.assertGreaterEqual(parser.code_blocks, 3)
+        self.assertGreaterEqual(parser.code_comments, 8)
+
+    def test_code_tokens_are_colored_and_important_terms_are_explained(self):
+        html = PAGE.read_text(encoding='utf-8')
+        parser = MeasurementProcessPageParser()
+        parser.feed(html)
+        parser.close()
+
+        for token_class in ('tok-variable', 'tok-function', 'tok-keyword', 'tok-comment'):
+            with self.subTest(token_class=token_class):
+                self.assertIn(token_class, parser.token_classes)
+        self.assertGreaterEqual(parser.glossary_terms, 15)
+        self.assertEqual(parser.glossary_terms, parser.glossary_definitions)
+
+    def test_page_names_real_algorithms_and_the_browser_fallback(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        for term in ('warpPerspective', 'GrabCut', 'CIELAB', '경계 상자', 'ArucoDetector'):
+            with self.subTest(term=term):
+                self.assertIn(term, html)
+
+    def test_page_shows_illustrated_steps_and_a_worked_measurement_example(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertGreaterEqual(html.count('<svg'), 2)
+        self.assertIn('aria-labelledby=', html)
+        self.assertIn('예시로 따라 재기', html)
+        self.assertIn('240px', html)
+        self.assertIn('450px', html)
+        self.assertIn('33.6cm', html)
+        self.assertIn('63.1cm', html)
+        self.assertEqual(round(240 * 84.1 / 600, 1), 33.6)
+        self.assertEqual(round(450 * 118.9 / 848, 1), 63.1)
+
+
+if __name__ == '__main__':
+    unittest.main()
