@@ -148,6 +148,29 @@ class MeasurementProcessPageTests(unittest.TestCase):
                 self.assertIn(ratio, html)
         self.assertIn('실제 봉제선을 찾아 정한 위치가 아니에요', html)
 
+    def test_kind_ratio_illustration_uses_garment_silhouettes_not_plain_bars(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        for garment_shape in (
+            'garment-shape-coat',
+            'garment-shape-crop-top',
+            'garment-shape-dress',
+            'garment-shape-jumper',
+            'garment-shape-pants',
+        ):
+            with self.subTest(garment_shape=garment_shape):
+                self.assertIn(f'id="{garment_shape}"', html)
+        self.assertIn('각 옷의 실제 모양을 보고 파란 선 위치를 비교해요', html)
+
+    def test_browser_fallback_is_optional_reference_not_a_numbered_process_step(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertNotIn('5. 서버를 못 쓰면 브라우저가 간단히 대신하기', html)
+        self.assertNotIn('small.data', html)
+        self.assertIn('참고: 서버 연결이 안 될 때', html)
+        self.assertIn('앱이 자동으로 제한적인 브라우저 분석을 한 번 시도해요', html)
+        self.assertIn('정확도가 낮을 수 있어요', html)
+
 
 if __name__ == '__main__':
     unittest.main()

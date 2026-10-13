@@ -725,46 +725,46 @@
                 </table>
               </div>
               <figure class="example-figure">
-                <svg viewBox="0 0 760 340" role="img" aria-labelledby="kind-ratio-title kind-ratio-desc">
+                <svg viewBox="0 0 900 365" role="img" aria-labelledby="kind-ratio-title kind-ratio-desc">
                   <title id="kind-ratio-title">옷 종류별 너비선 비율 비교 예시</title>
-                  <desc id="kind-ratio-desc">높이가 100픽셀이라고 가정한 초록색 옷 영역 다섯 개에 파란 너비선을 표시합니다. 상의 외투는 위에서 40픽셀, 흰 크롭티셔츠는 32.5픽셀, 원피스는 15픽셀, 점퍼는 20픽셀, 바지는 10픽셀 내려온 곳입니다. 이 선은 실제 봉제선을 찾아 정한 위치가 아니에요.</desc>
-                  <rect width="760" height="340" rx="12" fill="#eef4f7" />
-                  <text x="24" y="31" fill="#172b3a" font-size="18" font-weight="700">옷 영역 높이를 100px라고 놓고 비교해 봐요</text>
-                  <text x="24" y="55" fill="#526575" font-size="13">초록색은 컴퓨터가 옷이라고 고른 영역, 파란 선은 위에서 비율만큼 내려온 너비선이에요.</text>
+                  <desc id="kind-ratio-desc">외투, 크롭 티셔츠, 원피스, 점퍼, 바지 모양의 초록색 그림에 파란 너비선을 표시합니다. 옷마다 위에서 내려오는 비율은 각각 40%, 32.5%, 15%, 20%, 10%입니다. 이는 옷 종류별 규칙을 보여 주는 그림이지 실제 봉제선을 찾아낸 것이 아닙니다.</desc>
+                  <rect width="900" height="365" rx="12" fill="#eef4f7" />
+                  <text x="24" y="31" fill="#172b3a" font-size="18" font-weight="700">옷 모양에서 종류별 너비선 위치를 살펴봐요</text>
+                  <text x="24" y="55" fill="#526575" font-size="13">파란 선은 각 옷의 위에서 정해진 비율만큼 내려온 곳이에요.</text>
 
                   <g text-anchor="middle" font-size="13" font-weight="700" fill="#344d5d">
-                    <text x="103" y="83">상의 외투</text>
-                    <text x="247" y="83">흰 크롭티셔츠</text>
-                    <text x="391" y="83">원피스</text>
-                    <text x="535" y="83">점퍼</text>
-                    <text x="679" y="83">바지</text>
+                    <text x="100" y="83">상의 외투</text>
+                    <text x="275" y="83">흰 크롭티셔츠</text>
+                    <text x="450" y="83">원피스</text>
+                    <text x="625" y="83">점퍼</text>
+                    <text x="800" y="83">바지</text>
                   </g>
 
-                  <g fill="#dff3eb" stroke="#16745d" stroke-width="2">
-                    <rect x="73" y="98" width="60" height="160" rx="18" />
-                    <rect x="217" y="98" width="60" height="160" rx="18" />
-                    <rect x="361" y="98" width="60" height="160" rx="18" />
-                    <rect x="505" y="98" width="60" height="160" rx="18" />
-                    <rect x="649" y="98" width="60" height="160" rx="18" />
+                  <g fill="#dff3eb" stroke="#16745d" stroke-width="3" stroke-linejoin="round">
+                    <path id="garment-shape-coat" d="M78 104 L53 121 L28 176 L51 188 L71 151 L71 274 L129 274 L129 151 L149 188 L172 176 L147 121 L122 104 L112 124 L88 124 Z" />
+                    <path id="garment-shape-crop-top" d="M253 124 L235 137 L216 173 L237 183 L250 160 L250 244 L300 244 L300 160 L313 183 L334 173 L315 137 L297 124 L286 135 L264 135 Z" />
+                    <path id="garment-shape-dress" d="M433 105 L414 119 L397 151 L417 161 L429 139 L435 171 L410 274 L490 274 L465 171 L471 139 L483 161 L503 151 L486 119 L467 105 L457 118 L443 118 Z" />
+                    <path id="garment-shape-jumper" d="M604 119 L583 137 L560 181 L582 193 L600 159 L600 272 L650 272 L650 159 L668 193 L690 181 L667 137 L646 119 L637 135 L614 135 Z" />
+                    <path id="garment-shape-pants" d="M777 104 L823 104 L830 130 L825 168 L822 274 L797 274 L790 177 L783 274 L758 274 L755 168 L750 130 Z" />
                   </g>
 
                   <g stroke="#0877ae" stroke-width="5">
-                    <line x1="63" y1="162" x2="143" y2="162" />
-                    <line x1="207" y1="150" x2="287" y2="150" />
-                    <line x1="351" y1="122" x2="431" y2="122" />
-                    <line x1="495" y1="130" x2="575" y2="130" />
-                    <line x1="639" y1="114" x2="719" y2="114" />
+                    <line x1="27" y1="172" x2="173" y2="172" />
+                    <line x1="215" y1="163" x2="335" y2="163" />
+                    <line x1="397" y1="130" x2="503" y2="130" />
+                    <line x1="560" y1="149" x2="690" y2="149" />
+                    <line x1="750" y1="121" x2="830" y2="121" />
                   </g>
                   <g fill="#075c87" font-size="13" font-weight="700" text-anchor="middle">
-                    <text x="103" y="282">40%</text><text x="103" y="301">위에서 40px</text>
-                    <text x="247" y="282">32.5%</text><text x="247" y="301">위에서 32.5px</text>
-                    <text x="391" y="282">15%</text><text x="391" y="301">위에서 15px</text>
-                    <text x="535" y="282">20%</text><text x="535" y="301">위에서 20px</text>
-                    <text x="679" y="282">10%</text><text x="679" y="301">위에서 10px</text>
+                    <text x="100" y="299">40%</text><text x="100" y="318">위에서 내려온 위치</text>
+                    <text x="275" y="299">32.5%</text><text x="275" y="318">위에서 내려온 위치</text>
+                    <text x="450" y="299">15%</text><text x="450" y="318">위에서 내려온 위치</text>
+                    <text x="625" y="299">20%</text><text x="625" y="318">위에서 내려온 위치</text>
+                    <text x="800" y="299">10%</text><text x="800" y="318">위에서 내려온 위치</text>
                   </g>
-                  <text x="380" y="320" text-anchor="middle" fill="#526575" font-size="13">각 선 주변의 옷 가로 폭을 재요. 아래에서 올라오는 비율이 아니에요.</text>
+                  <text x="450" y="349" text-anchor="middle" fill="#526575" font-size="13">예를 들어 옷 높이가 100px이면 40%는 위에서 40px 내려온 곳이에요.</text>
                 </svg>
-                <figcaption><strong>그림 읽기:</strong> 똑같이 100px 높이라고 가정해도 종류 규칙에 따라 선이 달라요. 이 선은 가슴·허리 봉제선을 직접 찾은 결과가 아니라, 코드에 미리 적힌 위치 예시예요.</figcaption>
+                <figcaption><strong>그림 읽기:</strong> 각 옷의 실제 모양을 보고 파란 선 위치를 비교해요. 선 위치는 옷 종류에 따라 코드에서 정한 비율이며, 실제 봉제선을 찾아 정한 위치가 아니에요.</figcaption>
               </figure>
               <p>
                 이 숫자들은 코드에 미리 적힌 위치 규칙이에요. 서로 다른 옷에서 재어 알아낸
@@ -804,57 +804,14 @@
             </p>
           </article>
 
-          <article class="code-card">
-            <header>
-              <h3>5. 서버를 못 쓰면 브라우저가 간단히 대신하기</h3>
-              <p>대체 경로는 배경과 색이 다른 큰 덩어리의 상자를 찾아 크기를 계산합니다.</p>
-            </header>
-            <pre><code><span class="tok-keyword">const</span> <span class="tok-variable">distance</span> = <span class="tok-function">Math.abs</span>(<span class="tok-variable">small.data</span>[<span class="tok-variable">at</span>] - <span class="tok-variable">background</span>[<span class="tok-number">0</span>])
-    + <span class="tok-function">Math.abs</span>(<span class="tok-variable">small.data</span>[<span class="tok-variable">at</span> + <span class="tok-number">1</span>] - <span class="tok-variable">background</span>[<span class="tok-number">1</span>])
-    + <span class="tok-function">Math.abs</span>(<span class="tok-variable">small.data</span>[<span class="tok-variable">at</span> + <span class="tok-number">2</span>] - <span class="tok-variable">background</span>[<span class="tok-number">2</span>])
-
-<span class="tok-keyword">if</span> (<span class="tok-variable">distance</span> &gt; <span class="tok-number">105</span>) <span class="tok-variable">mask</span>[<span class="tok-variable">index</span>] = <span class="tok-number">1</span>;
-<span class="tok-comment">// 주변 바탕색과 많이 다른 픽셀을 옷 후보로 표시해요.</span>
-
-<span class="tok-keyword">for</span> (<span class="tok-keyword">const</span> <span class="tok-variable">next</span> <span class="tok-keyword">of</span> [
-  <span class="tok-variable">x</span> &gt; <span class="tok-number">0</span> ? <span class="tok-variable">index</span> - <span class="tok-number">1</span> : -<span class="tok-number">1</span>,
-  <span class="tok-variable">x</span> + <span class="tok-number">1</span> &lt; <span class="tok-variable">width</span> ? <span class="tok-variable">index</span> + <span class="tok-number">1</span> : -<span class="tok-number">1</span>,
-  <span class="tok-variable">y</span> &gt; <span class="tok-number">0</span> ? <span class="tok-variable">index</span> - <span class="tok-variable">width</span> : -<span class="tok-number">1</span>,
-  <span class="tok-variable">y</span> + <span class="tok-number">1</span> &lt; <span class="tok-variable">height</span> ? <span class="tok-variable">index</span> + <span class="tok-variable">width</span> : -<span class="tok-number">1</span>
-]) {
-  <span class="tok-keyword">if</span> (<span class="tok-variable">next</span> &gt;= <span class="tok-number">0</span> &amp;&amp; <span class="tok-variable">opened</span>[<span class="tok-variable">next</span>] &amp;&amp; !<span class="tok-variable">visited</span>[<span class="tok-variable">next</span>]) {
-    <span class="tok-variable">visited</span>[<span class="tok-variable">next</span>] = <span class="tok-number">1</span>;
-    <span class="tok-variable">queue</span>.push(<span class="tok-variable">next</span>);
-  }
-}
-<span class="tok-comment">// 서로 닿아 있는 후보 픽셀을 한 덩어리로 찾아요.</span>
-
-<span class="tok-keyword">if</span> (<span class="tok-variable">queue.length</span> &gt; <span class="tok-variable">bestArea</span> &amp;&amp; <span class="tok-variable">queue.length</span> &gt;= <span class="tok-variable">minimumArea</span> &amp;&amp; !<span class="tok-variable">touchesEdge</span>) {
-  <span class="tok-variable">bestArea</span> = <span class="tok-variable">queue.length</span>;
-  <span class="tok-variable">best</span> = { <span class="tok-variable">left</span>, <span class="tok-variable">top</span>, <span class="tok-variable">right</span>, <span class="tok-variable">bottom</span> };
-}
-<span class="tok-comment">// 가장 넓고 사진 가장자리에 닿지 않은 후보를 골라요.</span></code></pre>
-            <dl class="glossary">
-              <dt><code>background</code></dt><dd>사진 가장자리에서 짐작한 기준판·바닥의 대표 색이에요.</dd>
-              <dt><code>distance</code></dt><dd>픽셀 색과 바탕색이 얼마나 다른지 더해서 만든 숫자예요.</dd>
-              <dt><code>small.data</code> / <code>at</code></dt><dd>작게 줄인 사진의 색 숫자 목록과, 그 안에서 지금 픽셀을 찾는 자리 번호예요.</dd>
-              <dt><code>red</code> / <code>green</code> / <code>blue</code></dt><dd>픽셀의 빨강·초록·파랑 색 값이에요.</dd>
-              <dt><code>mask</code></dt><dd>옷 후보 픽셀을 1로 표시해 둔 지도예요.</dd>
-              <dt><code>index</code> / <code>x</code> / <code>y</code></dt><dd>사진 픽셀의 목록 번호와 가로·세로 위치예요.</dd>
-              <dt><code>width</code> / <code>height</code></dt><dd>작게 줄인 사진의 가로·세로 픽셀 수예요.</dd>
-              <dt><code>opened</code></dt><dd>작은 점과 얇은 격자선을 줄여 둔 후보 지도예요.</dd>
-              <dt><code>visited</code> / <code>queue</code> / <code>next</code></dt><dd>이미 살펴본 픽셀 표시, 다음에 볼 픽셀 목록, 그 목록에서 꺼낸 이웃 픽셀이에요.</dd>
-              <dt><code>bestArea</code> / <code>minimumArea</code></dt><dd>지금까지 가장 큰 덩어리의 크기와, 후보로 인정할 최소 크기예요.</dd>
-              <dt><code>touchesEdge</code> / <code>best</code></dt><dd>후보가 사진 끝에 닿았는지와, 최종으로 고른 덩어리의 경계 상자예요.</dd>
-              <dt><code>Math.abs</code> / <code>queue.push</code></dt><dd><code>Math.abs</code>는 두 숫자의 차이를 양수로 만들고, <code>push</code>는 배열 끝에 값을 추가해요.</dd>
-            </dl>
-            <p class="code-note">
-              이 브라우저 대체 경로는 주 서버의 GrabCut 분석과 같지 않아요.
-              옷 전체의 경계 상자로 길이와 너비를 대략 계산하므로 복잡한 모양이나
-              배경과 비슷한 색의 옷에는 더 어려울 수 있어요.
-            </p>
-          </article>
         </div>
+        <aside class="callout" aria-labelledby="browser-fallback-title">
+          <h3 id="browser-fallback-title">참고: 서버 연결이 안 될 때</h3>
+          <p>
+            이 방법은 사용자가 순서대로 하는 단계가 아니에요. 서버 요청이 실패하면 앱이 자동으로 제한적인 브라우저 분석을 한 번 시도해요.
+            옷 전체의 <span class="term">경계 상자</span>로 대략 재기 때문에 주 서버의 <code>GrabCut</code> 분석보다 정확도가 낮을 수 있어요.
+          </p>
+        </aside>
       </section>
 
       <section class="panel" aria-labelledby="positions-title">
