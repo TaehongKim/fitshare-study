@@ -272,6 +272,24 @@
       .checklist { padding-left: 1.3rem; }
       .checklist li { margin: 9px 0; }
 
+      .size-source-table { width: 100%; margin: 14px 0; border-collapse: collapse; }
+      .size-source-table th, .size-source-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+      .size-source-table th { background: #f5f9fb; }
+      .size-form { display: grid; gap: 16px; margin-top: 18px; }
+      .size-form-grid, .size-candidate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .size-form label { display: grid; gap: 5px; font-weight: 700; }
+      .size-form input { width: 100%; padding: 10px 12px; border: 1px solid #aebfc8; border-radius: 8px; font: inherit; }
+      .size-candidate-list { display: grid; gap: 12px; }
+      .size-candidate { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+      .size-candidate legend { padding: 0 6px; color: var(--blue); font-weight: 800; }
+      .size-form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+      .size-form button { padding: 10px 14px; border: 1px solid #aebfc8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+      .size-form button[type="submit"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+      .size-status { min-height: 1.7em; margin: 0; color: var(--blue); font-weight: 700; }
+      .size-results { display: grid; gap: 8px; margin: 0; padding-left: 1.5rem; }
+      .size-result { padding: 10px 12px; border-radius: 8px; background: #f5f9fb; }
+      .size-result.is-closest { background: var(--green-pale); outline: 2px solid #c7e7d6; }
+
       .formula {
         display: block;
         overflow-x: auto;
@@ -288,9 +306,10 @@
 
       @media (max-width: 680px) {
         .page { width: min(100% - 20px, 1040px); padding-top: 16px; }
-        .steps, .two-columns { grid-template-columns: 1fr; }
+        .steps, .two-columns, .size-form-grid, .size-candidate-fields { grid-template-columns: 1fr; }
         .step:last-child { grid-column: auto; }
         .mat-table { min-width: 560px; }
+        .size-source-table { min-width: 560px; }
         pre { font-size: .82rem; }
         .glossary { grid-template-columns: 1fr; gap: 2px; }
         .glossary dd { margin-bottom: 8px; }
@@ -318,6 +337,7 @@
         <ul class="jump-links" aria-label="이 페이지에서">
           <li><a href="#steps">실측 순서</a></li>
           <li><a href="#code">실제 코드</a></li>
+          <li><a href="#size-matcher">호수 비교</a></li>
           <li><a href="#missing">아직 못 하는 것</a></li>
           <li><a href="#accuracy">정확도와 확인</a></li>
         </ul>
@@ -805,13 +825,6 @@
           </article>
 
         </div>
-        <aside class="callout" aria-labelledby="browser-fallback-title">
-          <h3 id="browser-fallback-title">참고: 서버 연결이 안 될 때</h3>
-          <p>
-            이 방법은 사용자가 순서대로 하는 단계가 아니에요. 서버 요청이 실패하면 앱이 자동으로 제한적인 브라우저 분석을 한 번 시도해요.
-            옷 전체의 <span class="term">경계 상자</span>로 대략 재기 때문에 주 서버의 <code>GrabCut</code> 분석보다 정확도가 낮을 수 있어요.
-          </p>
-        </aside>
       </section>
 
       <section class="panel" aria-labelledby="positions-title">
@@ -842,6 +855,106 @@
             <p>상의 계열은 가슴 너비, 바지·하의는 허리 너비라는 종류 규칙을 써요. 옷 둘레나 사람이 입었을 때의 몸 치수를 재는 것은 아니에요.</p>
           </article>
         </div>
+      </section>
+
+      <section class="panel" id="size-matcher" aria-labelledby="size-matcher-title">
+        <p class="eyebrow">잰 치수를 호수와 비교해요</p>
+        <h2 id="size-matcher-title">옷의 너비와 기장으로 아동복 호수를 바로 알 수 있을까요?</h2>
+        <p class="section-lead">
+          정확한 공통 변환표는 없어요. 호수는 보통 옷을 입을 아이의 키를 나타내는 이름이고,
+          호수는 옷의 길이와 같지 않아요. 사진에서 잰 너비와 기장은 옷 자체의 크기예요.
+          같은 100호라도 브랜드와 옷 종류에 따라 실제 치수가 다를 수 있어요.
+        </p>
+
+        <div class="info-box">
+          <h3>확인한 한국 기준 자료</h3>
+          <p>
+            한국산업표준 <strong>KS K 0052 「유아복의 치수」</strong>는 유아복 치수 기준이에요.
+            한국표준정보망에는 2024년 확인 표준으로 나와 있어요.
+            공개된 개정 연구는 0~36개월 유아를 살펴보고 키를 기본 치수로 삼으며, 키 호칭을 5cm 간격으로 제안해요.
+            이 자료는 모든 어린이 옷의 펼친 너비·기장을 정한 표가 아니에요.
+          </p>
+          <div class="mat-table-wrap">
+            <table class="size-source-table">
+              <thead><tr><th scope="col">자료</th><th scope="col">알려 주는 내용</th><th scope="col">알려 주지 않는 내용</th></tr></thead>
+              <tbody>
+                <tr>
+                  <th scope="row">KS K 0052</th>
+                  <td>유아복 치수 기준의 이름과 범위</td>
+                  <td>초등학생 옷까지 포함하는 하나의 브랜드 공통 너비·기장표</td>
+                </tr>
+                <tr>
+                  <th scope="row">공개 연구</th>
+                  <td>0~36개월 유아를 조사했고, 키를 중심으로 5cm 간격 호칭을 제안</td>
+                  <td>사진으로 잰 옷 치수만 보고 모든 브랜드의 호수를 맞히는 공식</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small-note">
+            출처:
+            <a href="https://www.kssn.net/search/stddetail.do?itemNo=K001010147933" target="_blank" rel="noopener noreferrer">한국표준정보망의 KS K 0052 정보</a>,
+            <a href="https://www.koreascience.kr/article/JAKO201412835857603.page" target="_blank" rel="noopener noreferrer">유아복 KS 치수체계 개정 연구</a>.
+          </p>
+        </div>
+
+        <div class="info-box warning">
+          <h3>그래서 어떻게 비교하나요?</h3>
+          <p>
+            비교하려는 상품이나 브랜드가 공개한 <strong>호수별 옷 치수표</strong>를 함께 봐야 해요.
+            아래에 사진에서 잰 너비·기장을 넣고, 그 상품표의 호수와 옷 치수를 그대로 옮겨 적으면 가장 가까운 후보를 찾아요.
+            상품표 너비는 같은 위치와 방법으로 잰 너비여야 해요. 둘레 치수와 펼친 너비는 서로 바꿔 적지 마세요.
+          </p>
+        </div>
+
+        <form class="size-form" data-size-matcher-form novalidate>
+          <fieldset class="info-box">
+            <legend><strong>사진에서 잰 옷 치수</strong></legend>
+            <p class="small-note">이전 단계에서 확인한 결과를 cm 단위로 입력해요.</p>
+            <div class="size-form-grid">
+              <label>잰 너비 (cm)
+                <input type="number" min="0" step="any" required data-measured-width inputmode="decimal" />
+              </label>
+              <label>잰 기장 (cm)
+                <input type="number" min="0" step="any" required data-measured-length inputmode="decimal" />
+              </label>
+            </div>
+          </fieldset>
+
+          <div>
+            <h3>상품별 치수표</h3>
+            <p class="small-note">판매처 표에 적힌 호수, 펼친 너비, 기장을 같은 단위(cm)로 입력해요.</p>
+            <div class="size-candidate-list" data-chart-options></div>
+            <template data-chart-row-template>
+              <fieldset class="size-candidate" data-chart-row>
+                <legend data-row-title></legend>
+                <div class="size-candidate-fields">
+                  <label>표에 적힌 호수
+                    <input type="text" required data-candidate-label autocomplete="off" />
+                  </label>
+                  <label>상품표 너비 (cm)
+                    <input type="number" min="0" step="any" required data-candidate-width inputmode="decimal" />
+                  </label>
+                  <label>상품표 기장 (cm)
+                    <input type="number" min="0" step="any" required data-candidate-length inputmode="decimal" />
+                  </label>
+                </div>
+                <button type="button" data-remove-candidate>이 후보 지우기</button>
+              </fieldset>
+            </template>
+            <div class="size-form-actions">
+              <button type="button" data-add-candidate>호수 후보 추가</button>
+              <button type="submit">가장 가까운 호수 비교하기</button>
+            </div>
+          </div>
+          <p class="size-status" data-size-status role="status" aria-live="polite"></p>
+          <ol class="size-results" data-size-results></ol>
+        </form>
+        <p class="callout">
+          <strong>결과는 참고용이에요.</strong>
+          비교 점수가 가장 낮은 상품표 치수를 보여 줄 뿐, 아이 몸에 잘 맞는지 또는 전국 공통 호수를 판정하지 않아요.
+          옷 종류, 여유분, 재는 위치가 다르면 실제 착용감도 달라요.
+        </p>
       </section>
 
       <section class="panel" id="missing" aria-labelledby="missing-title">
@@ -884,5 +997,6 @@
         자세한 과정은 실제 코드와 함께 쉽게 읽을 수 있도록 정리했어요.
       </p>
     </main>
+    <script type="module" src="js/measurement-size-matcher.js"></script>
   </body>
 </html>

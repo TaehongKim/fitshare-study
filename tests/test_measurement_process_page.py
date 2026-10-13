@@ -88,10 +88,10 @@ class MeasurementProcessPageTests(unittest.TestCase):
         self.assertGreaterEqual(parser.glossary_terms, 15)
         self.assertEqual(parser.glossary_terms, parser.glossary_definitions)
 
-    def test_page_names_real_algorithms_and_the_browser_fallback(self):
+    def test_page_names_real_algorithms_without_a_browser_fallback_walkthrough(self):
         html = PAGE.read_text(encoding='utf-8')
 
-        for term in ('warpPerspective', 'GrabCut', 'CIELAB', '경계 상자', 'ArucoDetector'):
+        for term in ('warpPerspective', 'CIELAB', 'ArucoDetector'):
             with self.subTest(term=term):
                 self.assertIn(term, html)
 
@@ -162,14 +162,37 @@ class MeasurementProcessPageTests(unittest.TestCase):
                 self.assertIn(f'id="{garment_shape}"', html)
         self.assertIn('각 옷의 실제 모양을 보고 파란 선 위치를 비교해요', html)
 
-    def test_browser_fallback_is_optional_reference_not_a_numbered_process_step(self):
+    def test_browser_fallback_walkthrough_and_note_are_removed(self):
         html = PAGE.read_text(encoding='utf-8')
 
         self.assertNotIn('5. 서버를 못 쓰면 브라우저가 간단히 대신하기', html)
         self.assertNotIn('small.data', html)
-        self.assertIn('참고: 서버 연결이 안 될 때', html)
-        self.assertIn('앱이 자동으로 제한적인 브라우저 분석을 한 번 시도해요', html)
-        self.assertIn('정확도가 낮을 수 있어요', html)
+        self.assertNotIn('참고: 서버 연결이 안 될 때', html)
+        self.assertNotIn('앱이 자동으로 제한적인 브라우저 분석을 한 번 시도해요', html)
+        self.assertNotIn('GrabCut', html)
+        self.assertNotIn('경계 상자', html)
+
+    def test_page_explains_korean_infant_size_standard_and_its_scope(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('KS K 0052', html)
+        self.assertIn('유아복의 치수', html)
+        self.assertIn('5cm', html)
+        self.assertIn('0~36개월', html)
+        self.assertIn('옷의 길이와 같지 않아요', html)
+        self.assertIn('https://www.kssn.net/search/stddetail.do?itemNo=K001010147933', html)
+        self.assertIn('https://www.koreascience.kr/article/JAKO201412835857603.page', html)
+
+    def test_size_matcher_is_wired_and_requires_product_chart_values(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('id="size-matcher"', html)
+        self.assertIn('js/measurement-size-matcher.js', html)
+        self.assertIn('상품별 치수표', html)
+        self.assertIn('같은 위치와 방법으로 잰 너비', html)
+        self.assertIn('data-measured-width', html)
+        self.assertIn('data-measured-length', html)
+        self.assertIn('aria-live="polite"', html)
 
 
 if __name__ == '__main__':
