@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="같은 20장 사진에서 티셔츠·원피스·점퍼 너비선을 위에서 60%로 옮긴 8차 실험 결과" />
-  <title>실측 8차 실험 · 너비선 60% 비교 | FitShare</title>
+  <meta name="description" content="같은 20장 사진에서 티셔츠·원피스·점퍼 너비선을 위에서 60%로 옮긴 6차 실험 결과" />
+  <title>실측 6차 실험 · 너비선 60% 비교 | FitShare</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/measurement.css" />
   <link rel="stylesheet" href="css/measurement-round8.css" />
@@ -13,13 +13,13 @@
   <main class="measurement-shell round8-shell">
     <header class="measurement-header">
       <a class="measurement-brand" href="index.html">← 실험 결과 모아보기</a>
-      <span>MEASURE DATASET LAB · 8차 실험</span>
+      <span>MEASURE DATASET LAB · 6차 실험</span>
     </header>
     <section class="measurement-panel round8-panel" aria-labelledby="round8-title">
-      <p class="eyebrow">ROUND 8 · 너비를 재는 위치를 바꾸면 더 정확할까요?</p>
+      <p class="eyebrow">ROUND 6 · 너비를 재는 위치를 바꾸면 더 정확할까요?</p>
       <h1 id="round8-title">티셔츠·원피스·점퍼의 너비선을 60%로 옮겼어요</h1>
-      <p class="measurement-intro">7차의 848px와 치수별 분할은 그대로 두고, 옷 위에서 아래로 잰 너비선의 위치만 바꿨어요. 같은 20장 사진으로 기존 비율과 60%를 비교했습니다.</p>
-      <section class="round8-flow" aria-label="8차 실험에서 바꾼 점">
+      <p class="measurement-intro">통합 개선안의 848px와 치수별 분할은 그대로 두고, 옷 위에서 아래로 잰 너비선의 위치만 바꿨어요. 같은 20장 사진으로 기존 비율과 60%를 비교했습니다.</p>
+      <section class="round8-flow" aria-label="6차 실험에서 바꾼 점">
         <article><span>유지</span><strong>848px 사진 보정</strong><small>원본 비율과 기준판 무늬 환산</small></article>
         <article><span>유지</span><strong>GrabCut + YOLO→GrabCut</strong><small>너비 분할과 기장 분할은 그대로</small></article>
         <article class="round8-change"><span>변경</span><strong>너비선 위치 60%</strong><small>크롭 티셔츠·원피스·점퍼만</small></article>
@@ -50,12 +50,12 @@
               <text x="393" y="222">위에서 아래로 잰 몸판 높이 기준</text>
             </g>
           </svg>
-          <figcaption>회색 점선은 7차 위치, 파란 선은 이번 실험 위치예요. 옷마다 윤곽이 다르므로 비율만으로 실제 겨드랑이 위치를 보장하지 않아요.</figcaption>
+          <figcaption>회색 점선은 통합 개선안 위치, 파란 선은 이번 실험 위치예요. 옷마다 윤곽이 다르므로 비율만으로 실제 겨드랑이 위치를 보장하지 않아요.</figcaption>
         </figure>
         <pre><code>target_y = width_top + (width_bottom - width_top) * 0.60</code></pre>
       </section>
 
-      <p id="round8-status" class="round8-status" role="status" aria-live="polite">8차 실험 결과를 불러오고 있어요.</p>
+      <p id="round8-status" class="round8-status" role="status" aria-live="polite">6차 실험 결과를 불러오고 있어요.</p>
       <section id="round8-summary" class="round8-summary" aria-label="전체 및 대상 옷 결과 비교"></section>
       <p id="round8-conclusion" class="round8-conclusion" role="status"></p>
 
@@ -69,7 +69,7 @@
         <p>사진을 보면서 기준 너비와 두 위치의 측정값을 확인할 수 있어요.</p>
         <div id="round8-photos" class="round8-photos"></div>
       </section>
-      <aside class="round8-decision"><strong>실제 서비스 설정</strong><br />이 20장에서는 60%가 더 정확해지지 않았어요. 전체 너비 오차와 대상 옷의 너비 오차가 모두 커져, 실제 서비스는 검증된 7차 너비 비율을 유지합니다. 새 촬영 조건과 더 많은 옷으로 다시 검증하기 전에는 60%를 기본값으로 사용하지 않아요.</aside>
+      <aside class="round8-decision"><strong>실제 서비스 설정</strong><br />이 20장에서는 60%가 더 정확해지지 않았어요. 전체 너비 오차와 대상 옷의 너비 오차가 모두 커져, 실제 서비스는 검증된 통합 개선안 너비 비율을 유지합니다. 새 촬영 조건과 더 많은 옷으로 다시 검증하기 전에는 60%를 기본값으로 사용하지 않아요.</aside>
       <p class="round8-footnote">같은 20장 사진으로 비교한 결과라 독립 검증은 아니며, 다른 옷이나 촬영 환경에서도 같은 결과라고 단정할 수 없습니다. 이 실험에서는 너비선 위치 외에 사진 보정과 옷 분할 방법을 바꾸지 않았습니다.</p>
     </section>
   </main>
