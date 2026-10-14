@@ -1,14 +1,77 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="description" content="FitShare 옷 실측 배경과 자동 측정 방법 비교 실험 결과" />
-<title>FitShare 실측 실험 결과</title><link rel="stylesheet" href="css/styles.css" /><link rel="stylesheet" href="css/measurement.css" /></head>
-<body class="measurement-page"><main class="measurement-shell dataset-shell"><header class="measurement-header"><a class="measurement-brand" href="index.html">FitShare 실험 결과</a><span>실험 모아보기</span></header>
-<section class="measurement-panel dataset-panel"><p class="eyebrow">FITSHARE MEASUREMENT LAB</p><h1>옷 크기 재기 실험 결과</h1>
-<p class="measurement-intro">같은 옷 사진을 여러 배경과 측정 방법으로 살펴봤어요. 각 페이지에서 사진과 결과를 함께 확인할 수 있어요.</p>
-<nav aria-label="실험 결과"><ul><li><a class="primary-action" href="measure-dataset.html">1차 실험 · 배경과 AI 측정 방법 비교 →</a><p>점·격자·ChArUco 배경, FitShare 파이프라인, YOLO·SAM·HRNet·Gemini 비교</p></li>
-<li><a class="primary-action" href="measure-dataset-round3.html">3차 실험 · 사진 100회 반복 비교 →</a><p>항상 평판화하는 방법과 필요할 때만 평판화하는 방법 비교</p></li>
-<li><a class="primary-action" href="measure-dataset-round4.html">4차 실험 · 배경 무늬 간격 환산 비교 →</a><p>A0 전체 크기와 배경별 무늬 간격으로 20장 측정 비교</p></li>
-<li><a class="primary-action" href="measure-dataset-round5.html">5차 실험 · 원본 비율과 해상도 비교 →</a><p>같은 20장 사진을 긴 변 848~4000픽셀로 보정해 오차 비교</p></li>
-<li><a class="primary-action" href="measure-dataset-round6.html">6차 실험 · 옷 윤곽 찾는 모듈 비교 →</a><p>GrabCut, YOLO, YOLO→GrabCut, SAM을 바꿔 가며 20장 측정 오차 비교</p></li>
-<li><a class="primary-action" href="measurement-process.html">옷 실측 과정 쉽게 보기 →</a><p>사진 보정, 옷 영역 나누기, 종류별 너비와 기장 계산 과정을 설명해요.</p></li></ul></nav>
-<p class="dataset-footnote">공개된 사진은 결과를 보기 위한 웹용 크기예요. 측정 실험에는 원본 사진을 사용했어요. 측정값은 이 데이터셋에서 얻은 결과이며 모든 옷과 촬영 환경에 똑같이 적용된다는 뜻은 아니에요.</p></section></main></body></html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="FitShare 옷 실측 실험의 문제와 해결 시도를 순서대로 살펴봅니다." />
+  <title>FitShare 실측 실험 결과</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/measurement.css" />
+  <link rel="stylesheet" href="css/experiment-index.css" />
+</head>
+<body class="measurement-page">
+  <main class="measurement-shell dataset-shell">
+    <header class="measurement-header">
+      <a class="measurement-brand" href="index.html">FitShare 실험 결과</a>
+      <span>실험 모아보기</span>
+    </header>
+    <section class="measurement-panel dataset-panel">
+      <p class="eyebrow">FITSHARE MEASUREMENT LAB</p>
+      <h1>옷 크기 재기, 무엇을 바꿔 가며 확인했을까요?</h1>
+      <p class="measurement-intro">사진으로 잰 옷 치수가 실제와 다르면 어디서 오차가 생길까요? 배경 표식, 사진 보정, 크기 환산, 옷 윤곽을 차례로 살펴보며 한 번에 한 가지씩 바꿔 확인했어요.</p>
+
+      <nav class="experiment-journey" aria-label="문제에서 해결 시도로 이어지는 실험 순서">
+        <ol class="experiment-steps">
+          <li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">1</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset.html">1차 실험 · 배경과 AI 측정 방법 비교 →</a>
+              <p><strong>문제</strong> 어떤 배경과 분석 방법이 옷 치수를 잘 찾을까요?</p>
+              <p><strong>해결을 위한 시도</strong> 점·격자·ChArUco 배경과 FitShare 파이프라인, YOLO·SAM·HRNet·Gemini를 같은 사진에서 비교했어요.</p>
+            </div>
+          </li>
+          <li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">3</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset-round3.html">3차 실험 · 사진 평판화 방법 비교 →</a>
+              <p><strong>문제</strong> 모든 사진을 매번 반듯하게 펴야 할까요?</p>
+              <p><strong>해결을 위한 시도</strong> 항상 평판화하는 방법과 기준판이 크게 기울었을 때만 평판화하는 방법을 같은 사진으로 비교했어요.</p>
+            </div>
+          </li>
+          <li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">4</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset-round4.html">4차 실험 · 배경 무늬 간격으로 크기 환산 →</a>
+              <p><strong>문제</strong> A0 종이 전체 크기로 환산하면 사진 속 배경 무늬 간격과 차이가 날 수 있어요.</p>
+              <p><strong>해결을 위한 시도</strong> A0 전체 크기 기준과 점·격자·ChArUco의 실제 무늬 간격 기준을 같은 20장에 적용해 비교했어요.</p>
+            </div>
+          </li>
+          <li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">5</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset-round5.html">5차 실험 · 원본 비율과 해상도 비교 →</a>
+              <p><strong>문제</strong> 사진을 작게 줄이는 과정에서 비율이나 세부 정보가 손실되면 치수 오차가 커질까요?</p>
+              <p><strong>해결을 위한 시도</strong> 원본 비율을 유지하며 긴 변 해상도를 848~4000픽셀로 바꿔 측정 오차와 처리 시간을 함께 살펴봤어요.</p>
+            </div>
+          </li>
+          <li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">6</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset-round6.html">6차 실험 · 옷 윤곽 찾는 방법 비교 →</a>
+              <p><strong>문제</strong> 옷의 윤곽을 찾는 방법이 바뀌면 너비와 기장도 달라질까요?</p>
+              <p><strong>해결을 위한 시도</strong> 다른 조건은 유지하고 GrabCut, YOLO, YOLO→GrabCut, SAM으로 옷 영역을 나누어 결과를 비교했어요.</p>
+            </div>
+          </li>
+        </ol>
+      </nav>
+
+      <aside class="guide-link">
+        <a href="measurement-process.html">옷 실측 과정 쉽게 보기 →</a>
+        <p>사진 보정부터 옷 영역 찾기, 종류별 너비와 기장 계산까지 이어지는 방법을 설명해요.</p>
+      </aside>
+      <p class="dataset-footnote">공개된 사진은 결과 확인을 위한 웹용 크기예요. 측정 실험에는 원본 사진을 사용했어요. 결과는 이 데이터셋에서 얻은 값이며 모든 옷과 촬영 환경에 똑같이 적용된다는 뜻은 아니에요.</p>
+    </section>
+  </main>
+</body>
+</html>
+
