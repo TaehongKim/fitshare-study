@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import os
+import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 
@@ -225,6 +226,282 @@ def analyze_round4_dataset(dataset_root, output_path=None):
     return report
 
 
+def analyze_round5_dataset(dataset_root, output_path=None, resolutions=(848, 1000, 1600, 2400, 4000)):
+    """Find a useful ratio-preserving canvas resolution using identical source photos."""
+    root = Path(dataset_root)
+    image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
+    rows = []
+    for image_path in image_paths:
+        label = read_dataset_label(image_path)
+        row = {**label,
+               'imagePath': f"measure_dataset/{label['backgroundId']}/{label['imageName']}",
+               'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg"}
+        for resolution in resolutions:
+            method = f'px{resolution}'
+            started = time.perf_counter()
+            try:
+                rectified = rectify_photo(image_path, label['backgroundId'], preserve_resolution=True,
+                                          max_output_long_side=resolution)
+                if not rectified.get('ok'):
+                    raise ValueError(rectified.get('message', '사진을 보정하지 못했어요.'))
+                cv2, _ = _cv2_modules()
+                cv2.setRNGSeed(0)
+                measured = measure_garment(rectified['image'], garment_id=label['garmentId'],
+                                           scale_cm_per_pixel=rectified['scaleCmPerPixel'],
+                                           max_working_long_side=resolution)
+                row[method] = {
+                    'status': 'done', 'canvas': rectified['canvas'],
+                    'measuredWidthCm': measured['measuredWidthCm'],
+                    'measuredLengthCm': measured['measuredLengthCm'],
+                    'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
+                    'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
+                    'elapsedMs': round((time.perf_counter() - started) * 1000, 1),
+                }
+            except (ValueError, RuntimeError) as error:
+                row[method] = {'status': 'failed', 'message': str(error),
+                               'elapsedMs': round((time.perf_counter() - started) * 1000, 1)}
+        rows.append(row)
+
+    def summarize(method):
+        successful = [row[method] for row in rows if row[method]['status'] == 'done']
+        return {
+            'imageCount': len(rows), 'successCount': len(successful), 'failureCount': len(rows) - len(successful),
+            'successRatePct': round(len(successful) / len(rows) * 100, 1) if rows else 0,
+            'maeWidthCm': round(sum(item['absoluteWidthErrorCm'] for item in successful) / len(successful), 2) if successful else None,
+            'maeLengthCm': round(sum(item['absoluteLengthErrorCm'] for item in successful) / len(successful), 2) if successful else None,
+            'averageElapsedMs': round(sum(item['elapsedMs'] for item in successful) / len(successful), 1) if successful else None,
+        }
+
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'experiment': 'round5-ratio-preserving-resolution', 'imageCount': len(rows),
+        'testedResolutions': list(resolutions),
+        'methods': {f'px{resolution}': summarize(f'px{resolution}') for resolution in resolutions},
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
+
+
+def summarize_round7(rows, method_id):
+    successful = [row[method_id] for row in rows if row.get(method_id, {}).get('status') == 'done']
+    count = len(successful)
+    return {
+        'imageCount': len(rows), 'successCount': count, 'failureCount': len(rows) - count,
+        'successRatePct': round(count / len(rows) * 100, 1) if rows else 0,
+        'maeWidthCm': round(sum(row['absoluteWidthErrorCm'] for row in successful) / count, 2) if count else None,
+        'maeLengthCm': round(sum(row['absoluteLengthErrorCm'] for row in successful) / count, 2) if count else None,
+        'averageElapsedMs': round(sum(row['elapsedMs'] for row in successful) / count, 1) if count else None,
+    }
+
+
+def analyze_round7_dataset(dataset_root, output_path=None):
+    """Compare today's 600px GrabCut service with the selected 848px hybrid pipeline."""
+    try:
+        from tools.garment_segmentation import get_yolo_grabcut_provider
+    except ModuleNotFoundError as error:
+        if error.name != 'tools':
+            raise
+        from garment_segmentation import get_yolo_grabcut_provider
+
+    cv2, _ = _cv2_modules()
+    root = Path(dataset_root)
+    image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
+    rows = []
+    for image_path in image_paths:
+        label = read_dataset_label(image_path)
+        row = {**label, 'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg"}
+        for method_id in ('baseline', 'integrated'):
+            started = time.perf_counter()
+            try:
+                if method_id == 'baseline':
+                    rectified = rectify_photo(image_path, label['backgroundId'])
+                    working_side, length_provider = 600, None
+                else:
+                    rectified = rectify_photo(image_path, label['backgroundId'], preserve_resolution=True,
+                                              max_output_long_side=848)
+                    working_side = 848
+                    length_provider = get_yolo_grabcut_provider(garment_id=label['garmentId'])
+                if not rectified.get('ok'):
+                    raise ValueError(rectified.get('message', '사진을 보정하지 못했어요.'))
+                cv2.setRNGSeed(0)
+                measured = measure_garment(
+                    rectified['image'], garment_id=label['garmentId'],
+                    scale_cm_per_pixel=rectified['scaleCmPerPixel'], max_working_long_side=working_side,
+                    length_mask_provider=length_provider)
+                row[method_id] = {
+                    'status': 'done', 'canvas': rectified['canvas'],
+                    'measuredWidthCm': measured['measuredWidthCm'], 'measuredLengthCm': measured['measuredLengthCm'],
+                    'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
+                    'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
+                    'elapsedMs': round((time.perf_counter() - started) * 1000, 1),
+                    'maskMethods': measured['maskMethods'],
+                }
+            except (ValueError, RuntimeError, OSError) as error:
+                row[method_id] = {'status': 'failed', 'message': str(error),
+                                  'elapsedMs': round((time.perf_counter() - started) * 1000, 1)}
+        rows.append(row)
+        print(f"[round7] {len(rows)}/{len(image_paths)} {image_path.name}", flush=True)
+
+    backgrounds = ('point', 'cross', 'ChArUco', 'ChaArUco_Cross')
+    methods = ('baseline', 'integrated')
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'experiment': 'round7-integrated-pipeline', 'imageCount': len(rows), 'resolutionLongSidePx': 848,
+        'methodLabels': {
+            'baseline': {'label': '현재 기준', 'description': '600px 작업 크기 · 너비와 기장 GrabCut'},
+            'integrated': {'label': '7차 통합', 'description': '848px 비율 유지 · 너비 GrabCut · 기장 YOLO→GrabCut'},
+        },
+        'notes': [
+            '848px는 입력 원본과 A0 보정 사진의 비율을 유지하면서 처리 긴 변을 제한한 값입니다.',
+            '오차와 성공률은 이 20장 데이터셋에서 다시 측정한 값이며, 새로운 사진에서의 성능을 보장하지 않습니다.',
+            '처리 시간은 보정과 마스크 생성, 치수 계산 및 실험 중 모델을 처음 읽는 시간을 포함합니다. 이 실행은 이미 저장된 모델 파일을 사용했고 다운로드하지 않았습니다. 캐시가 비어 있으면 첫 실행 시간은 더 길 수 있습니다.',
+        ],
+        'methods': {method: summarize_round7(rows, method) for method in methods},
+        'byBackground': {background: {method: summarize_round7(
+            [row for row in rows if row['backgroundId'] == background], method)
+            for method in methods} for background in backgrounds},
+        'byGarment': {str(garment_id): {method: summarize_round7(
+            [row for row in rows if row['garmentId'] == garment_id], method)
+            for method in methods} for garment_id in sorted(GARMENT_INFO)},
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
+
+
+def analyze_round6_dataset(dataset_root, output_path=None, overlay_dir=None, model_dir=None, include_sam=True):
+    """Swap only the segmentation module (GrabCut, YOLO, YOLO+GrabCut, SAM) and keep every other step fixed."""
+    import base64
+    import onnxruntime as ort
+    from experiments.garment_ai.round6_masks import METHODS, build_providers, mask_iou
+    from tools.vision_pipeline import _component_mask
+
+    cv2, np = _cv2_modules()
+    cache = Path(model_dir) if model_dir else Path(__file__).resolve().parents[1] / 'server-data' / 'model-cache'
+    session = ort.InferenceSession(str(cache / 'deepfashion2-yolo26s-seg.onnx'), providers=['CPUExecutionProvider'])
+    predictor = None
+    if include_sam:
+        from experiments.garment_ai.sam_experiment import create_predictor
+        predictor = create_predictor(cache / 'sam_vit_b_01ec64.pth')
+    providers = build_providers(session, predictor)
+    method_ids = [method_id for method_id, _, _ in METHODS if method_id in providers]
+
+    root = Path(dataset_root)
+    image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
+    rows = []
+    for image_path in image_paths:
+        label = read_dataset_label(image_path)
+        row = {**label, 'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg"}
+        rectified = rectify_photo(image_path, label['backgroundId'])
+        if not rectified.get('ok'):
+            for method_id in method_ids:
+                row[method_id] = {'status': 'failed', 'message': rectified.get('message', '사진을 보정하지 못했어요.')}
+            rows.append(row)
+            continue
+        cv2.setRNGSeed(0)
+        baseline_mask = _component_mask(rectified['image'], label['garmentId'])[1]
+        for method_id in method_ids:
+            captured = {}
+            provider = providers[method_id]
+            if provider is not None:
+                def recording(image, garment_id, _provider=provider, _captured=captured):
+                    _captured['mask'] = np.asarray(_provider(image, garment_id)) > 0
+                    return _captured['mask']
+            else:
+                recording = None
+            started = time.perf_counter()
+            try:
+                cv2.setRNGSeed(0)
+                measured = measure_garment(rectified['image'], garment_id=label['garmentId'],
+                                           scale_cm_per_pixel=rectified['scaleCmPerPixel'],
+                                           mask_provider=recording)
+                entry = {
+                    'status': 'done',
+                    'measuredWidthCm': measured['measuredWidthCm'],
+                    'measuredLengthCm': measured['measuredLengthCm'],
+                    'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
+                    'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
+                    'elapsedMs': round((time.perf_counter() - started) * 1000, 1),
+                    'maskIouWithGrabcut': round(mask_iou(baseline_mask, captured['mask']), 3)
+                    if 'mask' in captured and captured['mask'].shape == baseline_mask.shape else None,
+                }
+                if overlay_dir is not None:
+                    decoded = cv2.imdecode(np.frombuffer(
+                        base64.b64decode(measured['overlayDataUrl'].split(',', 1)[1]), np.uint8), cv2.IMREAD_COLOR)
+                    small = cv2.resize(decoded, (360, round(decoded.shape[0] * 360 / decoded.shape[1])),
+                                       interpolation=cv2.INTER_AREA)
+                    destination = Path(overlay_dir) / method_id / f'{image_path.stem}.jpg'
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    cv2.imwrite(str(destination), small, [cv2.IMWRITE_JPEG_QUALITY, 72])
+                    entry['overlayUrl'] = f'assets/round6/{method_id}/{image_path.stem}.jpg'
+                row[method_id] = entry
+            except (ValueError, RuntimeError) as error:
+                row[method_id] = {'status': 'failed', 'message': str(error),
+                                  'elapsedMs': round((time.perf_counter() - started) * 1000, 1)}
+        rows.append(row)
+        print(f"[round6] {len(rows)}/{len(image_paths)} {image_path.name}", flush=True)
+
+    # 조합: 새로 분할하지 않고, 너비는 GrabCut 값과 기장은 YOLO→GrabCut 값을 가져와 합친 사후 계산이다.
+    for row in rows:
+        width_source, length_source = row.get('grabcut', {}), row.get('yoloGrabcut', {})
+        if width_source.get('status') == 'done' and length_source.get('status') == 'done':
+            row['hybrid'] = {
+                'status': 'done',
+                'measuredWidthCm': width_source['measuredWidthCm'],
+                'measuredLengthCm': length_source['measuredLengthCm'],
+                'absoluteWidthErrorCm': width_source['absoluteWidthErrorCm'],
+                'absoluteLengthErrorCm': length_source['absoluteLengthErrorCm'],
+                'elapsedMs': round(width_source['elapsedMs'] + length_source['elapsedMs'], 1),
+                'maskIouWithGrabcut': None,
+                'overlayUrl': length_source.get('overlayUrl'),
+            }
+        else:
+            row['hybrid'] = {'status': 'failed', 'message': '조합에 필요한 두 방법 중 하나가 실패했어요.'}
+    if 'yoloGrabcut' in method_ids:
+        method_ids.append('hybrid')
+
+    def summarize(selected_rows, method_id):
+        successful = [row[method_id] for row in selected_rows if row[method_id]['status'] == 'done']
+        ious =[item['maskIouWithGrabcut'] for item in successful if item.get('maskIouWithGrabcut') is not None]
+        return {
+            'imageCount': len(selected_rows), 'successCount': len(successful),
+            'failureCount': len(selected_rows) - len(successful),
+            'successRatePct': round(len(successful) / len(selected_rows) * 100, 1) if selected_rows else 0,
+            'maeWidthCm': round(sum(i['absoluteWidthErrorCm'] for i in successful) / len(successful), 2) if successful else None,
+            'maeLengthCm': round(sum(i['absoluteLengthErrorCm'] for i in successful) / len(successful), 2) if successful else None,
+            'averageElapsedMs': round(sum(i['elapsedMs'] for i in successful) / len(successful), 1) if successful else None,
+            'averageMaskIouWithGrabcut': round(sum(ious) / len(ious), 3) if ious else None,
+        }
+
+    background_ids = ('point', 'cross', 'ChArUco', 'ChaArUco_Cross')
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'experiment': 'round6-segmentation-module', 'imageCount': len(rows),
+        'methodLabels': {**{method_id: {'label': label, 'description': description}
+                            for method_id, label, description in METHODS if method_id in method_ids},
+                         'hybrid': {'label': '조합 (너비 GrabCut + 기장 YOLO→GrabCut)',
+                                    'description': '새 분할 없이 두 결과에서 잘 맞은 값을 골라 합친 사후 계산이에요. 같은 20장에서 고른 조합이라 실제보다 좋게 보일 수 있어요.'}},
+        'methods': {method_id: summarize(rows, method_id) for method_id in method_ids},
+        'byBackground': {background: {method_id: summarize([r for r in rows if r['backgroundId'] == background], method_id)
+                                      for method_id in method_ids} for background in background_ids},
+        'byGarment': {str(garment_id): {method_id: summarize([r for r in rows if r['garmentId'] == garment_id], method_id)
+                                        for method_id in method_ids} for garment_id in sorted(GARMENT_INFO)},
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
+
+
 def _round3_method_trials(task):
     image_path, label, method, policy, repeat_count = task
     trials = []
@@ -390,9 +667,47 @@ def main():
     parser.add_argument('--output', default=str(Path(__file__).resolve().parents[1] / 'server-data' / 'measure-dataset-report'))
     parser.add_argument('--round3', action='store_true', help='compare the two correction methods')
     parser.add_argument('--round4', action='store_true', help='compare A0 size with pattern-pitch calibration')
+    parser.add_argument('--round5', action='store_true', help='compare standard and ratio-preserving high-resolution processing')
+    parser.add_argument('--round6', action='store_true', help='compare segmentation modules (GrabCut, YOLO, SAM)')
+    parser.add_argument('--round7', action='store_true', help='compare current service and integrated 848px pipeline')
+    parser.add_argument('--no-sam', action='store_true', help='run round6 without the SAM methods')
     parser.add_argument('--repeat-count', type=int, default=100)
     parser.add_argument('--workers', type=int, default=8)
     args = parser.parse_args()
+    if args.round6:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round6.json'
+        docs = Path(__file__).resolve().parents[1] / 'docs'
+        report = analyze_round6_dataset(args.dataset, report_path, overlay_dir=docs / 'assets' / 'round6',
+                                        include_sam=not args.no_sam)
+        print(f"[round6] {report['imageCount']} images; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round6] {method}: MAE width={result['maeWidthCm']}cm, length={result['maeLengthCm']}cm, "
+                  f"successful={result['successCount']}, avg={result['averageElapsedMs']}ms, "
+                  f"IoU={result['averageMaskIouWithGrabcut']}", flush=True)
+        return
+    if args.round7:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round7.json'
+        report = analyze_round7_dataset(args.dataset, report_path)
+        print(f"[round7] {report['imageCount']} images; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round7] {method}: MAE width={result['maeWidthCm']}cm, length={result['maeLengthCm']}cm, "
+                  f"success={result['successCount']}/{result['imageCount']}, avg={result['averageElapsedMs']}ms", flush=True)
+        return
+    if args.round5:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round5.json'
+        report = analyze_round5_dataset(args.dataset, report_path)
+        print(f"[round5] {report['imageCount']} images; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round5] {method}: MAE width={result['maeWidthCm']}cm, "
+                  f"length={result['maeLengthCm']}cm, successful={result['successCount']}, "
+                  f"avg={result['averageElapsedMs']}ms", flush=True)
+        return
     if args.round4:
         report_path = Path(args.output)
         if report_path.suffix.lower() != '.json':
@@ -423,4 +738,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
