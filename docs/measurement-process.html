@@ -278,7 +278,7 @@
       .size-form { display: grid; gap: 16px; margin-top: 18px; }
       .size-form-grid, .size-candidate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       .size-form label { display: grid; gap: 5px; font-weight: 700; }
-      .size-form input { width: 100%; padding: 10px 12px; border: 1px solid #aebfc8; border-radius: 8px; font: inherit; }
+      .size-form input, .size-form select { width: 100%; padding: 10px 12px; border: 1px solid #aebfc8; border-radius: 8px; font: inherit; background: #fff; }
       .size-candidate-list { display: grid; gap: 12px; }
       .size-candidate { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
       .size-candidate legend { padding: 0 6px; color: var(--blue); font-weight: 800; }
@@ -861,18 +861,17 @@
         <p class="eyebrow">잰 치수를 호수와 비교해요</p>
         <h2 id="size-matcher-title">옷의 너비와 기장으로 아동복 호수를 바로 알 수 있을까요?</h2>
         <p class="section-lead">
-          정확한 공통 변환표는 없어요. 호수는 보통 옷을 입을 아이의 키를 나타내는 이름이고,
-          호수는 옷의 길이와 같지 않아요. 사진에서 잰 너비와 기장은 옷 자체의 크기예요.
-          같은 100호라도 브랜드와 옷 종류에 따라 실제 치수가 다를 수 있어요.
+          치수를 입력하면 옷 종류별 참고표와 비교해 국내에서 쓰는 키 호수 하나를 바로 골라요.
+          호수 숫자는 아이의 키를 가리키는 이름이고, 옷의 길이와 같지 않아요.
+          자동 선택 뒤에는 호수를 직접 바꿀 수 있어요.
         </p>
 
         <div class="info-box">
           <h3>확인한 한국 기준 자료</h3>
           <p>
-            한국산업표준 <strong>KS K 0052 「유아복의 치수」</strong>는 유아복 치수 기준이에요.
-            한국표준정보망에는 2024년 확인 표준으로 나와 있어요.
-            공개된 개정 연구는 0~36개월 유아를 살펴보고 키를 기본 치수로 삼으며, 키 호칭을 5cm 간격으로 제안해요.
-            이 자료는 모든 어린이 옷의 펼친 너비·기장을 정한 표가 아니에요.
+            한국산업표준에는 <strong>KS K 0052 「유아복의 치수」</strong>, <strong>KS K 9402 「남자 아동복의 치수」</strong>,
+            <strong>KS K 9403 「여자 아동복의 치수」</strong> 기준이 있어요. 한국표준정보망은 세 표준 모두
+            2025년 9월 개정된 것으로 안내해요. 적용 연령과 옷 종류가 표준마다 달라요.
           </p>
           <div class="mat-table-wrap">
             <table class="size-source-table">
@@ -880,29 +879,44 @@
               <tbody>
                 <tr>
                   <th scope="row">KS K 0052</th>
-                  <td>유아복 치수 기준의 이름과 범위</td>
-                  <td>초등학생 옷까지 포함하는 하나의 브랜드 공통 너비·기장표</td>
+                  <td>영아부터 취학 전 유아 의류 치수 기준</td>
+                  <td>초등학생 옷까지 포함하는 단일 호수표</td>
                 </tr>
                 <tr>
-                  <th scope="row">공개 연구</th>
-                  <td>0~36개월 유아를 조사했고, 키를 중심으로 5cm 간격 호칭을 제안</td>
-                  <td>사진으로 잰 옷 치수만 보고 모든 브랜드의 호수를 맞히는 공식</td>
+                  <th scope="row">KS K 9402·9403</th>
+                  <td>각각 만 7~12세 남자·여자 아동복 치수 기준</td>
+                  <td>사진으로 잰 옷의 펼친 너비·기장으로 브랜드 호수를 판정하는 공식</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p class="small-note">
             출처:
-            <a href="https://www.kssn.net/search/stddetail.do?itemNo=K001010147933" target="_blank" rel="noopener noreferrer">한국표준정보망의 KS K 0052 정보</a>,
-            <a href="https://www.koreascience.kr/article/JAKO201412835857603.page" target="_blank" rel="noopener noreferrer">유아복 KS 치수체계 개정 연구</a>.
+            <a href="https://www.kssn.net/search/stddetail.do?itemNo=K001010154267" target="_blank" rel="noopener noreferrer">KS K 0052 유아복</a>,
+            <a href="https://www.kssn.net/search/stddetail.do?itemNo=K001010123909" target="_blank" rel="noopener noreferrer">KS K 9402 남자 아동복</a>,
+            <a href="https://www.kssn.net/search/stddetail.do?itemNo=K001010123918" target="_blank" rel="noopener noreferrer">KS K 9403 여자 아동복</a>.
+          </p>
+        </div>
+
+        <div class="info-box">
+          <h3>자동 매핑은 이렇게 해요</h3>
+          <p>
+            옷 종류를 고르고 사진에서 확인한 너비·기장을 입력하면 내장 참고 치수표에서
+            너비와 기장이 가장 가까운 90~160호 하나를 바로 선택해요.
+            선택된 호수는 바로 아래 상자에서 직접 바꿀 수 있어요.
+          </p>
+          <p class="small-note">
+            내장 너비·기장 값은 FitShare가 정한 임시 참고값이에요. 공식 KS 변환표나 실제 상품 치수 통계가 아니며,
+            여러 브랜드의 옷을 재어 검증한 값도 아니에요. KS 호수는 아이 키 기준이라 옷 실측만으로 아이에게 맞는 크기를 보장할 수 없어요.
+            브랜드와 디자인에 따라 다르니 선택한 상품의 치수표와 아이의 키도 확인해 주세요.
           </p>
         </div>
 
         <div class="info-box warning">
-          <h3>그래서 어떻게 비교하나요?</h3>
+          <h3>상품 치수표로 더 맞춰 볼 수 있어요</h3>
           <p>
-            비교하려는 상품이나 브랜드가 공개한 <strong>호수별 옷 치수표</strong>를 함께 봐야 해요.
-            아래에 사진에서 잰 너비·기장을 넣고, 그 상품표의 호수와 옷 치수를 그대로 옮겨 적으면 가장 가까운 후보를 찾아요.
+            특정 상품과 비교하려면 아래에 그 브랜드가 공개한 <strong>호수별 옷 치수표</strong>를 입력하면 돼요.
+            상품표 치수와 실측값의 차이가 가장 작은 호수를 함께 표시해요.
             상품표 너비는 같은 위치와 방법으로 잰 너비여야 해요. 둘레 치수와 펼친 너비는 서로 바꿔 적지 마세요.
           </p>
         </div>
@@ -912,11 +926,29 @@
             <legend><strong>사진에서 잰 옷 치수</strong></legend>
             <p class="small-note">이전 단계에서 확인한 결과를 cm 단위로 입력해요.</p>
             <div class="size-form-grid">
+              <label>옷 종류
+                <select data-garment-type>
+                  <option value="top">상의·점퍼</option>
+                  <option value="dress">원피스</option>
+                  <option value="pants">바지</option>
+                </select>
+              </label>
               <label>잰 너비 (cm)
                 <input type="number" min="0" step="any" required data-measured-width inputmode="decimal" />
               </label>
               <label>잰 기장 (cm)
                 <input type="number" min="0" step="any" required data-measured-length inputmode="decimal" />
+              </label>
+            </div>
+            <div class="size-form-grid">
+              <label>선택된 호수 (직접 수정 가능)
+                <select data-auto-size aria-label="자동 선택된 호수, 직접 수정 가능">
+                  <option value="">먼저 자동으로 골라 주세요</option>
+                  <option value="90">90호</option><option value="100">100호</option>
+                  <option value="110">110호</option><option value="120">120호</option>
+                  <option value="130">130호</option><option value="140">140호</option>
+                  <option value="150">150호</option><option value="160">160호</option>
+                </select>
               </label>
             </div>
           </fieldset>
@@ -951,9 +983,9 @@
           <ol class="size-results" data-size-results></ol>
         </form>
         <p class="callout">
-          <strong>결과는 참고용이에요.</strong>
-          비교 점수가 가장 낮은 상품표 치수를 보여 줄 뿐, 아이 몸에 잘 맞는지 또는 전국 공통 호수를 판정하지 않아요.
-          옷 종류, 여유분, 재는 위치가 다르면 실제 착용감도 달라요.
+          <strong>자동 호수는 참고용이에요.</strong>
+          자동으로 선택한 값은 옷 실측과 내장 참고표의 근접값이에요. KS의 공식 변환 결과나 아이에게 잘 맞는다는 보장은 아니에요.
+          상품 치수표 비교와 아이 키를 함께 확인하고 필요하면 호수를 직접 바꿔 주세요.
         </p>
       </section>
 
@@ -1000,3 +1032,4 @@
     <script type="module" src="js/measurement-size-matcher.js"></script>
   </body>
 </html>
+
