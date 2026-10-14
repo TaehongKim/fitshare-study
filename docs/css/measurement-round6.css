@@ -1,0 +1,24 @@
+.round6-methods { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:20px 0; }
+.round6-method { padding:14px; border:1px solid #e2eaf5; border-radius:14px; background:#fbfcff; }
+.round6-method.is-baseline { border-color:#c9d6ee; background:#f4f8ff; }
+.round6-method.is-combo { border-color:#bfe9dc; background:#f2fbf7; }
+.round6-method h3 { margin:0 0 6px; color:#273a58; font:18px 'Jua',sans-serif; }
+.round6-method p { margin:0; color:#65738d; font-size:13px; line-height:1.55; }
+.round6-summary-grid { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+.round6-bar { display:grid; grid-template-columns:42px 1fr 64px; align-items:center; gap:8px; margin-top:8px; color:#52627b; font-size:12px; }
+.round6-bar-track { height:10px; border-radius:6px; background:#edf1f7; overflow:hidden; }
+.round6-bar-fill { display:block; height:100%; border-radius:6px; background:#6f8fd0; }
+.round6-bar-fill.is-length { background:#3fb093; }
+.round6-bar strong { color:#263954; text-align:right; font-variant-numeric:tabular-nums; }
+.round6-extra { margin:10px 0 0; color:#71809a; font-size:12px; line-height:1.6; }
+.round3-table td.is-best { background:#e9f8f1; font-weight:900; color:#1f6e57; }
+.round3-table td.is-fail { color:#a05a5a; }
+.round6-reading { display:grid; gap:8px; padding-left:20px; color:#52627b; font-size:14px; line-height:1.65; }
+.round6-overlays { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.round6-overlays figure { margin:0; }
+.round6-overlays img { width:100%; border-radius:8px; border:1px solid #e2eaf5; background:#f4f6fa; }
+.round6-overlays figcaption { margin-top:3px; color:#71809a; font-size:11px; text-align:center; }
+.round6-failed-image { display:grid; place-items:center; aspect-ratio:600/848; border-radius:8px; background:#f7eeee; color:#a05a5a; font-size:12px; }
+.round6-photo-card { display:grid; gap:12px; padding:14px; border:1px solid #e4eaf3; border-radius:14px; }
+.round6-photo-card h3 { margin:0; color:#304565; font:19px 'Jua',sans-serif; }
+@media (max-width:560px) { .round6-overlays { grid-template-columns:repeat(2,minmax(0,1fr)); } }

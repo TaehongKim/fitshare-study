@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="옷 윤곽을 찾는 모듈을 GrabCut, YOLO, SAM으로 바꿔 20장의 실측 오차를 비교한 6차 실험" />
+    <title>실측 6차 실험 | FitShare</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/measurement.css" />
+    <link rel="stylesheet" href="css/measurement-round5.css" />
+    <link rel="stylesheet" href="css/measurement-round6.css" />
+  </head>
+  <body class="measurement-page">
+    <main class="measurement-shell round3-shell">
+      <header class="measurement-header">
+        <a class="measurement-brand" href="index.html">← 실험 결과 모아보기</a>
+        <span>MEASURE DATASET LAB · 6차 실험</span>
+      </header>
+      <section class="measurement-panel round3-panel" aria-labelledby="round6-title">
+        <p class="eyebrow">ROUND 6 · GrabCut을 다른 모듈로 바꾸면 더 정확해질까요?</p>
+        <h1 id="round6-title">옷 윤곽 찾는 모듈만 바꿔 봐요</h1>
+        <p class="measurement-intro">사진 보정, 배경 무늬 환산, 너비·기장을 재는 규칙은 모두 그대로 두고 옷 윤곽(마스크)을 만드는 부분만 GrabCut, YOLO, SAM으로 바꿔 같은 20장을 다시 쟀어요.</p>
+        <section id="round6-methods" class="round6-methods" aria-label="비교한 분할 방법"></section>
+        <div class="kid-help"><strong>비교할 때 주의할 점</strong><br />너비·기장을 계산하는 규칙과 색깔로 윤곽을 다듬는 단계는 GrabCut 마스크에 맞춰 정한 것이라, 다른 마스크에는 불리할 수 있어요. 마스크가 겹치는 정도(IoU)는 정답이 아니라 GrabCut 마스크와 얼마나 비슷한지를 나타내요. 정확도는 항상 기준 치수와의 평균 차이로 봐요.</div>
+        <p id="round6-status" role="status" aria-live="polite">저장된 6차 실험 결과를 불러오고 있어요.</p>
+        <section id="round6-summary" class="round3-summary round6-summary-grid" aria-label="전체 비교"></section>
+        <p id="round6-conclusion" class="kid-help" role="status"></p>
+        <section class="round3-section" aria-labelledby="round6-garment-heading">
+          <h2 id="round6-garment-heading">옷 종류별 평균 오차</h2>
+          <p>각 칸은 너비 / 기장 평균 오차(cm)이고, 가장 작은 값에 색을 칠했어요. 옷마다 사진 4장(배경 4종)이에요.</p>
+          <div class="round3-table-wrap"><table class="round3-table" id="round6-garment-table"></table></div>
+        </section>
+        <section class="round3-section" aria-labelledby="round6-background-heading">
+          <h2 id="round6-background-heading">배경별 평균 오차</h2>
+          <p>각 칸은 너비 / 기장 평균 오차(cm)예요. 배경마다 사진 5장이에요.</p>
+          <div class="round3-table-wrap"><table class="round3-table" id="round6-background-table"></table></div>
+        </section>
+        <section class="round3-section" aria-labelledby="round6-reading-heading">
+          <h2 id="round6-reading-heading">결과를 이렇게 읽었어요</h2>
+          <ul id="round6-reading" class="round6-reading"></ul>
+        </section>
+        <section class="round3-section" aria-labelledby="round6-photos-heading">
+          <h2 id="round6-photos-heading">사진별 측정 결과</h2>
+          <p>초록색이 각 방법이 찾은 옷 영역이고, 파란 선이 너비, 주황 선이 기장이에요.</p>
+          <div id="round6-photos" class="round3-photo-list"></div>
+        </section>
+        <p class="round3-footnote">같은 20장 사진, 같은 보정, 같은 난수 시드로 실행했어요. 20장은 적은 표본이고 조합 방법은 같은 사진에서 골랐기 때문에 일반적인 정확도 보장이 아니에요. SAM은 CPU에서 실행했고, YOLO와 SAM 모델 파일은 저장소에 포함하지 않았어요.</p>
+      </section>
+    </main>
+    <script type="module" src="js/measurement/publicRound6Report.js"></script>
+  </body>
+</html>
