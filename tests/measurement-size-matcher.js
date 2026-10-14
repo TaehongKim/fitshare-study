@@ -95,7 +95,24 @@ function finish() {
 }
 
 import('../docs/js/measurement-size-matcher.js')
-  .then(async ({ rankSizeCandidates }) => {
+  .then(async ({ rankSizeCandidates, mapKoreanKidsSize }) => {
+    record('maps exact top measurements to Korean height size 110', () => {
+      const match = mapKoreanKidsSize({ garmentType: 'top', widthCm: 32, lengthCm: 46 });
+      assertEqual(match.label, '110호', 'exact top size');
+      assertEqual(mapKoreanKidsSize({ garmentType: 'dress', widthCm: 30, lengthCm: 60 }).label, '110호', 'exact dress size');
+      assertEqual(mapKoreanKidsSize({ garmentType: 'pants', widthCm: 23, lengthCm: 62 }).label, '110호', 'exact pants size');
+    });
+
+    record('maps edge measurements to the nearest available size', () => {
+      const match = mapKoreanKidsSize({ garmentType: 'top', widthCm: 44, lengthCm: 66 });
+      assertEqual(match.label, '160호', 'upper boundary size');
+    });
+
+    record('rejects unknown garment type and invalid dimensions for auto mapping', () => {
+      assertThrows(() => mapKoreanKidsSize({ garmentType: 'unknown', widthCm: 32, lengthCm: 46 }), 'unknown type must fail');
+      assertThrows(() => mapKoreanKidsSize({ garmentType: 'top', widthCm: 0, lengthCm: 46 }), 'zero width must fail');
+    });
+
     record('ranks the closest product-chart candidate', () => {
       const ranked = rankSizeCandidates(
         { widthCm: 32, lengthCm: 50 },
@@ -222,6 +239,40 @@ import('../docs/js/measurement-size-matcher.js')
         assertEqual(doc.querySelectorAll('[data-chart-row]').length, startingCount, 'rows after remove');
       })
     );
+
+    await recordAsync('lets the user change the automatically mapped size', () =>
+      withGuide((doc) => {
+        const width = doc.querySelector('[data-measured-width]');
+        const length = doc.querySelector('[data-measured-length]');
+        width.value = '32';
+        width.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+        length.value = '46';
+        length.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+        const control = doc.querySelector('[data-auto-size]');
+        if (control.value !== '110') throw new Error('expected automatic 110호 selection');
+        control.value = '120';
+        control.dispatchEvent(new doc.defaultView.Event('change', { bubbles: true }));
+        if (!doc.querySelector('[data-size-status]').textContent.includes('120호')) {
+          throw new Error('manual size change was not announced');
+        }
+      })
+    );
+
+    await recordAsync('updates the mapping as measurements change and clears stale size on invalid input', () =>
+      withGuide((doc) => {
+        const width = doc.querySelector('[data-measured-width]');
+        const length = doc.querySelector('[data-measured-length]');
+        width.value = '32';
+        length.value = '46';
+        width.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+        length.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+        const selected = doc.querySelector('[data-auto-size]');
+        if (selected.value !== '110') throw new Error('valid measurements did not map automatically');
+        width.value = '0';
+        width.dispatchEvent(new doc.defaultView.Event('input', { bubbles: true }));
+        if (selected.value !== '') throw new Error('stale size remained after invalid input');
+      })
+    );
   })
   .catch((error) => {
     failed += 1;
@@ -230,3 +281,4 @@ import('../docs/js/measurement-size-matcher.js')
     results.append(item);
   })
   .finally(finish);
+
