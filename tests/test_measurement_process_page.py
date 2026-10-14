@@ -172,22 +172,31 @@ class MeasurementProcessPageTests(unittest.TestCase):
         self.assertNotIn('GrabCut', html)
         self.assertNotIn('경계 상자', html)
 
-    def test_page_explains_korean_infant_size_standard_and_its_scope(self):
+    def test_page_explains_korean_child_size_standards_and_their_scope(self):
         html = PAGE.read_text(encoding='utf-8')
 
-        self.assertIn('KS K 0052', html)
-        self.assertIn('유아복의 치수', html)
-        self.assertIn('5cm', html)
-        self.assertIn('0~36개월', html)
+        for term in ('KS K 0052', 'KS K 9402', 'KS K 9403', '만 7~12세', '2025년 9월 개정'):
+            with self.subTest(term=term):
+                self.assertIn(term, html)
         self.assertIn('옷의 길이와 같지 않아요', html)
-        self.assertIn('https://www.kssn.net/search/stddetail.do?itemNo=K001010147933', html)
-        self.assertIn('https://www.koreascience.kr/article/JAKO201412835857603.page', html)
+        self.assertIn('https://www.kssn.net/search/stddetail.do?itemNo=K001010154267', html)
+        self.assertIn('https://www.kssn.net/search/stddetail.do?itemNo=K001010123909', html)
+        self.assertIn('https://www.kssn.net/search/stddetail.do?itemNo=K001010123918', html)
 
-    def test_size_matcher_is_wired_and_requires_product_chart_values(self):
+    def test_size_matcher_offers_korean_auto_mapping_and_manual_size_edit(self):
         html = PAGE.read_text(encoding='utf-8')
 
         self.assertIn('id="size-matcher"', html)
         self.assertIn('js/measurement-size-matcher.js', html)
+        self.assertIn('data-garment-type', html)
+        self.assertIn('data-auto-size', html)
+        self.assertIn('치수를 입력하면', html)
+        self.assertIn('직접 바꿀 수 있어요', html)
+        self.assertIn('공식 KS 변환표나 실제 상품 치수 통계가 아니며', html)
+
+    def test_size_matcher_keeps_manual_product_chart_comparison(self):
+        html = PAGE.read_text(encoding='utf-8')
+
         self.assertIn('상품별 치수표', html)
         self.assertIn('같은 위치와 방법으로 잰 너비', html)
         self.assertIn('data-measured-width', html)
@@ -197,3 +206,4 @@ class MeasurementProcessPageTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
