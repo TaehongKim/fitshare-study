@@ -35,6 +35,11 @@
         <p id="round5-status" role="status" aria-live="polite">저장된 5차 실험 결과를 불러오고 있어요.</p>
         <section id="round5-summary" class="round3-summary" aria-label="전체 비교"></section>
         <p id="round5-conclusion" class="kid-help" role="status"></p>
+        <section class="round3-section" aria-labelledby="round5-time-heading">
+          <h2 id="round5-time-heading">해상도별 평균 처리 시간</h2>
+          <p>사진 한 장을 처리하는 데 걸린 평균 시간이에요. 해상도가 커질수록 처리 시간이 어떻게 달라지는지 확인해요.</p>
+          <div id="round5-time-chart" class="round5-time-chart"></div>
+        </section>
         <section class="round3-section" aria-labelledby="round5-photos-heading">
           <h2 id="round5-photos-heading">사진별 측정 결과</h2>
           <p>각 방법은 너비와 기장 오차, 처리 시간, 보정 캔버스 크기를 보여줘요.</p>
@@ -46,4 +51,3 @@
     <script type="module" src="js/measurement/publicRound5Report.js"></script>
   </body>
 </html>
-

@@ -2,6 +2,7 @@ const status = document.querySelector('#round5-status');
 const summaryRoot = document.querySelector('#round5-summary');
 const photosRoot = document.querySelector('#round5-photos');
 const conclusion = document.querySelector('#round5-conclusion');
+const timeChartRoot = document.querySelector('#round5-time-chart');
 
 const backgrounds = {
   point: '점 배경', cross: '격자 배경', ChArUco: 'ChArUco', ChaArUco_Cross: 'ChArUco 격자'
@@ -37,11 +38,67 @@ function renderSummary(report) {
     : '성공한 측정이 없어 해상도별 정확도를 비교할 수 없어요.';
 }
 
+function renderTimeChart(report) {
+  const resolutions = Array.isArray(report.testedResolutions) ? report.testedResolutions : [];
+  const points = resolutions.map((resolution) => {
+    const result = report.methods?.[`px${resolution}`];
+    const seconds = result?.averageElapsedMs / 1000;
+    return { resolution, seconds };
+  }).filter((point) => Number.isFinite(point.resolution)
+    && Number.isFinite(point.seconds) && point.seconds >= 0);
+
+  if (points.length === 0) {
+    timeChartRoot.innerHTML = '<p class="round5-time-empty" role="status">처리 시간 데이터가 없어요.</p>';
+    return;
+  }
+
+  const width = 760;
+  const height = 320;
+  const left = 64;
+  const right = 28;
+  const top = 42;
+  const bottom = 258;
+  const plotWidth = width - left - right;
+  const plotHeight = bottom - top;
+  const maximum = Math.max(...points.map((point) => point.seconds));
+  const yMaximum = Math.max(1, Math.ceil(maximum / 5) * 5);
+  const x = (index) => points.length === 1
+    ? left + plotWidth / 2
+    : left + (plotWidth * index) / (points.length - 1);
+  const y = (seconds) => bottom - (seconds / yMaximum) * plotHeight;
+  const grid = Array.from({ length: 6 }, (_, index) => {
+    const seconds = (yMaximum * index) / 5;
+    const yPosition = y(seconds);
+    return `<g class="round5-time-grid"><line x1="${left}" y1="${yPosition}" x2="${width - right}" y2="${yPosition}" />
+      <text x="${left - 10}" y="${yPosition + 4}" text-anchor="end">${seconds.toFixed(0)}</text></g>`;
+  }).join('');
+  const line = points.map((point, index) => `${x(index)},${y(point.seconds)}`).join(' ');
+  const marks = points.map((point, index) => {
+    const xPosition = x(index);
+    const yPosition = y(point.seconds);
+    return `<g class="round5-time-point"><circle cx="${xPosition}" cy="${yPosition}" r="6" />
+      <text class="round5-time-value" x="${xPosition}" y="${Math.max(top - 6, yPosition - 13)}" text-anchor="middle">${point.seconds.toFixed(2)}초</text>
+      <text class="round5-time-resolution" x="${xPosition}" y="${bottom + 25}" text-anchor="middle">${point.resolution.toLocaleString('ko-KR')}px</text></g>`;
+  }).join('');
+
+  timeChartRoot.innerHTML = `<svg class="round5-time-svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="round5-time-svg-title round5-time-svg-desc">
+    <title id="round5-time-svg-title">해상도별 평균 처리 시간</title>
+    <desc id="round5-time-svg-desc">가로축은 사진의 긴 변 픽셀 수, 세로축은 사진 한 장당 평균 처리 시간(초)입니다.</desc>
+    <text class="round5-time-axis-title" x="${left}" y="20">평균 처리 시간 (초)</text>
+    ${grid}
+    <line class="round5-time-axis" x1="${left}" y1="${top}" x2="${left}" y2="${bottom}" />
+    <line class="round5-time-axis" x1="${left}" y1="${bottom}" x2="${width - right}" y2="${bottom}" />
+    <polyline class="round5-time-line" points="${line}" />
+    ${marks}
+    <text class="round5-time-axis-title" x="${left + plotWidth / 2}" y="${height - 4}" text-anchor="middle">긴 변 해상도</text>
+  </svg>`;
+}
+
 function renderPhotos(report) {
   const methods = report.testedResolutions.map((resolution) => [`px${resolution}`, `${resolution}px`]);
   photosRoot.innerHTML = report.rows.map((row) => {
     const widthName = row.widthKind === 'waist' ? '허리 너비' : '가슴 너비';
-    const cells = Object.entries(methods).map(([key, name]) => {
+    const cells = methods.map(([key, name]) => {
       const result = row[key];
       const failed = result.status !== 'done';
       const values = failed ? safe(result.message || '측정하지 못했어요.') :
@@ -60,9 +117,9 @@ fetch('./data/measure-dataset-round5.json').then((response) => {
   return response.json();
 }).then((report) => {
   renderSummary(report);
+  renderTimeChart(report);
   renderPhotos(report);
   status.textContent = `${new Date(report.generatedAt).toLocaleString('ko-KR')} · 사진 ${report.imageCount}장 · 두 방법을 비교했어요.`;
 }).catch(() => {
   status.textContent = '5차 실험 결과 파일을 불러오지 못했어요.';
 });
-

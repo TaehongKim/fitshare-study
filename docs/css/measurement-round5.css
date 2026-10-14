@@ -47,4 +47,18 @@
 }
 
 .round3-repeat-note { grid-column:1/-1; margin:0; padding:10px 12px; border-radius:10px; background:#f7f9fd; color:#52627b; font-size:13px; line-height:1.5; }
-
+.round5-time-chart { width:100%; margin-top:14px; padding:12px 8px 4px; border:1px solid #e4eaf3; border-radius:14px; background:linear-gradient(180deg,#fbfdff,#fff); }
+.round5-time-svg { display:block; width:100%; height:auto; overflow:visible; }
+.round5-time-grid line { stroke:#e7edf5; stroke-width:1; }
+.round5-time-grid text,.round5-time-resolution { fill:#71809a; font:12px sans-serif; }
+.round5-time-axis { stroke:#aab8cb; stroke-width:1.4; }
+.round5-time-axis-title { fill:#52627b; font:600 13px sans-serif; }
+.round5-time-line { fill:none; stroke:#3486d7; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.round5-time-point circle { fill:#fff; stroke:#23896e; stroke-width:3; }
+.round5-time-value { fill:#263954; font:700 12px sans-serif; }
+.round5-time-empty { margin:0; padding:24px 12px; color:#65738d; text-align:center; }
+@media (max-width:700px) {
+  .round5-time-chart { padding:8px 2px 2px; }
+  .round5-time-grid text,.round5-time-resolution { font-size:10px; }
+  .round5-time-value { font-size:10px; }
+}
