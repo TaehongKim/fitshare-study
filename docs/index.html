@@ -30,52 +30,52 @@
               <p><strong>해결을 위한 시도</strong> 점·격자·ChArUco 배경과 FitShare 파이프라인, YOLO·SAM·HRNet·Gemini를 같은 사진에서 비교했어요.</p>
             </div>
           </li>
-          <li class="experiment-step">
-            <span class="experiment-number" aria-hidden="true">3</span>
+<li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">2</span>
             <div class="experiment-step-content">
-              <a class="primary-action" href="measure-dataset-round3.html">3차 실험 · 사진 평판화 방법 비교 →</a>
+              <a class="primary-action" href="measure-dataset-round3.html">2차 실험 · 사진 평판화 방법 비교 →</a>
               <p><strong>문제</strong> 모든 사진을 매번 반듯하게 펴야 할까요?</p>
               <p><strong>해결을 위한 시도</strong> 항상 평판화하는 방법과 기준판이 크게 기울었을 때만 평판화하는 방법을 같은 사진으로 비교했어요.</p>
             </div>
           </li>
-          <li class="experiment-step">
-            <span class="experiment-number" aria-hidden="true">4</span>
+<li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">3</span>
             <div class="experiment-step-content">
-              <a class="primary-action" href="measure-dataset-round4.html">4차 실험 · 배경 무늬 간격으로 크기 환산 →</a>
+              <a class="primary-action" href="measure-dataset-round4.html">3차 실험 · 배경 무늬 간격으로 크기 환산 →</a>
               <p><strong>문제</strong> A0 종이 전체 크기로 환산하면 사진 속 배경 무늬 간격과 차이가 날 수 있어요.</p>
               <p><strong>해결을 위한 시도</strong> A0 전체 크기 기준과 점·격자·ChArUco의 실제 무늬 간격 기준을 같은 20장에 적용해 비교했어요.</p>
             </div>
           </li>
-          <li class="experiment-step">
-            <span class="experiment-number" aria-hidden="true">5</span>
+<li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">4</span>
             <div class="experiment-step-content">
-              <a class="primary-action" href="measure-dataset-round5.html">5차 실험 · 원본 비율과 해상도 비교 →</a>
+              <a class="primary-action" href="measure-dataset-round5.html">4차 실험 · 원본 비율과 해상도 비교 →</a>
               <p><strong>문제</strong> 사진을 작게 줄이는 과정에서 비율이나 세부 정보가 손실되면 치수 오차가 커질까요?</p>
               <p><strong>해결을 위한 시도</strong> 원본 비율을 유지하며 긴 변 해상도를 848~4000픽셀로 바꿔 측정 오차와 처리 시간을 함께 살펴봤어요.</p>
             </div>
           </li>
-          <li class="experiment-step">
-            <span class="experiment-number" aria-hidden="true">6</span>
+<li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">5</span>
             <div class="experiment-step-content">
-              <a class="primary-action" href="measure-dataset-round6.html">6차 실험 · 옷 윤곽 찾는 방법 비교 →</a>
+              <a class="primary-action" href="measure-dataset-round6.html">5차 실험 · 옷 윤곽 찾는 방법 비교 →</a>
               <p><strong>문제</strong> 옷의 윤곽을 찾는 방법이 바뀌면 너비와 기장도 달라질까요?</p>
               <p><strong>해결을 위한 시도</strong> 다른 조건은 유지하고 GrabCut, YOLO, YOLO→GrabCut, SAM으로 옷 영역을 나누어 결과를 비교했어요.</p>
             </div>
           </li>
-          <li class="experiment-step">
+<li class="experiment-step">
+            <span class="experiment-number" aria-hidden="true">6</span>
+            <div class="experiment-step-content">
+              <a class="primary-action" href="measure-dataset-round8.html">6차 실험 · 너비선 위치 60% 비교 →</a>
+              <p><strong>문제</strong> 티셔츠·원피스·점퍼의 너비를 위에서 60% 지점에서 재면 더 정확할까요?</p>
+              <p><strong>해결을 위한 시도</strong> 다른 처리 조건은 유지하고 같은 20장 사진에서 기존 너비선 위치와 60% 위치를 비교했어요.</p>
+            </div>
+          </li>
+<li class="experiment-step">
             <span class="experiment-number" aria-hidden="true">7</span>
             <div class="experiment-step-content">
               <a class="primary-action" href="measure-dataset-round7.html">7차 실험 · 선택한 개선을 서비스에 통합 →</a>
               <p><strong>문제</strong> 해상도와 윤곽 분할을 따로 고른 결과가 실제 서비스에서도 함께 효과가 있을까요?</p>
               <p><strong>해결을 위한 시도</strong> 848px 작업 크기에 너비 GrabCut, 기장 YOLO→GrabCut을 적용하고 기존 서비스와 같은 20장을 다시 비교했어요.</p>
-            </div>
-          </li>
-          <li class="experiment-step">
-            <span class="experiment-number" aria-hidden="true">8</span>
-            <div class="experiment-step-content">
-              <a class="primary-action" href="measure-dataset-round8.html">8차 실험 · 너비선 위치 60% 비교 →</a>
-              <p><strong>문제</strong> 티셔츠·원피스·점퍼의 너비를 위에서 60% 지점에서 재면 더 정확할까요?</p>
-              <p><strong>해결을 위한 시도</strong> 다른 처리 조건은 유지하고 같은 20장 사진에서 기존 너비선 위치와 60% 위치를 비교했어요.</p>
             </div>
           </li>
         </ol>
