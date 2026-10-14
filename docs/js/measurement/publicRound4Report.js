@@ -76,6 +76,6 @@ fetch('./data/measure-dataset-round4.json').then((response) => {
   renderPhotos(report);
   status.textContent = `${new Date(report.generatedAt).toLocaleString('ko-KR')} · 사진 ${report.imageCount}장 · 같은 사진에 두 환산식을 적용했어요.`;
 }).catch(() => {
-  status.textContent = '4차 실험 결과 파일을 불러오지 못했어요.';
+  status.textContent = '3차 실험 결과 파일을 불러오지 못했어요.';
 });
 
