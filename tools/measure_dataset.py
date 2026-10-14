@@ -12,13 +12,13 @@ from datetime import datetime, timezone
 
 try:
     from tools.vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
-                                      _cv2_modules, measure_garment, rectify_photo)
+                                      _cv2_modules, measure_garment, rectify_photo, width_line_y)
 except ModuleNotFoundError as error:
     # 직접 파일을 실행할 때는 같은 폴더에서 분석 도구를 가져온다.
     if error.name != 'tools':
         raise
     from vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
-                                 _cv2_modules, measure_garment, rectify_photo)
+                                 _cv2_modules, measure_garment, rectify_photo, width_line_y)
 
 
 DATASET_PATTERN = re.compile(r'^(p|c|ch|chc)_([1-5])_w(\d+(?:\.\d+)?)_h(\d+(?:\.\d+)?)\.jpg$', re.IGNORECASE)
@@ -296,6 +296,98 @@ def summarize_round7(rows, method_id):
         'maeLengthCm': round(sum(row['absoluteLengthErrorCm'] for row in successful) / count, 2) if count else None,
         'averageElapsedMs': round(sum(row['elapsedMs'] for row in successful) / count, 1) if count else None,
     }
+
+
+def summarize_round8(rows, method_id):
+    summary = summarize_round7(rows, method_id)
+    target_rows = [row for row in rows if row.get('garmentId') in {2, 3, 4}]
+    target = summarize_round7(target_rows, method_id)
+    summary.update({
+        'targetGarmentCount': len(target_rows),
+        'targetSuccessCount': target['successCount'],
+        'targetFailureCount': target['failureCount'],
+        'targetMaeWidthCm': target['maeWidthCm'],
+        'targetMaeLengthCm': target['maeLengthCm'],
+    })
+    return summary
+
+
+ROUND7_WIDTH_RATIOS = {1: .40, 2: .325, 3: .15, 4: .20, 5: .10}
+ROUND8_WIDTH_RATIO = .60
+
+
+def analyze_round8_dataset(dataset_root, output_path=None):
+    """Compare 7th-round width lines with 60% lines for shirts, dresses, and jumpers."""
+    try:
+        from tools.garment_segmentation import get_yolo_grabcut_provider
+    except ModuleNotFoundError as error:
+        if error.name != 'tools':
+            raise
+        from garment_segmentation import get_yolo_grabcut_provider
+
+    cv2, _ = _cv2_modules()
+    image_paths = sorted(Path(dataset_root).rglob('*.jpg')) if Path(dataset_root).is_dir() else []
+    rows = []
+    for image_path in image_paths:
+        label = read_dataset_label(image_path)
+        row = {**label, 'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg"}
+        for method_id in ('round7', 'round8'):
+            started = time.perf_counter()
+            try:
+                rectified = rectify_photo(image_path, label['backgroundId'], preserve_resolution=True,
+                                          max_output_long_side=848)
+                if not rectified.get('ok'):
+                    raise ValueError(rectified.get('message', '사진을 보정하지 못했어요.'))
+                length_provider = get_yolo_grabcut_provider(garment_id=label['garmentId'])
+                cv2.setRNGSeed(0)
+                measured = measure_garment(
+                    rectified['image'], garment_id=label['garmentId'],
+                    scale_cm_per_pixel=rectified['scaleCmPerPixel'], max_working_long_side=848,
+                    length_mask_provider=length_provider,
+                    width_ratio_override=(ROUND7_WIDTH_RATIOS[label['garmentId']] if method_id == 'round7'
+                                          else ROUND8_WIDTH_RATIO if label['garmentId'] in {2, 3, 4} else None))
+                row[method_id] = {
+                    'status': 'done', 'measuredWidthCm': measured['measuredWidthCm'],
+                    'measuredLengthCm': measured['measuredLengthCm'],
+                    'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
+                    'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
+                    'elapsedMs': round((time.perf_counter() - started) * 1000, 1),
+                    'widthRatio': ROUND7_WIDTH_RATIOS[label['garmentId']] if method_id == 'round7'
+                                  else (ROUND8_WIDTH_RATIO if label['garmentId'] in {2, 3, 4}
+                                        else ROUND7_WIDTH_RATIOS[label['garmentId']]),
+                    'maskMethods': measured['maskMethods'],
+                }
+            except (ValueError, RuntimeError, OSError) as error:
+                row[method_id] = {'status': 'failed', 'message': str(error),
+                                  'elapsedMs': round((time.perf_counter() - started) * 1000, 1)}
+        rows.append(row)
+        print(f"[round8] {len(rows)}/{len(image_paths)} {image_path.name}", flush=True)
+
+    methods = ('round7', 'round8')
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'experiment': 'round8-width-line-at-60-percent', 'imageCount': len(rows),
+        'targetGarmentIds': [2, 3, 4], 'targetImageCount': sum(row['garmentId'] in {2, 3, 4} for row in rows),
+        'methodLabels': {
+            'round7': {'label': '7차 기준', 'description': '848px · 너비 GrabCut · 기장 YOLO→GrabCut · 옷별 기존 너비 비율'},
+            'round8': {'label': '8차 60% 너비선', 'description': '동일한 848px·분할 조합 · 티셔츠·원피스·점퍼 너비선을 위에서 60%로 이동'},
+        },
+        'notes': [
+            '동일한 20장 사진과 848px 측정 흐름을 사용하고, 너비 비율만 바꿔 비교했습니다.',
+            '60% 적용 대상은 크롭 티셔츠·원피스·점퍼 12장입니다. 상의 외투와 바지는 기존 너비 비율을 유지했습니다.',
+            '결과는 이 20장 데이터셋에 한정되며, 다른 옷이나 촬영 조건의 정확도를 보장하지 않습니다.',
+        ],
+        'methods': {method: summarize_round8(rows, method) for method in methods},
+        'byGarment': {str(garment_id): {method: summarize_round8(
+            [row for row in rows if row['garmentId'] == garment_id], method) for method in methods}
+            for garment_id in sorted(GARMENT_INFO)},
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
 
 
 def analyze_round7_dataset(dataset_root, output_path=None):
@@ -670,10 +762,22 @@ def main():
     parser.add_argument('--round5', action='store_true', help='compare standard and ratio-preserving high-resolution processing')
     parser.add_argument('--round6', action='store_true', help='compare segmentation modules (GrabCut, YOLO, SAM)')
     parser.add_argument('--round7', action='store_true', help='compare current service and integrated 848px pipeline')
+    parser.add_argument('--round8', action='store_true', help='compare current width lines with 60% lines for shirts, dresses, jumpers')
     parser.add_argument('--no-sam', action='store_true', help='run round6 without the SAM methods')
     parser.add_argument('--repeat-count', type=int, default=100)
     parser.add_argument('--workers', type=int, default=8)
     args = parser.parse_args()
+    if args.round8:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round8.json'
+        report = analyze_round8_dataset(args.dataset, report_path)
+        print(f"[round8] {report['imageCount']} images; target {report['targetImageCount']}; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round8] {method}: MAE width={result['maeWidthCm']}cm, length={result['maeLengthCm']}cm, "
+                  f"success={result['successCount']}/{result['imageCount']}, "
+                  f"target width MAE={result['targetMaeWidthCm']}cm, avg={result['averageElapsedMs']}ms", flush=True)
+        return
     if args.round6:
         report_path = Path(args.output)
         if report_path.suffix.lower() != '.json':
@@ -738,3 +842,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
