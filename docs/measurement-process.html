@@ -129,6 +129,20 @@
         counter-increment: step;
       }
 
+      .step-visual {
+        display: grid;
+        height: 154px;
+        margin: 14px 0 10px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #f0f6f8;
+      }
+
+      .step-visual img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      .step-visual svg { display: block; width: 100%; height: 100%; }
+
       .step::before {
         position: absolute;
         top: 18px;
@@ -162,6 +176,10 @@
       .mat-card-body { padding: 16px; }
       .mat-card-body p, .mat-card-body li { color: var(--muted); }
       .mat-card-body ul { margin: 8px 0 0; padding-left: 1.2rem; }
+      .mat-photo-annotated { position: relative; width: min(100%, 225px); aspect-ratio: 1600 / 2133; margin: 0 auto; background: #edf2f5; }
+      .mat-photo-annotated img { width: 100%; height: 100%; max-height: none; object-fit: fill; }
+      .photo-annotation { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+      .mat-photo-caption { margin: 0; padding: 7px 10px; color: var(--muted); text-align: center; font-size: .86rem; }
       .resolution-results { margin-top: 16px; padding: 18px; border: 1px solid #c7e7d6; border-radius: 14px; background: var(--green-pale); }
 
       .code-grid { display: grid; gap: 16px; }
@@ -349,22 +367,27 @@
         <div class="steps">
           <article class="step">
             <h3>옷과 기준판을 함께 찍어요</h3>
+            <figure class="step-visual"><img src="assets/photos/ChArUco/ch_2_w54_h50.jpg" alt="ChArUco 기준판 위에 옷을 펼쳐 촬영한 실제 사진" loading="lazy" /></figure>
             <p>옷을 기준판 가운데에 놓고 가능한 한 펴요. 기준판의 네 모서리와 표식이 사진에 다 나오게 해요.</p>
           </article>
           <article class="step">
             <h3>사진에서 기준판을 찾아 바로잡아요</h3>
+            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="비스듬한 사진을 반듯한 A0 기준판으로 보정하는 그림"><rect width="600" height="250" rx="12" fill="#edf5f8"/><polygon points="44,54 214,32 229,207 58,222" fill="#fff" stroke="#175f83" stroke-width="5"/><g fill="#e9a326"><circle cx="61" cy="55" r="7"/><circle cx="199" cy="38" r="7"/><circle cx="216" cy="201" r="7"/><circle cx="72" cy="215" r="7"/></g><path d="M260 127h72m-18-18 20 18-20 18" fill="none" stroke="#16745d" stroke-width="6"/><rect x="365" y="34" width="130" height="184" fill="#fff" stroke="#175f83" stroke-width="5"/><path d="M376 80h108M376 126h108M376 172h108M409 38v176M452 38v176" stroke="#d3e0e6" stroke-width="2"/><text x="430" y="238" text-anchor="middle" fill="#526575" font-size="16">600 × 848 px</text></svg></figure>
             <p>점·격자·ChArUco 표식을 찾아 실제 기준판 모양에 맞춰요. 비스듬한 사각형을 반듯한 A0 판처럼 변환해요.</p>
           </article>
           <article class="step">
             <h3>옷으로 보이는 곳을 골라요</h3>
+            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="사진에서 옷 모양을 초록색 마스크로 표시한 그림"><rect width="600" height="250" rx="12" fill="#fff"/><path d="M260 34l-42 22-35 56 32 18 26-40v112h120V90l26 40 32-18-35-56-42-22-25 22h-32z" fill="#dce6e9" stroke="#526575" stroke-width="4"/><path d="M260 34l-42 22-35 56 32 18 26-40v112h120V90l26 40 32-18-35-56-42-22-25 22h-32z" fill="#32bb8b" fill-opacity=".72" stroke="#16745d" stroke-width="4"/><text x="300" y="232" text-anchor="middle" fill="#16745d" font-size="18" font-weight="700">초록색 = 옷으로 고른 픽셀</text></svg></figure>
             <p>색과 이어진 모양을 살펴 옷 픽셀을 흰색, 배경을 검은색으로 표시해요. 이 흑백 지도를 <span class="term">마스크</span>라고 해요.</p>
           </article>
           <article class="step">
             <h3>종류별 규칙으로 너비와 기장을 찾아요</h3>
+            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="옷 마스크 위에 너비와 기장 측정선을 표시한 그림"><rect width="600" height="250" rx="12" fill="#fff"/><path d="M250 30l-36 22-37 55 31 18 27-39v124h132V86l27 39 31-18-37-55-36-22-25 22h-52z" fill="#75d5b4" stroke="#16745d" stroke-width="4"/><path d="M224 105h144" stroke="#0877ae" stroke-width="7"/><path d="M390 30v180m-10-15 10 15 10-15m-20-150 10-15 10 15" fill="none" stroke="#d64b45" stroke-width="5"/><text x="298" y="96" text-anchor="middle" fill="#075c87" font-size="16" font-weight="700">너비</text><text x="420" y="126" fill="#b13e45" font-size="16" font-weight="700">기장</text></svg></figure>
             <p>가로줄마다 옷의 왼쪽부터 오른쪽까지 폭을 계산해요. 상의는 가슴 너비, 바지·하의는 허리 너비라고 보고, 옷 종류별 비율로 잴 위치를 정해요.</p>
           </article>
           <article class="step">
             <h3>픽셀을 cm로 바꾸고 사람이 확인해요</h3>
+            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="기준판 픽셀 비율로 옷 길이를 센티미터로 환산하는 그림"><rect width="600" height="250" rx="12" fill="#fff"/><rect x="48" y="29" width="102" height="192" fill="#f7fbfc" stroke="#175f83" stroke-width="4"/><path d="M55 65h88M55 101h88M55 137h88M55 173h88M80 32v186M113 32v186" stroke="#d6e1e7" stroke-width="2"/><text x="99" y="245" text-anchor="middle" fill="#526575" font-size="14">A0 600×848px</text><path d="M190 123h55m-15-15 17 15-17 15" fill="none" stroke="#16745d" stroke-width="6"/><text x="285" y="105" fill="#075c87" font-size="22" font-weight="700">240px ÷ 600px × 84.1cm</text><text x="285" y="150" fill="#16745d" font-size="28" font-weight="800">= 33.6cm</text><text x="285" y="190" fill="#526575" font-size="16">마지막으로 사람이 결과를 확인해요</text></svg></figure>
             <p>A0 기준판의 알려진 길이로 픽셀을 cm로 환산해요. 결과 사진에 칠해진 옷 영역과 선이 맞는지 눈으로 보고, 이상하면 다시 찍거나 숫자를 고쳐야 해요.</p>
           </article>
         </div>
@@ -386,7 +409,7 @@
         <div class="mat-cards">
           <article class="mat-card"><img src="assets/photos/point/p_1_w55_h65.jpg" alt="M1 점 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M1 · 점 표식</h3><p>회색조와 임계값 처리로 어두운 점을 분리한 뒤 <code>cv2.connectedComponentsWithStats</code>로 이어진 픽셀을 점 덩어리로 묶어요. 점 크기·위치 조건으로 후보를 고르고 외곽 모양을 기준 좌표에 대응합니다.</p><ul><li>핵심 함수: <code>_component_mask</code>, <code>_detect_dot_mat</code>, <code>cv2.getPerspectiveTransform</code></li><li>점들의 바깥 윤곽과 간격으로 판의 위치와 방향을 계산해요.</li></ul></div></article>
           <article class="mat-card"><img src="assets/photos/cross/c_1_w55_h65.jpg" alt="M2 십자 격자 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M2 · 십자 격자</h3><p><code>cv2.Canny</code>로 선의 가장자리를 강조하고 <code>cv2.HoughLinesP</code>로 긴 선분을 찾아요. 방향이 비슷한 선을 가로·세로로 묶고 <code>cv2.fitLine</code>과 <code>_line_intersection</code>으로 교차점을 계산합니다.</p><ul><li>핵심 함수: <code>_detect_cross_mat</code>, <code>_cluster_grid_lines</code>, <code>cv2.Canny</code>, <code>cv2.HoughLinesP</code></li><li>교차점과 판의 경계를 기준 좌표에 맞춰 원근을 펴요.</li></ul></div></article>
-          <article class="mat-card"><img src="assets/photos/ChArUco/ch_1_w55_h65.jpg" alt="M3 ChArUco 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M3 · ChArUco 표식</h3><p><code>cv2.aruco.ArucoDetector.detectMarkers</code>가 표식의 네 모서리와 ID를 찾아요. ID는 QR 번호가 아니라 <code>DICT_4X4_1000</code> 사전에서 무늬를 구분하는 ArUco 표식 번호예요.</p><ul><li>ID는 위치나 순서를 뜻하지 않아요. <code>data/charuco_marker_maps.json</code>에서 이 판의 ID에 해당하는 네 모서리 좌표를 찾는 열쇠예요.</li><li>예: M3 ID 31은 기준 캔버스의 x=551.8~564.8, y=33.8~47.1px에 대응합니다.</li><li><code>cv2.findHomography</code>와 RANSAC이 잘못 짝지어진 표식을 걸러요.</li></ul></div></article>
+          <article class="mat-card"><figure class="mat-photo-annotated"><img src="assets/photos/ChArUco/ch_2_w54_h50.jpg" alt="M3 ChArUco 기준판 위에 옷을 펼쳐 놓은 사진" loading="lazy" /><svg class="photo-annotation" viewBox="0 0 1600 2133" role="img" aria-label="사진 오른쪽 위 가장자리의 ID 31 표식을 노란 테두리로 표시"><path d="M1404 142 L1435 142 L1433 175 L1402 174 Z" fill="none" stroke="#ffcf38" stroke-width="16"/><path d="M1402 184 L1275 300 L1050 300" fill="none" stroke="#ffcf38" stroke-width="12"/><rect x="1015" y="260" width="220" height="82" rx="18" fill="#172b3a" fill-opacity=".92"/><text x="1125" y="316" text-anchor="middle" fill="#ffdf66" font-size="52" font-weight="800">ID 31</text></svg></figure><p class="mat-photo-caption">노란 테두리: 사진의 오른쪽 위 가장자리에서 찾은 ID 31</p><div class="mat-card-body"><h3>M3 · ChArUco 표식</h3><p><code>cv2.aruco.ArucoDetector.detectMarkers</code>가 표식의 네 모서리와 ID를 찾아요. ID는 QR 번호가 아니라 <code>DICT_4X4_1000</code> 사전에서 무늬를 구분하는 ArUco 표식 번호예요.</p><ul><li>ID는 위치나 순서를 뜻하지 않아요. <code>data/charuco_marker_maps.json</code>에서 이 판의 ID에 해당하는 네 모서리 기준 좌표를 찾는 열쇠예요.</li><li>사진에서 실제로 찾은 ID 31 위치를 위 그림에 노란 테두리로 표시했어요. 표식 번호를 기준표에서 찾아 좌표로 연결합니다.</li><li><code>cv2.findHomography</code>와 RANSAC이 잘못 짝지어진 표식을 걸러요.</li></ul></div></article>
           <article class="mat-card"><img src="assets/photos/ChaArUco_Cross/chc_1_w55_h65.jpg" alt="M4 ChArUco 격자 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M4 · ChArUco 격자</h3><p>검출기는 M3와 같지만 격자형 판의 ID 배치와 기준 좌표표는 별개예요. M4 전용 좌표표에서 ID마다 기준판의 네 모서리를 찾아 사진 좌표와 연결합니다.</p><ul><li>핵심 함수: <code>ArucoDetector.detectMarkers</code>, <code>cv2.findHomography</code>, RANSAC</li><li>예: M4 ID 243은 기준 캔버스의 x=34.5~47.8, y=800.2~813.5px에 대응해요. ID 번호만으로 위치를 추측하지 않아요.</li></ul></div></article>
         </div>
         <p class="small-note">M1·M2는 점이나 선에서 대응점을 계산하고, M3·M4는 검출한 ID로 기준 위치를 조회해요. 앞의 두 방식은 대응점으로 <code>cv2.getPerspectiveTransform</code> 또는 <code>cv2.getAffineTransform</code>을 구하고, ChArUco는 여러 표식 대응점으로 <code>cv2.findHomography</code>를 구합니다. 마지막에는 <code>cv2.warpPerspective</code> 또는 <code>cv2.warpAffine</code>으로 사진을 변환해요.</p>
