@@ -114,7 +114,8 @@ def main():
         garment_id = int(match.group(1))
         reference_width, reference_length = reference_from_filename(photo_path)
         flattened = rectify_photo(photo_path.read_bytes(), 'M4')
-        current = measure_garment(flattened['image'], garment_id=garment_id)
+        current = measure_garment(flattened['image'], garment_id=garment_id,
+                                  scale_cm_per_pixel=flattened['scaleCmPerPixel'])
         tensor, _ = preprocess(flattened['image'], 416)
         started = time.perf_counter()
         output0, output1 = session.run(None, {'images': tensor})
@@ -234,4 +235,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 

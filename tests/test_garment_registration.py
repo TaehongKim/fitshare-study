@@ -74,7 +74,8 @@ class GarmentRegistrationTests(unittest.TestCase):
 
         photo = Path(server.PROJECT_ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_2_w54_h50.jpg').read_bytes()
         flattened = rectify_photo(photo, 'M4')
-        experiment_result = measure_garment(flattened['image'], garment_id=2)
+        experiment_result = measure_garment(flattened['image'], garment_id=2,
+                                             scale_cm_per_pixel=flattened['scaleCmPerPixel'])
         photo_data = 'data:image/jpeg;base64,' + base64.b64encode(photo).decode('ascii')
         _, registration_result = self.request_json('/api/garments/analyze', 'POST', {
             'backgroundId': 'M4', 'garmentId': 2, 'photoDataUrl': photo_data
@@ -248,3 +249,4 @@ class GarmentRegistrationTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

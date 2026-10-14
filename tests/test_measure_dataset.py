@@ -62,21 +62,24 @@ class DatasetVisionTests(unittest.TestCase):
     def test_quad_charuco_pants_waist_width_stays_near_the_reference(self):
         source = ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_5_w42_h90.jpg'
         flattened = rectify_photo(source, 'ChaArUco_Cross')
-        measured = measure_garment(flattened['image'], garment_id=5)
+        measured = measure_garment(flattened['image'], garment_id=5,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'])
 
         self.assertLessEqual(abs(measured['measuredWidthCm'] - 42), 8)
 
     def test_point_mat_crop_shirt_includes_the_sleeves_in_chest_width(self):
         source = ROOT / 'measure_dataset' / 'point' / 'p_2_w54_h50.jpg'
         flattened = rectify_photo(source, 'point')
-        measured = measure_garment(flattened['image'], garment_id=2)
+        measured = measure_garment(flattened['image'], garment_id=2,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'])
 
         self.assertLessEqual(abs(measured['measuredWidthCm'] - 54), 8)
 
     def test_point_mat_crop_shirt_does_not_extend_into_the_mat_for_length(self):
         source = ROOT / 'measure_dataset' / 'point' / 'p_2_w54_h50.jpg'
         flattened = rectify_photo(source, 'point')
-        measured = measure_garment(flattened['image'], garment_id=2)
+        measured = measure_garment(flattened['image'], garment_id=2,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'])
 
         self.assertLessEqual(abs(measured['measuredLengthCm'] - 50), 8)
 
@@ -132,3 +135,4 @@ class DatasetVisionTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+

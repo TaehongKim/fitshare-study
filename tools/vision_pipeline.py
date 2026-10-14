@@ -2,6 +2,7 @@
 
 import base64
 import json
+import math
 from pathlib import Path
 
 
@@ -17,6 +18,8 @@ A0_WIDTH_CM = 84.1
 A0_HEIGHT_CM = 118.9
 OUTPUT_WIDTH = 600
 OUTPUT_HEIGHT = 848
+CHARUCO_SQUARE_SIZE_CM = 2.5
+CHARUCO_MARKER_SIZE_CM = 1.875
 
 
 def _cv2_modules():
@@ -57,6 +60,48 @@ def _resize_long_side(image, maximum=1000):
     if scale == 1:
         return image.copy()
     return cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+
+
+def _cm_per_pixel_from_spacing(horizontal_pixels, vertical_pixels, horizontal_cm, vertical_cm):
+    """Convert a known pattern pitch in the rectification map into cm per pixel."""
+    values = (horizontal_pixels, vertical_pixels, horizontal_cm, vertical_cm)
+    if any(not math.isfinite(value) or value <= 0 for value in values):
+        raise ValueError('배경 무늬의 실제 간격과 픽셀 거리를 확인해 주세요.')
+    return {'x': float(horizontal_cm / horizontal_pixels), 'y': float(vertical_cm / vertical_pixels)}
+
+
+def _measure_pattern_scale(background_id, reference_points=None):
+    """Derive cm/px from known dot, grid, or marker pitch in the rectification map."""
+    _, np = _cv2_modules()
+    canonical = MAT_ALIASES.get(str(background_id))
+    if canonical == 'point':
+        points = np.asarray(reference_points, dtype=np.float64).reshape(4, 2)
+        # 외곽 점 9×12개는 가로 8칸·세로 11칸이고, 중심 간격은 10cm예요.
+        horizontal_pitch = float(np.linalg.norm(points[1] - points[0]) / 8)
+        vertical_pitch = float(np.linalg.norm(points[3] - points[0]) / 11)
+        return _cm_per_pixel_from_spacing(horizontal_pitch, vertical_pitch, 10, 10)
+    if canonical == 'cross':
+        points = np.asarray(reference_points, dtype=np.float64).reshape(4, 2)
+        # M2 기준 무늬는 가로 16칸·세로 23칸이며 한 칸은 5cm예요.
+        horizontal_pitch = float(np.linalg.norm(points[1] - points[0]) / 16)
+        vertical_pitch = float(np.linalg.norm(points[3] - points[0]) / 23)
+        return _cm_per_pixel_from_spacing(horizontal_pitch, vertical_pitch, 5, 5)
+    if canonical in {'ChArUco', 'ChaArUco_Cross'}:
+        marker_map = _charuco_reference(canonical)
+        horizontal_sides = []
+        vertical_sides = []
+        for marker in marker_map.values():
+            points = np.asarray(marker, dtype=np.float64).reshape(4, 2)
+            horizontal_sides.extend((float(np.linalg.norm(points[1] - points[0])),
+                                     float(np.linalg.norm(points[2] - points[3]))))
+            vertical_sides.extend((float(np.linalg.norm(points[2] - points[1])),
+                                   float(np.linalg.norm(points[3] - points[0]))))
+        marker_to_square_ratio = CHARUCO_SQUARE_SIZE_CM / CHARUCO_MARKER_SIZE_CM
+        square_pitch_x = float(np.median(horizontal_sides)) * marker_to_square_ratio
+        square_pitch_y = float(np.median(vertical_sides)) * marker_to_square_ratio
+        return _cm_per_pixel_from_spacing(square_pitch_x, square_pitch_y,
+                                          CHARUCO_SQUARE_SIZE_CM, CHARUCO_SQUARE_SIZE_CM)
+    raise ValueError('배경 무늬 종류를 확인해 주세요.')
 
 
 def _ordered_quad(points):
@@ -151,7 +196,7 @@ def _detect_dot_mat(image, accurate_grid=False):
         raise ValueError('점 배경이 옆으로 누워 보여요. 매트가 세로가 되게 사진을 돌려 주세요.')
 
     # 인쇄 도면의 9×12 점은 10cm 간격이며, 바깥 점은 종이 모서리에서 일정하게 떨어져 있어요.
-    left_top_cm = 2.05 if accurate_grid else 20.5
+    left_top_cm = 2.05
     target = np.array([
         [left_top_cm / A0_WIDTH_CM * OUTPUT_WIDTH, 4.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
         [82.05 / A0_WIDTH_CM * OUTPUT_WIDTH, 4.45 / A0_HEIGHT_CM * OUTPUT_HEIGHT],
@@ -327,8 +372,10 @@ def rectify_photo(source, background_id, perspective_policy='always'):
         if perspective_policy not in {'always', 'conditional'}:
             raise ValueError('사진 보정 방식이 올바르지 않아요.')
         perspective_score = None
+        pattern_reference_points = None
         if canonical_background == 'point':
             source_points, target_points, confidence = _detect_dot_mat(image, accurate_grid=perspective_policy == 'conditional')
+            pattern_reference_points = target_points
             if perspective_policy == 'conditional':
                 decision = choose_rectification_mode(source_points, target_points)
                 perspective_score = decision['perspectiveScore']
@@ -345,6 +392,7 @@ def rectify_photo(source, background_id, perspective_policy='always'):
             detected_markers = None
         elif canonical_background == 'cross':
             source_points, target_points, confidence = _detect_cross_mat(image)
+            pattern_reference_points = target_points
             if perspective_policy == 'conditional':
                 decision = choose_rectification_mode(source_points, target_points)
                 perspective_score = decision['perspectiveScore']
@@ -364,8 +412,10 @@ def rectify_photo(source, background_id, perspective_policy='always'):
                 image, canonical_background, perspective_policy=perspective_policy
             )
             method = 'ChArUco ID 표식'
+        scale_cm_per_pixel = _measure_pattern_scale(canonical_background, pattern_reference_points)
         return {
             'ok': True, 'image': flattened, 'matrix': matrix.tolist(),
+            'scaleCmPerPixel': scale_cm_per_pixel,
             'confidence': float(confidence), 'method': method,
             'rectificationMode': mode, 'perspectiveScore': perspective_score,
             'detectedMarkers': detected_markers,
@@ -504,7 +554,8 @@ def _dominant_color_name(image, mask):
     return '빨강'
 
 
-def measure_garment(image, garment_id=None, category=None, include_closet_image=False):
+def measure_garment(image, garment_id=None, category=None, include_closet_image=False, *,
+                    scale_cm_per_pixel):
     """Measure the garment's semantic width line and length on a flattened A0 image."""
     cv2, np = _cv2_modules()
     working, base_mask, profile, width_kind = _component_mask(image, garment_id, category)
@@ -555,9 +606,17 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
         raise ValueError('가슴선 또는 허리선을 찾지 못했어요. 직접 위치를 확인해 주세요.')
     width_pixels = float(np.median(valid_spans))
 
-    # 보정된 A0 사진의 가로·세로 픽셀 수를 각각 실제 A0 치수에 맞춰 cm로 바꿉니다.
-    cm_per_pixel_x = A0_WIDTH_CM / OUTPUT_WIDTH * (OUTPUT_WIDTH / width)
-    cm_per_pixel_y = A0_HEIGHT_CM / OUTPUT_HEIGHT * (OUTPUT_HEIGHT / height)
+    if (
+        not isinstance(scale_cm_per_pixel, dict)
+        or any(isinstance(scale_cm_per_pixel.get(axis), bool)
+               or not isinstance(scale_cm_per_pixel.get(axis), (int, float))
+               or not math.isfinite(scale_cm_per_pixel[axis])
+               or scale_cm_per_pixel[axis] <= 0 for axis in ('x', 'y'))
+    ):
+        raise ValueError('배경 무늬로 계산한 픽셀 크기를 확인해 주세요.')
+    # 보정 사진을 마스크 크기로 줄인 비율을 반영해, 배경 무늬에서 얻은 cm/px를 적용합니다.
+    cm_per_pixel_x = scale_cm_per_pixel['x'] * (OUTPUT_WIDTH / width)
+    cm_per_pixel_y = scale_cm_per_pixel['y'] * (OUTPUT_HEIGHT / height)
     width_cm = width_pixels * cm_per_pixel_x
     length_cm = garment_height * cm_per_pixel_y
     if not (5 <= width_cm <= 200 and 5 <= length_cm <= 300):
@@ -620,3 +679,4 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     if closet_image_data_url is not None:
         result['closetImageDataUrl'] = closet_image_data_url
     return result
+

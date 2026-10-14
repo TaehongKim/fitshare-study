@@ -83,7 +83,8 @@ def run_comparison():
         if not flattened['ok']:
             raise ValueError(f'{photo_path.name}: {flattened["message"]}')
         image = flattened['image']
-        baseline = measure_garment(image, garment_id=garment_id)
+        baseline = measure_garment(image, garment_id=garment_id,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'])
         yolo_input, _ = preprocess_yolo(image, 416)
         yolo_output, yolo_masks = yolo_model.run(None, {'images': yolo_input})
         detections = decode_predictions(yolo_output, yolo_masks, image.shape[:2], 416)
@@ -181,3 +182,4 @@ def run_comparison():
 
 if __name__ == '__main__':
     run_comparison()
+

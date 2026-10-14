@@ -324,7 +324,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 flattened = rectify_photo(photo_bytes, background_id)
                 if not flattened['ok']:
                     return self.send_json(422, {'error': flattened['message']})
-                measured = measure_garment(flattened['image'], garment_id=garment_id, include_closet_image=True)
+                measured = measure_garment(flattened['image'], garment_id=garment_id, include_closet_image=True,
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error) or '사진 분석 도구를 준비하지 못했어요.'})
             except (ValueError, OSError) as error:
@@ -420,7 +421,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
                     if not flattened.get('ok'):
                         return self.send_json(422, {'error': flattened.get('message', '옷 이미지를 만들지 못했어요.')})
-                    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True)
+                    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
+                                               scale_cm_per_pixel=flattened['scaleCmPerPixel'])
                     photo = decode_png_data(measured.get('closetImageDataUrl'))
                     if photo is None:
                         return self.send_json(500, {'error': '투명 옷장 사진을 만들지 못했어요.'})
@@ -472,7 +474,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
                 if not flattened.get('ok'):
                     raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
-                measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True)
+                measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
                 photo = decode_png_data(measured.get('closetImageDataUrl'))
                 if photo is None:
                     raise ValueError('투명 옷장 사진을 만들지 못했어요.')
@@ -817,7 +820,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 flattened = rectify_photo(photo_bytes, mat_id)
                 if not flattened['ok']:
                     return self.send_json(422, {'error': flattened['message']})
-                measured = measure_garment(flattened['image'], category=category)
+                measured = measure_garment(flattened['image'], category=category,
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error)})
             except (ValueError, OSError) as error:
@@ -997,3 +1001,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

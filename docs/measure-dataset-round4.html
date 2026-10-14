@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="20장 사진으로 A0 크기 환산과 배경 무늬 간격 환산을 비교한 실측 4차 실험" />
+    <title>실측 4차 실험 | FitShare</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/measurement.css" />
+    <link rel="stylesheet" href="css/measurement-round3.css" />
+  </head>
+  <body class="measurement-page">
+    <main class="measurement-shell round3-shell">
+      <header class="measurement-header">
+        <a class="measurement-brand" href="index.html">← 실험 결과 모아보기</a>
+        <span>MEASURE DATASET LAB · 4차 실험</span>
+      </header>
+      <section class="measurement-panel round3-panel" aria-labelledby="round4-title">
+        <p class="eyebrow">ROUND 4 · 어떤 눈금으로 cm를 계산할까요?</p>
+        <h1 id="round4-title">배경 무늬 간격으로 크기를 계산해요</h1>
+        <p class="measurement-intro">같은 20장 사진을 같은 방식으로 펴고 옷을 찾은 다음, cm로 바꾸는 계산만 두 가지로 비교했어요.</p>
+        <section class="round3-methods" aria-label="비교한 환산 방식">
+          <article class="round3-method round3-method-old">
+            <span class="round3-method-number">방법 A</span>
+            <h2>A0 전체 크기</h2>
+            <p>600×848 캔버스를 A0 전체 크기 84.1×118.9cm로 보고 환산해요.</p>
+          </article>
+          <article class="round3-method round3-method-new">
+            <span class="round3-method-number">방법 B</span>
+            <h2>무늬 간격</h2>
+            <p>점은 10cm, 격자는 5cm, ChArUco 칸은 2.5cm인 실제 간격을 기준으로 환산해요.</p>
+          </article>
+        </section>
+        <div class="kid-help"><strong>공정하게 비교했어요.</strong><br />사진 보정과 옷 찾기는 한 번만 하고, 같은 결과에 환산식만 바꿔 적용했어요. 그래서 차이는 cm 계산 방법에서 나와요. ChArUco 검은 표식은 1.875cm이며, 칸 크기 2.5cm에 맞춰 비율로 환산해요.</div>
+        <p id="round4-status" role="status" aria-live="polite">저장된 4차 실험 결과를 불러오고 있어요.</p>
+        <section id="round4-summary" class="round3-summary" aria-label="전체 비교"></section>
+        <p id="round4-conclusion" class="kid-help" role="status"></p>
+        <section class="round3-section" aria-labelledby="round4-background-heading">
+          <h2 id="round4-background-heading">배경별 비교</h2>
+          <div id="round4-backgrounds" class="round3-table-wrap"></div>
+        </section>
+        <section class="round3-section" aria-labelledby="round4-photos-heading">
+          <h2 id="round4-photos-heading">사진별 측정 결과</h2>
+          <p>너비는 옷 종류에 따른 가슴선 또는 허리선이에요. 오차는 기준값과 측정값 차이의 절댓값이에요.</p>
+          <div id="round4-photos" class="round3-photo-list"></div>
+        </section>
+        <p class="round3-footnote">20장 데이터셋의 비교 결과예요. 평균 오차가 낮은 방법이 모든 옷·인쇄물·촬영 환경에서도 더 정확하다고 보장하지 않아요. 특히 기준판 인쇄 크기와 무늬 좌표의 정확도도 별도로 확인해야 해요.</p>
+      </section>
+    </main>
+    <script type="module" src="js/measurement/publicRound4Report.js"></script>
+  </body>
+</html>
+

@@ -10,12 +10,14 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 try:
-    from tools.vision_pipeline import measure_garment, rectify_photo
+    from tools.vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
+                                      _cv2_modules, measure_garment, rectify_photo)
 except ModuleNotFoundError as error:
     # 직접 파일을 실행할 때는 같은 폴더에서 분석 도구를 가져온다.
     if error.name != 'tools':
         raise
-    from vision_pipeline import measure_garment, rectify_photo
+    from vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
+                                 _cv2_modules, measure_garment, rectify_photo)
 
 
 DATASET_PATTERN = re.compile(r'^(p|c|ch|chc)_([1-5])_w(\d+(?:\.\d+)?)_h(\d+(?:\.\d+)?)\.jpg$', re.IGNORECASE)
@@ -96,7 +98,8 @@ def analyze_dataset(dataset_root, output_dir=None):
             flattened = rectify_photo(image_path, label['backgroundId'])
             if not flattened['ok']:
                 raise ValueError(flattened['message'])
-            measured = measure_garment(flattened['image'], garment_id=label['garmentId'])
+            measured = measure_garment(flattened['image'], garment_id=label['garmentId'],
+                                       scale_cm_per_pixel=flattened['scaleCmPerPixel'])
             row.update({
                 'status': 'done',
                 'message': measured['message'],
@@ -140,6 +143,88 @@ def analyze_dataset(dataset_root, output_dir=None):
     return report
 
 
+def analyze_round4_dataset(dataset_root, output_path=None):
+    """Compare A0-canvas conversion with mat-pitch conversion on identical flattened photos."""
+    root = Path(dataset_root)
+    image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
+    rows = []
+    for image_path in image_paths:
+        label = read_dataset_label(image_path)
+        rectified = rectify_photo(image_path, label['backgroundId'])
+        row = {
+            **label,
+            'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg",
+            'patternScaleCmPerPixel': rectified.get('scaleCmPerPixel') if rectified.get('ok') else None,
+            'rectificationMethod': rectified.get('method'),
+            'pattern': {'status': 'failed', 'message': '', 'measuredWidthCm': None,
+                        'measuredLengthCm': None, 'absoluteWidthErrorCm': None,
+                        'absoluteLengthErrorCm': None},
+            'a0': {'status': 'failed', 'message': '', 'measuredWidthCm': None,
+                   'measuredLengthCm': None, 'absoluteWidthErrorCm': None,
+                   'absoluteLengthErrorCm': None},
+        }
+        if not rectified.get('ok'):
+            reason = rectified.get('message', '사진을 보정하지 못했어요.')
+            row['pattern']['message'] = reason
+            row['a0']['message'] = reason
+        else:
+            scales = {
+                'pattern': rectified['scaleCmPerPixel'],
+                'a0': {'x': A0_WIDTH_CM / OUTPUT_WIDTH, 'y': A0_HEIGHT_CM / OUTPUT_HEIGHT},
+            }
+            for method, scale in scales.items():
+                try:
+                    # GrabCut은 RNG 상태를 사용하므로 두 계산에서 같은 마스크가 나오게 초기화해요.
+                    cv2, _ = _cv2_modules()
+                    cv2.setRNGSeed(0)
+                    measured = measure_garment(rectified['image'], garment_id=label['garmentId'],
+                                               scale_cm_per_pixel=scale)
+                    row[method].update({
+                        'status': 'done',
+                        'measuredWidthCm': measured['measuredWidthCm'],
+                        'measuredLengthCm': measured['measuredLengthCm'],
+                        'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
+                        'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
+                    })
+                except (ValueError, RuntimeError) as error:
+                    row[method]['message'] = str(error)
+        rows.append(row)
+
+    def summarize(items, method):
+        successful = [row[method] for row in items if row[method]['status'] == 'done']
+        count = len(items)
+        return {
+            'imageCount': count,
+            'successCount': len(successful),
+            'failureCount': count - len(successful),
+            'successRatePct': round(len(successful) / count * 100, 1) if count else 0,
+            'maeWidthCm': round(sum(item['absoluteWidthErrorCm'] for item in successful) / len(successful), 2) if successful else None,
+            'maeLengthCm': round(sum(item['absoluteLengthErrorCm'] for item in successful) / len(successful), 2) if successful else None,
+        }
+
+    methods = {method: summarize(rows, method) for method in ('a0', 'pattern')}
+    backgrounds = ('point', 'cross', 'ChArUco', 'ChaArUco_Cross')
+    report = {
+        'generatedAt': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+        'experiment': 'round4-pattern-pitch-calibration',
+        'imageCount': len(rows),
+        'methods': methods,
+        'byBackground': {
+            background: {
+                method: summarize([row for row in rows if row['backgroundId'] == background], method)
+                for method in ('a0', 'pattern')
+            }
+            for background in backgrounds
+        },
+        'rows': rows,
+    }
+    if output_path is not None:
+        destination = Path(output_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(report, ensure_ascii=False), encoding='utf-8')
+    return report
+
+
 def _round3_method_trials(task):
     image_path, label, method, policy, repeat_count = task
     trials = []
@@ -149,7 +234,8 @@ def _round3_method_trials(task):
             rectified = rectify_photo(image_path, label['backgroundId'], perspective_policy=policy)
             if not rectified['ok']:
                 raise ValueError(rectified['message'])
-            measured = measure_garment(rectified['image'], garment_id=label['garmentId'])
+            measured = measure_garment(rectified['image'], garment_id=label['garmentId'],
+                                       scale_cm_per_pixel=rectified['scaleCmPerPixel'])
             width = float(measured['measuredWidthCm'])
             length = float(measured['measuredLengthCm'])
             trials.append({
@@ -303,9 +389,20 @@ def main():
     parser.add_argument('--dataset', default=str(Path(__file__).resolve().parents[1] / 'measure_dataset'))
     parser.add_argument('--output', default=str(Path(__file__).resolve().parents[1] / 'server-data' / 'measure-dataset-report'))
     parser.add_argument('--round3', action='store_true', help='compare the two correction methods')
+    parser.add_argument('--round4', action='store_true', help='compare A0 size with pattern-pitch calibration')
     parser.add_argument('--repeat-count', type=int, default=100)
     parser.add_argument('--workers', type=int, default=8)
     args = parser.parse_args()
+    if args.round4:
+        report_path = Path(args.output)
+        if report_path.suffix.lower() != '.json':
+            report_path = report_path / 'round4.json'
+        report = analyze_round4_dataset(args.dataset, report_path)
+        print(f"[round4] {report['imageCount']} images; saved {report_path}", flush=True)
+        for method, result in report['methods'].items():
+            print(f"[round4] {method}: MAE width={result['maeWidthCm']}cm, "
+                  f"length={result['maeLengthCm']}cm, successful={result['successCount']}", flush=True)
+        return
     if args.round3:
         report_path = Path(args.output)
         if report_path.suffix.lower() != '.json':
@@ -326,3 +423,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

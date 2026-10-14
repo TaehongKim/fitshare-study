@@ -53,6 +53,45 @@ class ConditionalRectificationTests(unittest.TestCase):
         self.assertAlmostEqual(float(np.linalg.norm(target[1] - target[0])) / 8, 10 * 600 / 84.1, delta=1.0)
         self.assertAlmostEqual(float(np.linalg.norm(target[3] - target[0])) / 11, 10 * 848 / 118.9, delta=1.0)
 
+    def test_pattern_spacing_is_converted_to_cm_per_pixel(self):
+        scale = vision_pipeline._cm_per_pixel_from_spacing(50, 80, 10, 5)
+
+        self.assertEqual(scale, {'x': 0.2, 'y': 0.0625})
+
+    def test_pattern_spacing_must_be_positive(self):
+        with self.assertRaisesRegex(ValueError, '배경 무늬'):
+            vision_pipeline._cm_per_pixel_from_spacing(0, 80, 10, 5)
+
+    def test_charuco_marker_side_is_scaled_to_the_25cm_board_cell(self):
+        marker_px = 12
+        cell_px = marker_px * (vision_pipeline.CHARUCO_SQUARE_SIZE_CM /
+                               vision_pipeline.CHARUCO_MARKER_SIZE_CM)
+        scale = vision_pipeline._cm_per_pixel_from_spacing(cell_px, cell_px, 2.5, 2.5)
+
+        self.assertAlmostEqual(cell_px, 16)
+        self.assertAlmostEqual(scale['x'], 2.5 / 16)
+        self.assertAlmostEqual(scale['y'], 2.5 / 16)
+
+    def test_rectification_returns_scale_measured_from_each_mat_pattern(self):
+        examples = (
+            ('point', 'point', 'p_1_w55_h65.jpg'),
+            ('cross', 'cross', 'c_1_w55_h65.jpg'),
+            ('ChArUco', 'ChArUco', 'ch_1_w55_h65.jpg'),
+            ('ChaArUco_Cross', 'ChaArUco_Cross', 'chc_1_w55_h65.jpg'),
+        )
+
+        for background_id, folder, filename in examples:
+            with self.subTest(background=background_id):
+                path = ROOT / 'measure_dataset' / folder / filename
+                flattened = vision_pipeline.rectify_photo(path, background_id)
+
+                self.assertTrue(flattened['ok'], flattened.get('message'))
+                scale = flattened['scaleCmPerPixel']
+                self.assertGreater(scale['x'], 0.10)
+                self.assertLess(scale['x'], 0.22)
+                self.assertGreater(scale['y'], 0.10)
+                self.assertLess(scale['y'], 0.22)
+
 
 class Round3ReportTests(unittest.TestCase):
     def test_round3_analyzer_is_separate_from_first_experiment(self):
@@ -162,3 +201,4 @@ class Round3ApiTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
