@@ -276,20 +276,11 @@
       .size-source-table th, .size-source-table td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
       .size-source-table th { background: #f5f9fb; }
       .size-form { display: grid; gap: 16px; margin-top: 18px; }
-      .size-form-grid, .size-candidate-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .size-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
       .size-form label { display: grid; gap: 5px; font-weight: 700; }
       .size-form input, .size-form select { width: 100%; padding: 10px 12px; border: 1px solid #aebfc8; border-radius: 8px; font: inherit; background: #fff; }
-      .size-candidate-list { display: grid; gap: 12px; }
-      .size-candidate { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
-      .size-candidate legend { padding: 0 6px; color: var(--blue); font-weight: 800; }
-      .size-form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-      .size-form button { padding: 10px 14px; border: 1px solid #aebfc8; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
-      .size-form button[type="submit"] { border-color: var(--blue); background: var(--blue); color: #fff; }
-      .size-status { min-height: 1.7em; margin: 0; color: var(--blue); font-weight: 700; }
-      .size-results { display: grid; gap: 8px; margin: 0; padding-left: 1.5rem; }
-      .size-result { padding: 10px 12px; border-radius: 8px; background: #f5f9fb; }
-      .size-result.is-closest { background: var(--green-pale); outline: 2px solid #c7e7d6; }
-
+                                          .size-status { min-height: 1.7em; margin: 0; color: var(--blue); font-weight: 700; }
+                  
       .formula {
         display: block;
         overflow-x: auto;
@@ -306,7 +297,7 @@
 
       @media (max-width: 680px) {
         .page { width: min(100% - 20px, 1040px); padding-top: 16px; }
-        .steps, .two-columns, .size-form-grid, .size-candidate-fields { grid-template-columns: 1fr; }
+        .steps, .two-columns, .size-form-grid { grid-template-columns: 1fr; }
         .step:last-child { grid-column: auto; }
         .mat-table { min-width: 560px; }
         .size-source-table { min-width: 560px; }
@@ -337,7 +328,7 @@
         <ul class="jump-links" aria-label="이 페이지에서">
           <li><a href="#steps">실측 순서</a></li>
           <li><a href="#code">실제 코드</a></li>
-          <li><a href="#size-matcher">호수 비교</a></li>
+          <li><a href="#size-matcher">호수 자동 매핑</a></li>
           <li><a href="#missing">아직 못 하는 것</a></li>
           <li><a href="#accuracy">정확도와 확인</a></li>
         </ul>
@@ -908,20 +899,11 @@
           <p class="small-note">
             내장 너비·기장 값은 FitShare가 정한 임시 참고값이에요. 공식 KS 변환표나 실제 상품 치수 통계가 아니며,
             여러 브랜드의 옷을 재어 검증한 값도 아니에요. KS 호수는 아이 키 기준이라 옷 실측만으로 아이에게 맞는 크기를 보장할 수 없어요.
-            브랜드와 디자인에 따라 다르니 선택한 상품의 치수표와 아이의 키도 확인해 주세요.
+            브랜드와 디자인에 따라 다르니 상품을 고를 때 판매처의 안내와 아이의 키도 확인해 주세요.
           </p>
         </div>
 
-        <div class="info-box warning">
-          <h3>상품 치수표로 더 맞춰 볼 수 있어요</h3>
-          <p>
-            특정 상품과 비교하려면 아래에 그 브랜드가 공개한 <strong>호수별 옷 치수표</strong>를 입력하면 돼요.
-            상품표 치수와 실측값의 차이가 가장 작은 호수를 함께 표시해요.
-            상품표 너비는 같은 위치와 방법으로 잰 너비여야 해요. 둘레 치수와 펼친 너비는 서로 바꿔 적지 마세요.
-          </p>
-        </div>
-
-        <form class="size-form" data-size-matcher-form novalidate>
+                <form class="size-form" data-size-matcher-form novalidate>
           <fieldset class="info-box">
             <legend><strong>사진에서 잰 옷 치수</strong></legend>
             <p class="small-note">이전 단계에서 확인한 결과를 cm 단위로 입력해요.</p>
@@ -952,40 +934,13 @@
               </label>
             </div>
           </fieldset>
-
-          <div>
-            <h3>상품별 치수표</h3>
-            <p class="small-note">판매처 표에 적힌 호수, 펼친 너비, 기장을 같은 단위(cm)로 입력해요.</p>
-            <div class="size-candidate-list" data-chart-options></div>
-            <template data-chart-row-template>
-              <fieldset class="size-candidate" data-chart-row>
-                <legend data-row-title></legend>
-                <div class="size-candidate-fields">
-                  <label>표에 적힌 호수
-                    <input type="text" required data-candidate-label autocomplete="off" />
-                  </label>
-                  <label>상품표 너비 (cm)
-                    <input type="number" min="0" step="any" required data-candidate-width inputmode="decimal" />
-                  </label>
-                  <label>상품표 기장 (cm)
-                    <input type="number" min="0" step="any" required data-candidate-length inputmode="decimal" />
-                  </label>
-                </div>
-                <button type="button" data-remove-candidate>이 후보 지우기</button>
-              </fieldset>
-            </template>
-            <div class="size-form-actions">
-              <button type="button" data-add-candidate>호수 후보 추가</button>
-              <button type="submit">가장 가까운 호수 비교하기</button>
-            </div>
-          </div>
           <p class="size-status" data-size-status role="status" aria-live="polite"></p>
-          <ol class="size-results" data-size-results></ol>
+
         </form>
         <p class="callout">
           <strong>자동 호수는 참고용이에요.</strong>
           자동으로 선택한 값은 옷 실측과 내장 참고표의 근접값이에요. KS의 공식 변환 결과나 아이에게 잘 맞는다는 보장은 아니에요.
-          상품 치수표 비교와 아이 키를 함께 확인하고 필요하면 호수를 직접 바꿔 주세요.
+          판매처 안내와 아이 키를 함께 확인하고 필요하면 호수를 직접 바꿔 주세요.
         </p>
       </section>
 
@@ -1023,9 +978,9 @@
 
       <p class="footer">
         코드 용어를 찾아보고 싶다면
-        <a href="../tools/vision_pipeline.py">서버 사진 분석 코드</a>,
-        <a href="../js/measurement/automaticMeasurement.js">브라우저 자동 분석 코드</a>,
-        <a href="../js/measurement/calibration.js">cm 환산 코드</a>를 볼 수 있어요.
+        <a href="https://taehongkim.github.io/fitshare-study/tools/vision_pipeline.py">서버 사진 분석 코드</a>,
+        <a href="https://taehongkim.github.io/fitshare-study/js/measurement/automaticMeasurement.js">브라우저 자동 분석 코드</a>,
+        <a href="https://taehongkim.github.io/fitshare-study/js/measurement/calibration.js">cm 환산 코드</a>를 볼 수 있어요.
         자세한 과정은 실제 코드와 함께 쉽게 읽을 수 있도록 정리했어요.
       </p>
     </main>
