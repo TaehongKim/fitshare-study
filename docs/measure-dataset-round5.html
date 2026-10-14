@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="사진 비율을 유지하고 축소를 줄인 고해상도 처리와 기존 처리의 20장 비교 실험" />
+    <title>실측 5차 실험 | FitShare</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/measurement.css" />
+    <link rel="stylesheet" href="css/measurement-round5.css" />
+  </head>
+  <body class="measurement-page">
+    <main class="measurement-shell round3-shell">
+      <header class="measurement-header">
+        <a class="measurement-brand" href="index.html">← 실험 결과 모아보기</a>
+        <span>MEASURE DATASET LAB · 5차 실험</span>
+      </header>
+        <section class="measurement-panel round3-panel" aria-labelledby="round5-title">
+        <p class="eyebrow">ROUND 5 · 해상도를 높이면 기장 오차가 줄까요?</p>
+        <h1 id="round5-title">사진 비율을 지키고 축소를 줄여요</h1>
+        <p class="measurement-intro">같은 20장 원본 사진을 긴 변 848·1000·1600·2400픽셀, 그리고 원본 해상도로 보정해 정확도를 비교해요.</p>
+        <section class="round3-methods" aria-label="비교한 사진 처리 방식">
+          <article class="round3-method round3-method-old">
+            <span class="round3-method-number">방법 A</span>
+            <h2>848픽셀</h2>
+            <p>기존 600×848 캔버스와 같은 크기의 보정 결과에서 옷을 찾아요.</p>
+          </article>
+          <article class="round3-method round3-method-new">
+            <span class="round3-method-number">방법 B</span>
+            <h2>사진 비율을 지킨 고해상도</h2>
+            <p>표식은 같은 축소본에서 찾고, 보정은 원본 사진에 적용해요. A0 비율을 지키면서 긴 변 해상도를 높이고 옷 찾기도 같은 해상도로 실행해요.</p>
+          </article>
+        </section>
+        <div class="kid-help"><strong>비교할 때 주의할 점</strong><br />모든 해상도에서 같은 원본 사진과 같은 표식 검출을 사용하고, 보정 캔버스와 GrabCut 해상도만 바꿔요. 평균 오차를 먼저 보고 처리 시간은 참고로 확인해요. 높은 해상도에서 오차가 줄어도 이 20장 사진에서만 그런지 추가 사진으로 확인해야 해요.</div>
+        <p id="round5-status" role="status" aria-live="polite">저장된 5차 실험 결과를 불러오고 있어요.</p>
+        <section id="round5-summary" class="round3-summary" aria-label="전체 비교"></section>
+        <p id="round5-conclusion" class="kid-help" role="status"></p>
+        <section class="round3-section" aria-labelledby="round5-photos-heading">
+          <h2 id="round5-photos-heading">사진별 측정 결과</h2>
+          <p>각 방법은 너비와 기장 오차, 처리 시간, 보정 캔버스 크기를 보여줘요.</p>
+          <div id="round5-photos" class="round3-photo-list"></div>
+        </section>
+        <p class="round3-footnote">각 해상도 모두 같은 20장 사진을 사용했어요. 가장 높은 조건은 사진의 원본 높이를 유지해요. 고해상도는 메모리를 더 사용할 수 있고, 오차가 줄더라도 다른 사진에서 같은 결과인지는 추가 확인이 필요해요.</p>
+      </section>
+    </main>
+    <script type="module" src="js/measurement/publicRound5Report.js"></script>
+  </body>
+</html>
+
