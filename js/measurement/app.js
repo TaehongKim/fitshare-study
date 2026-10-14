@@ -6,6 +6,7 @@ import { getGarmentInstruction, getMeasurementNames, renderGarmentDiagram, rende
 import { addPerspectiveCorner, clearPerspectiveCorners, getAutomaticFailureMessage, moveBackgroundOrder, normalizeBackgroundOrder, removePerspectiveCorner, resolveShotDraft, shouldOpenManualCorrection } from './shotDraft.js?v=photo-capture-fix-5';
 import { loadPhotoImage, releasePhotoImage } from './photoImage.js?v=photo-load-fallback-2';
 import { createGarmentInputValues, isGarmentInputDraft, isResumableSession, readGarmentInputDraft } from './garmentDraft.js?v=garment-draft-1';
+import { retryPhotoMeasurement } from './photoRetry.mjs?v=photo-retry-1';
 
 const app = document.querySelector('#measurement-app');
 const mats = [
@@ -270,6 +271,7 @@ async function renderShot({ preserveCurrentDraft = false } = {}) {
     </section>`;
   app.querySelector('#photo-input-gallery').addEventListener('change', handlePhoto);
   app.querySelector('#photo-input-camera').addEventListener('change', handlePhoto);
+  app.querySelector('[data-action="retry-measurement"]')?.addEventListener('click', retryMeasurement);
   app.querySelector('[data-action="perspective"]')?.addEventListener('click', openPerspectiveTool);
   app.querySelector('[data-action="reset-perspective"]')?.addEventListener('click', () => {
     draft.photo = draft.rawPhoto;
@@ -334,6 +336,16 @@ async function handlePhoto(event) {
   } catch (error) {
     showMessage(error.message || '사진을 열지 못했어요. JPG나 PNG 사진을 다시 골라 주세요.');
   }
+}
+
+async function retryMeasurement(event) {
+  const button = event.currentTarget;
+  if (!draft?.photo) return;
+  button.disabled = true;
+  button.textContent = '사진을 다시 살펴보고 있어요…';
+  const garment = session.garments[session.garmentIndex];
+  draft = await retryPhotoMeasurement(draft, autoProcessPhoto, garment.category, getCurrentMat().id);
+  renderShot({ preserveCurrentDraft: true });
 }
 
 async function drawPhotoCanvas(photo) {
@@ -477,7 +489,7 @@ function analysisHtml(record) {
   const mat = record.matCheck?.message || '사진 속 밝고 어두운 부분을 살펴봤어요.';
   const automatic = record.autoMeasurement?.message || '기울기와 길이를 자동으로 찾지 못했어요. 아래 숫자를 직접 입력해 주세요.';
   const success = Boolean(record.corrected && record.autoMeasurement?.ok);
-  return `<p class="${success ? 'automatic-success' : 'analysis-note'}" role="status"><strong>${success ? '자동 보정과 측정 완료' : '사진 자동 확인'}</strong><br>${escapeHtml(automatic)}<br>${escapeHtml(mat)}<br>${escapeHtml(outline)}<br>${success ? '숫자를 확인하고 사진 저장하고 다음으로를 누르면 돼요.' : '자동으로 찾지 못했으면 위의 직접 보정 도구를 열어 주세요.'}</p>`;
+  return `<p class="${success ? 'automatic-success' : 'analysis-note'}" role="status"><strong>${success ? '자동 보정과 측정 완료' : '사진 자동 확인'}</strong><br>${escapeHtml(automatic)}<br>${escapeHtml(mat)}<br>${escapeHtml(outline)}<br>${success ? '숫자를 확인하고 사진 저장하고 다음으로를 누르면 돼요.' : '같은 사진을 다시 분석하거나 위의 직접 보정 도구에서 고칠 수 있어요.'}</p>${success ? '' : '<button type="button" class="quiet-action retry-measurement" data-action="retry-measurement">같은 사진 다시 측정</button>'}`;
 }
 
 async function saveAndMove() {
@@ -561,3 +573,4 @@ function mapCanvasClick(event, canvas) {
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 }
+
