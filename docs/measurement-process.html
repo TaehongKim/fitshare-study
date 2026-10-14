@@ -183,7 +183,6 @@
       .resolution-results { margin-top: 16px; padding: 18px; border: 1px solid #c7e7d6; border-radius: 14px; background: var(--green-pale); }
 
       .code-grid { display: grid; gap: 16px; }
-      .example-steps { display: grid; gap: 14px; }
       .example-figure {
         margin: 0;
         padding: 14px;
@@ -212,9 +211,6 @@
 
       .ratio-example svg { display: block; width: min(100%, 540px); height: auto; margin: 0 auto; }
       .ratio-example p { color: var(--muted); }
-      .ratio-table { width: 100%; border-collapse: collapse; }
-      .ratio-table th, .ratio-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; }
-      .ratio-table th { background: #f5f9fb; }
 
       .code-card {
         overflow: hidden;
@@ -383,11 +379,11 @@
           <article class="step">
             <h3>종류별 규칙으로 너비와 기장을 찾아요</h3>
             <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="옷 마스크 위에 너비와 기장 측정선을 표시한 그림"><rect width="600" height="250" rx="12" fill="#fff"/><path d="M250 30l-36 22-37 55 31 18 27-39v124h132V86l27 39 31-18-37-55-36-22-25 22h-52z" fill="#75d5b4" stroke="#16745d" stroke-width="4"/><path d="M224 105h144" stroke="#0877ae" stroke-width="7"/><path d="M390 30v180m-10-15 10 15 10-15m-20-150 10-15 10 15" fill="none" stroke="#d64b45" stroke-width="5"/><text x="298" y="96" text-anchor="middle" fill="#075c87" font-size="16" font-weight="700">너비</text><text x="420" y="126" fill="#b13e45" font-size="16" font-weight="700">기장</text></svg></figure>
-            <p>가로줄마다 옷의 왼쪽부터 오른쪽까지 폭을 계산해요. 상의는 가슴 너비, 바지·하의는 허리 너비라고 보고, 옷 종류별 비율로 잴 위치를 정해요.</p>
+            <p>옷 종류에 따라 미리 정한 높이 비율에서 너비를 재고, 옷의 위아래 끝을 기준으로 기장을 구해요.</p>
           </article>
           <article class="step">
             <h3>픽셀을 cm로 바꾸고 사람이 확인해요</h3>
-            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="기준판 픽셀 비율로 옷 길이를 센티미터로 환산하는 그림"><rect width="600" height="250" rx="12" fill="#fff"/><rect x="48" y="29" width="102" height="192" fill="#f7fbfc" stroke="#175f83" stroke-width="4"/><path d="M55 65h88M55 101h88M55 137h88M55 173h88M80 32v186M113 32v186" stroke="#d6e1e7" stroke-width="2"/><text x="99" y="245" text-anchor="middle" fill="#526575" font-size="14">A0 600×848px</text><path d="M190 123h55m-15-15 17 15-17 15" fill="none" stroke="#16745d" stroke-width="6"/><text x="285" y="105" fill="#075c87" font-size="22" font-weight="700">240px ÷ 600px × 84.1cm</text><text x="285" y="150" fill="#16745d" font-size="28" font-weight="800">= 33.6cm</text><text x="285" y="190" fill="#526575" font-size="16">마지막으로 사람이 결과를 확인해요</text></svg></figure>
+            <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="잰 픽셀 길이를 기준판의 센티미터 비율로 바꾸는 그림"><rect width="600" height="250" rx="12" fill="#fff"/><rect x="48" y="29" width="102" height="192" fill="#f7fbfc" stroke="#175f83" stroke-width="4"/><path d="M55 65h88M55 101h88M55 137h88M55 173h88M80 32v186" stroke="#d6e1e7" stroke-width="2"/><text x="99" y="245" text-anchor="middle" fill="#526575" font-size="14">A0 기준판</text><path d="M190 123h55m-15-15 17 15-17 15" fill="none" stroke="#16745d" stroke-width="6"/><text x="285" y="105" fill="#075c87" font-size="22" font-weight="700">측정한 픽셀 × cm/px</text><text x="285" y="150" fill="#16745d" font-size="28" font-weight="800">= 실제 길이(cm)</text><text x="285" y="190" fill="#526575" font-size="16">마지막으로 사람이 결과를 확인해요</text></svg></figure>
             <p>A0 기준판의 알려진 길이로 픽셀을 cm로 환산해요. 결과 사진에 칠해진 옷 영역과 선이 맞는지 눈으로 보고, 이상하면 다시 찍거나 숫자를 고쳐야 해요.</p>
           </article>
         </div>
@@ -410,7 +406,7 @@
           <article class="mat-card"><img src="assets/photos/point/p_1_w55_h65.jpg" alt="M1 점 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M1 · 점 표식</h3><p>회색조와 임계값 처리로 어두운 점을 분리한 뒤 <code>cv2.connectedComponentsWithStats</code>로 이어진 픽셀을 점 덩어리로 묶어요. 점 크기·위치 조건으로 후보를 고르고 외곽 모양을 기준 좌표에 대응합니다.</p><ul><li>핵심 함수: <code>_component_mask</code>, <code>_detect_dot_mat</code>, <code>cv2.getPerspectiveTransform</code></li><li>점들의 바깥 윤곽과 간격으로 판의 위치와 방향을 계산해요.</li></ul></div></article>
           <article class="mat-card"><img src="assets/photos/cross/c_1_w55_h65.jpg" alt="M2 십자 격자 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M2 · 십자 격자</h3><p><code>cv2.Canny</code>로 선의 가장자리를 강조하고 <code>cv2.HoughLinesP</code>로 긴 선분을 찾아요. 방향이 비슷한 선을 가로·세로로 묶고 <code>cv2.fitLine</code>과 <code>_line_intersection</code>으로 교차점을 계산합니다.</p><ul><li>핵심 함수: <code>_detect_cross_mat</code>, <code>_cluster_grid_lines</code>, <code>cv2.Canny</code>, <code>cv2.HoughLinesP</code></li><li>교차점과 판의 경계를 기준 좌표에 맞춰 원근을 펴요.</li></ul></div></article>
           <article class="mat-card"><figure class="mat-photo-annotated"><img src="assets/photos/ChArUco/ch_2_w54_h50.jpg" alt="M3 ChArUco 기준판 위에 옷을 펼쳐 놓은 사진" loading="lazy" /><svg class="photo-annotation" viewBox="0 0 1600 2133" role="img" aria-label="사진 오른쪽 위 가장자리의 ID 31 표식을 노란 테두리로 표시"><path d="M1404 142 L1435 142 L1433 175 L1402 174 Z" fill="none" stroke="#ffcf38" stroke-width="16"/><path d="M1402 184 L1275 300 L1050 300" fill="none" stroke="#ffcf38" stroke-width="12"/><rect x="1015" y="260" width="220" height="82" rx="18" fill="#172b3a" fill-opacity=".92"/><text x="1125" y="316" text-anchor="middle" fill="#ffdf66" font-size="52" font-weight="800">ID 31</text></svg></figure><p class="mat-photo-caption">노란 테두리: 사진의 오른쪽 위 가장자리에서 찾은 ID 31</p><div class="mat-card-body"><h3>M3 · ChArUco 표식</h3><p><code>cv2.aruco.ArucoDetector.detectMarkers</code>가 표식의 네 모서리와 ID를 찾아요. ID는 QR 번호가 아니라 <code>DICT_4X4_1000</code> 사전에서 무늬를 구분하는 ArUco 표식 번호예요.</p><ul><li>ID는 위치나 순서를 뜻하지 않아요. <code>data/charuco_marker_maps.json</code>에서 이 판의 ID에 해당하는 네 모서리 기준 좌표를 찾는 열쇠예요.</li><li>사진에서 실제로 찾은 ID 31 위치를 위 그림에 노란 테두리로 표시했어요. 표식 번호를 기준표에서 찾아 좌표로 연결합니다.</li><li><code>cv2.findHomography</code>와 RANSAC이 잘못 짝지어진 표식을 걸러요.</li></ul></div></article>
-          <article class="mat-card"><img src="assets/photos/ChaArUco_Cross/chc_1_w55_h65.jpg" alt="M4 ChArUco 격자 기준판과 옷" loading="lazy" /><div class="mat-card-body"><h3>M4 · ChArUco 격자</h3><p>검출기는 M3와 같지만 격자형 판의 ID 배치와 기준 좌표표는 별개예요. M4 전용 좌표표에서 ID마다 기준판의 네 모서리를 찾아 사진 좌표와 연결합니다.</p><ul><li>핵심 함수: <code>ArucoDetector.detectMarkers</code>, <code>cv2.findHomography</code>, RANSAC</li><li>예: M4 ID 243은 기준 캔버스의 x=34.5~47.8, y=800.2~813.5px에 대응해요. ID 번호만으로 위치를 추측하지 않아요.</li></ul></div></article>
+          <article class="mat-card"><figure class="mat-photo-annotated"><img src="assets/photos/ChaArUco_Cross/chc_1_w55_h65.jpg" alt="M4 ChArUco 격자 기준판과 옷" loading="lazy" /><svg class="photo-annotation" viewBox="0 0 1600 2133" role="img" aria-label="사진 왼쪽 아래 가장자리의 ID 243 표식을 노란 테두리로 표시"><path d="M156 2028 L189 2025 L189 2057 L157 2059 Z" fill="none" stroke="#ffcf38" stroke-width="16"/><path d="M195 2020 L300 1900 L500 1900" fill="none" stroke="#ffcf38" stroke-width="12"/><rect x="500" y="1860" width="260" height="82" rx="18" fill="#172b3a" fill-opacity=".92"/><text x="630" y="1916" text-anchor="middle" fill="#ffdf66" font-size="52" font-weight="800">ID 243</text></svg></figure><p class="mat-photo-caption">노란 테두리: 사진의 왼쪽 아래 가장자리에서 찾은 ID 243</p><div class="mat-card-body"><h3>M4 · ChArUco 격자</h3><p>검출기는 M3와 같지만 격자형 판의 ID 배치와 기준 좌표표는 별개예요. M4 전용 좌표표에서 ID마다 기준판의 네 모서리를 찾아 사진 좌표와 연결합니다.</p><ul><li>핵심 함수: <code>ArucoDetector.detectMarkers</code>, <code>cv2.findHomography</code>, RANSAC</li><li>사진 왼쪽 아래에 검출한 ID 243을 표시했어요. ID 번호만으로 위치를 추측하지 않고, M4 기준표에서 좌표를 조회합니다.</li></ul></div></article>
         </div>
         <p class="small-note">M1·M2는 점이나 선에서 대응점을 계산하고, M3·M4는 검출한 ID로 기준 위치를 조회해요. 앞의 두 방식은 대응점으로 <code>cv2.getPerspectiveTransform</code> 또는 <code>cv2.getAffineTransform</code>을 구하고, ChArUco는 여러 표식 대응점으로 <code>cv2.findHomography</code>를 구합니다. 마지막에는 <code>cv2.warpPerspective</code> 또는 <code>cv2.warpAffine</code>으로 사진을 변환해요.</p>
         <div class="worked-example"><h3>입력 사진을 줄이고 보정 결과를 통일하는 이유</h3><p>원본 사진은 4000×3000픽셀입니다. 표식을 찾기 전 긴 변이 최대 1000픽셀이 되도록 줄이고, 찾은 좌표를 이용해 A0 기준판을 <strong>600×848픽셀</strong> 캔버스에 맞춰요. 실제 크기 84.1×118.9cm에 맞춘 공통 좌표판이라 사진마다 픽셀과 cm의 관계를 같은 기준으로 계산할 수 있습니다.</p><p>옷 마스크 계산에서는 보정 사진을 다시 긴 변 최대 600픽셀로 줄여요. 따라서 보정 출력 기준은 약 <strong>0.140cm(1.4mm)/px</strong>이고, 마스크 분석 영상은 약 424×600픽셀로 약 <strong>0.198cm(2.0mm)/px</strong>입니다. 출력 이미지 해상도와 옷 경계를 분석하는 해상도는 같지 않아요.</p><p>입력과 마스크 크기 제한은 처리할 픽셀 수를 줄여 계산량과 메모리 사용을 낮추는 효과가 있습니다. 이는 코드의 크기 제한을 바탕으로 한 해석입니다. 축소 과정에서 작은 경계 정보가 사라질 수도 있으므로, 숫자를 크게 하면 항상 정확도가 좋아진다고 할 수 없어요.</p></div>
@@ -479,120 +475,15 @@
 
             <rect x="168" y="330" width="424" height="42" rx="10" fill="#dff3eb" />
             <text x="380" y="357" text-anchor="middle" fill="#176047" font-size="17" font-weight="700">= 약 33.6cm  (240 ÷ 600 × 84.1)</text>
+            <text x="655" y="294" text-anchor="middle" fill="#526575" font-size="12">세로 450px ÷ 848px × 118.9cm = 약 63.1cm</text>
           </svg>
-          <figcaption><strong>그림 읽기:</strong> 컴퓨터는 무늬만 보고 cm를 맞히는 게 아니에요. 실제 크기를 아는 기준판의 표식을 찾아 사진을 바로잡은 뒤, 픽셀과 실제 길이의 비율을 계산해요.</figcaption>
+          <figcaption><strong>예시로 따라 재기:</strong> 실제 크기를 아는 기준판의 표식을 찾아 사진을 바로잡고, 너비와 기장의 픽셀을 가로·세로 기준에 맞춰 각각 cm로 바꿔요.</figcaption>
         </figure>
-        <div class="worked-example">
-          <h3>숫자로 한 번 더 계산해 봐요</h3>
-          <ul>
-            <li><strong>가로:</strong> 기준판 600px가 실제 84.1cm예요. 옷 너비 240px는 <code>240 ÷ 600 × 84.1 = 33.6cm</code>예요.</li>
-            <li><strong>세로:</strong> 기준판 848px가 실제 118.9cm예요. 옷 길이 450px는 <code>450 ÷ 848 × 118.9 = 63.1cm</code>예요.</li>
-          </ul>
-          <p>가로와 세로는 기준판의 가로·세로 길이가 다르므로 각각 따로 바꿔요. 여기서 240px와 450px는 계산을 보여 주기 위한 예시예요.</p>
-        </div>
         <p class="callout">
           <strong>중요:</strong>
           아무 바닥 무늬나 자가 되는 것은 아니에요. 무늬의 간격이나 표식 위치, 기준판의 실제 크기를 미리 알아야 해요.
           표식이 가려지거나 판이 사진 밖으로 잘리면 바로잡기 어렵고, 옷이 구겨져 있으면 사진만 반듯하게 고쳐도 옷 주름은 펴지지 않아요.
         </p>
-      </section>
-
-      <section class="panel" aria-labelledby="example-title">
-        <p class="eyebrow">같은 사진을 따라가며 봐요</p>
-        <h2 id="example-title">예시로 따라 재기</h2>
-        <p class="section-lead">
-          아래 그림은 실제 촬영 사진이 아니라, 프로그램이 사진을 처리하는 순서를 보여 주는 설명 그림이에요.
-          옷의 주름이나 겨드랑이 선을 자동으로 알아낸다는 뜻은 아니에요.
-        </p>
-        <div class="example-steps">
-          <figure class="example-figure">
-            <svg viewBox="0 0 760 250" role="img" aria-labelledby="example-photo-title example-photo-desc">
-              <title id="example-photo-title">기울어진 사진 속 기준판과 옷 예시</title>
-              <desc id="example-photo-desc">사다리꼴 모양으로 비스듬하게 찍힌 기준판 위에 셔츠가 놓여 있고, 기준판 네 모서리가 번호로 표시돼 있습니다.</desc>
-              <rect width="760" height="250" rx="12" fill="#eef4f7" />
-              <text x="22" y="30" fill="#172b3a" font-size="18" font-weight="700">1단계 · 사진에서 기준판 모서리 찾기</text>
-              <polygon points="228,48 466,35 511,221 194,231" fill="#fff" stroke="#175f83" stroke-width="4" />
-              <g stroke="#9bb8c7" stroke-width="1">
-                <path d="M229 82 L475 69 M218 120 L484 107 M208 160 L493 148 M200 198 L502 187" />
-                <path d="M284 45 L253 229 M344 42 L315 227 M404 38 L382 225 M462 35 L449 223" />
-              </g>
-              <path d="M315 91 L292 105 L278 139 L295 145 L307 125 L308 183 L391 180 L387 122 L401 142 L417 133 L398 102 L377 90 L360 102 L342 102 Z" fill="#f5c454" stroke="#8a5a00" stroke-width="3" />
-              <g fill="#d64b45" stroke="#fff" stroke-width="3">
-                <circle cx="228" cy="48" r="13" /><circle cx="466" cy="35" r="13" />
-                <circle cx="511" cy="221" r="13" /><circle cx="194" cy="231" r="13" />
-              </g>
-              <g fill="#fff" font-size="12" font-weight="800" text-anchor="middle">
-                <text x="228" y="52">1</text><text x="466" y="39">2</text><text x="511" y="225">3</text><text x="194" y="235">4</text>
-              </g>
-              <text x="548" y="106" fill="#526575" font-size="15">네 모서리와</text>
-              <text x="548" y="129" fill="#526575" font-size="15">표식을 찾아요</text>
-              <text x="548" y="172" fill="#175f83" font-size="14" font-weight="700">실제 사진에서는</text>
-              <text x="548" y="194" fill="#175f83" font-size="14" font-weight="700">옷 전체도 보여야 해요</text>
-            </svg>
-            <figcaption><strong>사진 준비:</strong> 기준판이 비스듬해도 네 모서리가 보이면 컴퓨터가 판의 모양을 찾을 수 있어요.</figcaption>
-          </figure>
-
-          <figure class="example-figure">
-            <svg viewBox="0 0 760 250" role="img" aria-labelledby="example-flat-title example-flat-desc">
-              <title id="example-flat-title">기준판 사진을 반듯하게 보정한 예시</title>
-              <desc id="example-flat-desc">비스듬한 기준판이 세로 A0 직사각형으로 바뀌고, 옷은 같은 판 위에 반듯하게 보입니다.</desc>
-              <rect width="760" height="250" rx="12" fill="#eef4f7" />
-              <text x="22" y="30" fill="#172b3a" font-size="18" font-weight="700">2단계 · 사진을 반듯한 A0 판으로 바꾸기</text>
-              <rect x="260" y="48" width="150" height="178" fill="#fff" stroke="#175f83" stroke-width="4" />
-              <g stroke="#b5cbd5" stroke-width="1">
-                <path d="M260 83 H410 M260 118 H410 M260 153 H410 M260 188 H410" />
-                <path d="M290 48 V226 M320 48 V226 M350 48 V226 M380 48 V226" />
-              </g>
-              <path d="M307 86 L289 98 L280 125 L294 131 L304 113 L304 178 L366 178 L363 113 L375 130 L390 123 L375 96 L357 86 L344 97 L326 97 Z" fill="#f5c454" stroke="#8a5a00" stroke-width="3" />
-              <path d="M95 136 H220" stroke="#16745d" stroke-width="5" />
-              <path d="M207 125 L223 136 L207 147" fill="none" stroke="#16745d" stroke-width="5" />
-              <text x="67" y="112" fill="#16745d" font-size="15" font-weight="700">원근을 펴요</text>
-              <text x="438" y="91" fill="#175f83" font-size="15" font-weight="700">가로 84.1cm</text>
-              <text x="438" y="114" fill="#526575" font-size="14">세로 118.9cm</text>
-              <text x="438" y="159" fill="#526575" font-size="14">이제 픽셀 크기를</text>
-              <text x="438" y="181" fill="#526575" font-size="14">실제 길이와 맞춰요</text>
-            </svg>
-            <figcaption><strong>사진 보정:</strong> 옷을 다림질하는 것이 아니라 사진 속 기준판을 반듯한 직사각형으로 맞춰요.</figcaption>
-          </figure>
-
-          <figure class="example-figure">
-            <svg viewBox="0 0 760 280" role="img" aria-labelledby="example-mask-title example-mask-desc">
-              <title id="example-mask-title">옷 마스크와 너비·기장 측정선 예시</title>
-              <desc id="example-mask-desc">옷 부분이 초록색으로 표시된 마스크 그림입니다. 파란 가로선은 예시 너비, 빨간 세로선은 예시 기장을 보여 줍니다.</desc>
-              <rect width="760" height="280" rx="12" fill="#eef4f7" />
-              <text x="22" y="30" fill="#172b3a" font-size="18" font-weight="700">3단계 · 옷 영역을 표시하고 선 길이 재기</text>
-              <rect x="260" y="47" width="172" height="213" fill="#fff" stroke="#175f83" stroke-width="4" />
-              <g stroke="#d3e0e6" stroke-width="1">
-                <path d="M260 90 H432 M260 133 H432 M260 176 H432 M260 219 H432" />
-                <path d="M303 47 V260 M346 47 V260 M389 47 V260" />
-              </g>
-              <path d="M326 77 L306 91 L288 127 L307 135 L320 112 L320 212 L374 212 L374 112 L389 135 L407 127 L389 91 L370 77 L354 90 L342 90 Z" fill="#58c49b" fill-opacity=".75" stroke="#16745d" stroke-width="4" />
-              <path d="M321 142 H374" stroke="#0877ae" stroke-width="5" />
-              <circle cx="321" cy="142" r="6" fill="#0877ae" /><circle cx="374" cy="142" r="6" fill="#0877ae" />
-              <path d="M398 78 V211" stroke="#d64b45" stroke-width="5" />
-              <path d="M390 89 L398 77 L406 89 M390 200 L398 212 L406 200" fill="none" stroke="#d64b45" stroke-width="4" />
-              <path d="M388 142 H500" stroke="#0877ae" stroke-width="2" stroke-dasharray="6 5" />
-              <text x="512" y="137" fill="#075c87" font-size="15" font-weight="700">파랑: 예시 너비선</text>
-              <text x="512" y="160" fill="#526575" font-size="13">겨드랑이점을 직접 찾은 선은 아니에요</text>
-              <path d="M405 211 H500" stroke="#d64b45" stroke-width="2" stroke-dasharray="6 5" />
-              <text x="512" y="205" fill="#b13e45" font-size="15" font-weight="700">빨강: 예시 기장</text>
-              <text x="512" y="228" fill="#526575" font-size="13">위·아래 끝을 픽셀로 재요</text>
-              <rect x="44" y="102" width="15" height="15" rx="3" fill="#58c49b" />
-              <text x="67" y="115" fill="#16745d" font-size="14" font-weight="700">초록: 옷이라고 고른 곳</text>
-            </svg>
-            <figcaption><strong>선 확인:</strong> 초록 마스크가 옷에 잘 맞는지 확인해요. 너비선은 종류별 비율로 고르므로 실제 겨드랑이 선과 다를 수 있어요.</figcaption>
-          </figure>
-        </div>
-
-        <div class="worked-example">
-          <h3>가상 숫자로 cm를 계산해 봐요</h3>
-          <p>반듯하게 고친 A0 사진이 600×848픽셀이라고 해요. 예시로 찾은 너비선은 240px, 기장 끝점 사이는 450px라고 해 볼게요.</p>
-          <ul>
-            <li>가로 1px은 84.1 ÷ 600cm예요. 그래서 240px × 84.1 ÷ 600 = <strong>약 33.6cm</strong>예요.</li>
-            <li>세로 1px은 118.9 ÷ 848cm예요. 그래서 450px × 118.9 ÷ 848 = <strong>약 63.1cm</strong>예요.</li>
-          </ul>
-          <p><strong>기억해요:</strong> 숫자는 계산 예시예요. 실제 사진에서는 컴퓨터가 고른 선과 옷 모양에 따라 픽셀 수가 달라지고, 저장하기 전에 사람이 결과를 확인해야 해요.</p>
-        </div>
       </section>
 
       <section class="panel" id="code" aria-labelledby="code-title">
@@ -716,45 +607,8 @@
               <dt><code>valid_spans</code> / <code>width_pixels</code></dt><dd>너비선 주변에서 쓸 수 있는 폭 목록과, 그 폭의 대표 픽셀 값이에요.</dd>
             </dl>
             <div class="ratio-example">
-              <h3>40%는 위에서 얼마나 내려올까요?</h3>
-              <p>
-                비율의 기준은 <strong>옷으로 고른 영역의 위쪽부터 아래쪽까지</strong>예요.
-                그 높이가 100px이면 40%는 <strong>100px 높이의 40%는 40px</strong>이라는 뜻이에요.
-                그래서 맨 위에서 40px 내려온 곳에 가로선을 놓아요.
-              </p>
-              <svg viewBox="0 0 540 250" role="img" aria-labelledby="ratio-title ratio-desc">
-                <title id="ratio-title">높이 100픽셀 중 위에서 40퍼센트 위치</title>
-                <desc id="ratio-desc">세로 100픽셀인 옷 영역의 맨 위에서 40픽셀 내려온 곳에 파란 너비선을 표시합니다. 아래쪽까지 60픽셀이 남습니다.</desc>
-                <rect x="205" y="35" width="130" height="180" rx="8" fill="#e8f6ef" stroke="#16745d" stroke-width="3" />
-                <text x="270" y="25" text-anchor="middle" fill="#16745d" font-size="14" font-weight="700">위쪽 0px</text>
-                <line x1="190" y1="107" x2="350" y2="107" stroke="#0877ae" stroke-width="5" />
-                <circle cx="205" cy="107" r="5" fill="#0877ae" /><circle cx="335" cy="107" r="5" fill="#0877ae" />
-                <text x="270" y="98" text-anchor="middle" fill="#075c87" font-size="15" font-weight="700">너비선: 40px 내려옴</text>
-                <text x="270" y="235" text-anchor="middle" fill="#16745d" font-size="14" font-weight="700">아래쪽까지 60px 남음</text>
-                <line x1="375" y1="38" x2="375" y2="104" stroke="#526575" stroke-width="2" />
-                <path d="M369 46 L375 36 L381 46 M369 96 L375 106 L381 96" fill="none" stroke="#526575" stroke-width="2" />
-                <text x="390" y="76" fill="#526575" font-size="14">40px</text>
-                <line x1="375" y1="110" x2="375" y2="212" stroke="#526575" stroke-width="2" />
-                <text x="390" y="168" fill="#526575" font-size="14">60px</text>
-                <text x="120" y="125" text-anchor="end" fill="#526575" font-size="14">전체 높이 100px</text>
-              </svg>
-              <p>
-                반대로 말하면, 비율 40%는 아래에서 재는 게 아니라 <strong>위에서 40% 내려오는 규칙</strong>이에요.
-                이것은 코드가 위치를 고르는 약속이에요. <strong>겨드랑이 봉제선을 찾아 정한 숫자가 아니에요.</strong>
-              </p>
-              <h3>코드에 적힌 옷 종류별 예시 비율</h3>
-              <div class="mat-table-wrap">
-                <table class="ratio-table">
-                  <thead><tr><th scope="col">코드의 옷 이름</th><th scope="col">위에서 내려오는 비율</th><th scope="col">높이가 100px일 때</th></tr></thead>
-                  <tbody>
-                    <tr><th scope="row">상의 외투</th><td>40%</td><td>위에서 40px</td></tr>
-                    <tr><th scope="row">흰 크롭티셔츠</th><td>32.5%</td><td>위에서 32.5px</td></tr>
-                    <tr><th scope="row">원피스</th><td>15%</td><td>위에서 15px</td></tr>
-                    <tr><th scope="row">점퍼</th><td>20%</td><td>위에서 20px</td></tr>
-                    <tr><th scope="row">바지</th><td>10%</td><td>위에서 10px</td></tr>
-                  </tbody>
-                </table>
-              </div>
+              <h3>옷 종류별 비율 지점에서 너비를 재요</h3>
+              <p>기준은 옷으로 고른 영역의 위쪽부터 아래쪽까지 높이예요. 높이가 100px이면 40%는 위에서 40px 내려온 곳이에요.</p>
               <figure class="example-figure">
                 <svg viewBox="0 0 900 365" role="img" aria-labelledby="kind-ratio-title kind-ratio-desc">
                   <title id="kind-ratio-title">옷 종류별 너비선 비율 비교 예시</title>
@@ -795,12 +649,8 @@
                   </g>
                   <text x="450" y="349" text-anchor="middle" fill="#526575" font-size="13">예를 들어 옷 높이가 100px이면 40%는 위에서 40px 내려온 곳이에요.</text>
                 </svg>
-                <figcaption><strong>그림 읽기:</strong> 각 옷의 실제 모양을 보고 파란 선 위치를 비교해요. 선 위치는 옷 종류에 따라 코드에서 정한 비율이며, 실제 봉제선을 찾아 정한 위치가 아니에요.</figcaption>
+                <figcaption><strong>파랑: 예시 너비선.</strong> 겨드랑이점을 직접 찾은 선이 아니라, 옷 종류에 따라 우리가 고민해서 정한 비율의 지점에서 잰 길이예요. 예를 들어 티셔츠는 위에서 40%, 바지는 10% 지점의 길이예요.</figcaption>
               </figure>
-              <p>
-                이 숫자들은 코드에 미리 적힌 위치 규칙이에요. 서로 다른 옷에서 재어 알아낸
-                겨드랑이·허리 봉제선의 정확한 위치라고 보면 안 돼요.
-              </p>
             </div>
             <p class="code-note">
               여기서 <code>profile</code>은 옷 종류별 규칙표예요.
@@ -839,33 +689,19 @@
       </section>
 
       <section class="panel" aria-labelledby="positions-title">
-        <p class="eyebrow">어디를 재는지 꼭 확인해요</p>
-        <h2 id="positions-title">“가슴 너비”와 “겨드랑이 아래 너비”는 같을까요?</h2>
+        <p class="eyebrow">마지막으로 기준을 확인해요</p>
+        <h2 id="positions-title">자동으로 그은 선이 원하는 위치인지 살펴봐요</h2>
         <div class="two-columns">
           <article class="info-box">
-            <h3>사람이 보는 안내</h3>
-            <p>상의 안내는 겨드랑이 봉제선보다 조금 아래에서 왼쪽 끝부터 오른쪽 끝까지 재라고 설명해요.</p>
+            <h3>사람이 옷을 잴 때</h3>
+            <p>상의는 겨드랑이 아래처럼 정해 둔 기준에서 너비를 재는 경우가 많아요. 판매처마다 측정 위치가 다를 수 있어 안내를 확인해야 해요.</p>
           </article>
           <article class="info-box warning">
-            <h3>현재 자동 계산</h3>
-            <p>컴퓨터는 겨드랑이 봉제선을 직접 찾지 않아요. 옷 종류별 규칙을 따라 옷으로 고른 영역의 위에서부터 비율만큼 내려온 곳에 너비선을 놓아요. 예를 들어 높이를 100px라고 보면 상의 외투는 40px, 바지는 10px 내려온 위치예요. 아래 비교 그림처럼 종류마다 선이 다르며, 실제 봉제선을 찾은 위치는 아니에요.</p>
+            <h3>프로그램이 잰 결과</h3>
+            <p>앞의 그림처럼 마스크 높이의 비율로 너비선을 골라요. 겨드랑이나 봉제점을 찾은 결과가 아니므로, 오버레이를 보고 원하는 위치인지 확인해 주세요.</p>
           </article>
         </div>
-        <p class="callout">
-          <strong>중요:</strong>
-          그래서 자동 선이 안내 그림의 겨드랑이 아래 위치와 늘 정확히 같다고 말할 수 없어요.
-          결과 그림을 확인하고, 위치가 다르면 사람이 직접 고칠 방법이 필요해요.
-        </p>
-        <div class="two-columns">
-          <article class="info-box">
-            <h3>기장</h3>
-            <p>옷 모양의 위아래 끝을 추정해 세로 길이를 계산해요. 목과 어깨가 만나는 점, 바지 허리선처럼 종류별 기준점을 직접 알아내지는 않아요.</p>
-          </article>
-          <article class="info-box">
-            <h3>너비</h3>
-            <p>상의 계열은 가슴 너비, 바지·하의는 허리 너비라는 종류 규칙을 써요. 옷 둘레나 사람이 입었을 때의 몸 치수를 재는 것은 아니에요.</p>
-          </article>
-        </div>
+        <p class="callout"><strong>측정값의 뜻:</strong> 너비는 옷을 바닥에 펼쳤을 때의 좌우 길이이고, 기장은 옷 영역에서 찾은 위·아래 끝 사이 길이예요. 둘레나 사람이 입었을 때의 몸 치수는 아닙니다.</p>
       </section>
 
       <section class="panel" id="size-matcher" aria-labelledby="size-matcher-title">
