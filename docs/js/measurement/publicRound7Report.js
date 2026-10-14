@@ -76,7 +76,7 @@ function renderPhotos(report) {
       return `<tr><th>${safe(report.methodLabels[id].label)}</th><td>${cm(result.measuredWidthCm)} / ${cm(result.measuredLengthCm)}</td><td>${cm(result.absoluteWidthErrorCm)} / ${cm(result.absoluteLengthErrorCm)}</td><td>${elapsed(result.elapsedMs)}</td></tr>`;
     }).join('');
     return `<article class="round7-photo-card"><img class="round7-photo-thumb" src="${safe(row.sourceUrl)}" alt="${safe(row.garmentName)} 원본 사진" loading="lazy" />
-      <div><details class="round7-photo"><summary>${safe(backgroundNames[row.backgroundId] || row.backgroundId)} · ${safe(row.garmentName)} <span>기준 너비 ${cm(row.referenceWidthCm)} / 기장 ${cm(row.referenceLengthCm)}</span></summary>
+      <div><details class="round7-photo" open><summary>${safe(backgroundNames[row.backgroundId] || row.backgroundId)} · ${safe(row.garmentName)} <span>기준 너비 ${cm(row.referenceWidthCm)} / 기장 ${cm(row.referenceLengthCm)}</span></summary>
       <table><thead><tr><th>방식</th><th>측정 너비 / 기장</th><th>절대 오차 너비 / 기장</th><th>시간</th></tr></thead><tbody>${resultRows}</tbody></table>
       <p><a href="${safe(row.sourceUrl)}" target="_blank" rel="noreferrer">사진 원본 보기</a></p></details></div></article>`;
   }).join('');
