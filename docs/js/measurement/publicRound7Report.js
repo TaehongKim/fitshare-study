@@ -103,7 +103,7 @@ function renderReading(report) {
     `<strong>너비:</strong> 평균 오차가 ${cm(base.maeWidthCm)}에서 ${cm(next.maeWidthCm)}로 늘었어요. 너비는 기존 GrabCut을 유지했지만, 작업 해상도 변화가 너비선을 포함한 전체 분할에 영향을 줄 수 있어요.`,
     `<strong>시간:</strong> 통합 방식은 사진당 평균 ${elapsed(next.averageElapsedMs)}가 걸렸어요. 보고서에는 실험 중 모델을 처음 읽는 시간이 포함됐고, 이미 저장된 모델 파일을 사용해 다운로드는 없었어요. 모델 캐시가 비어 있으면 첫 사용 시간은 더 길 수 있어요.`,
     `<strong>실패 사례:</strong> ${safe(failureText)}`,
-    '<strong>해석 범위:</strong> 알고리즘을 선택한 5·6차와 같은 20장으로 통합 결과를 다시 확인했어요. 별도의 새 사진 검증이 아니므로 다른 촬영 조건에서의 결과는 추가 실험이 필요해요.'
+    '<strong>해석 범위:</strong> 알고리즘을 선택한 4·5차와 같은 20장으로 통합 결과를 다시 확인했어요. 별도의 새 사진 검증이 아니므로 다른 촬영 조건에서의 결과는 추가 실험이 필요해요.'
   ].map((line) => `<li>${line}</li>`).join('');
 }
 
