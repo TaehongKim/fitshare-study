@@ -55,6 +55,22 @@
         <h2 id="round7-reading-heading">결과를 이렇게 읽었어요</h2>
         <ul id="round7-reading" class="round7-reading"></ul>
       </section>
+      <section class="round7-section" aria-labelledby="round7-size-heading">
+        <h2 id="round7-size-heading">잰 너비와 기장으로 한국 아동복 호수를 매핑해요</h2>
+        <div class="round7-size-mapping">
+          <p>자동 측정된 너비와 기장을 옷 종류별 참고 치수표와 비교해 가장 가까운 호수를 바로 표시합니다. 점수는 너비·기장 차이를 각각 입력 치수로 나눈 뒤 평균해 계산하고, 점수가 가장 낮은 호수를 선택해요. 결과를 안내한 뒤 사용자가 호수를 직접 고칠 수 있습니다.</p>
+          <table><thead><tr><th>상의 참고 호수</th><th>너비</th><th>기장</th></tr></thead><tbody>
+            <tr><th>90호</th><td>28cm</td><td>38cm</td></tr><tr><th>100호</th><td>30cm</td><td>42cm</td></tr>
+            <tr><th>110호</th><td>32cm</td><td>46cm</td></tr><tr><th>120호</th><td>34cm</td><td>50cm</td></tr>
+            <tr><th>130호</th><td>36cm</td><td>54cm</td></tr><tr><th>140호</th><td>38cm</td><td>58cm</td></tr>
+            <tr><th>150호</th><td>41cm</td><td>62cm</td></tr><tr><th>160호</th><td>44cm</td><td>66cm</td></tr>
+          </tbody></table>
+          <pre><code>점수 = (|기준 너비 - 잰 너비| / 잰 너비
+      + |기준 기장 - 잰 기장| / 잰 기장) / 2
+선택 호수 = 점수가 가장 낮은 기준 치수</code></pre>
+          <p>예를 들어 상의가 너비 34.5cm, 기장 50.5cm면 상의 참고표에서 120호(34 × 50cm)가 가장 가까운 후보가 됩니다. 원피스와 바지는 별도 기준표를 사용해요. 이 표는 안내용 참고값이며 KS 공식 의류 치수표나 모든 브랜드의 실측을 대표하지 않아요. 브랜드 상품 치수표와 아이에게 맞는지는 별도로 확인해야 합니다. <a href="measurement-process.html#size-matcher">호수 매핑 기준과 전체 옷 종류별 표 보기</a></p>
+        </div>
+      </section>
       <aside class="round7-license"><strong>모델 출처와 사용 조건</strong><br />실험에서 사용한 <a href="https://huggingface.co/HasanKabir23/Yolov26s-DeepFashion2" target="_blank" rel="noreferrer">DeepFashion2 YOLO 모델 카드</a>의 라이선스 표기와 내려받은 ONNX 파일의 메타데이터 표기가 서로 달라 추가 확인이 필요해요. 모델 파일은 저장소나 GitHub Pages에 올리지 않았습니다. 이번 공개 페이지는 알고리즘과 측정 결과를 기록하며, 모델 배포나 사용 권한을 단정하지 않습니다.</aside>
       <p class="round7-footnote">같은 데이터셋으로 실험 방법을 선택하고 다시 비교했으므로 독립 검증은 아니에요. 사진 20장 결과는 실제 환경의 정확도를 보장하지 않습니다. 통합 흐름은 기장 오차를 낮췄지만 너비 오차와 처리 시간이 늘었고 1장이 실패했어요.</p>
     </section>
@@ -62,3 +78,4 @@
   <script type="module" src="js/measurement/publicRound7Report.js"></script>
 </body>
 </html>
+
