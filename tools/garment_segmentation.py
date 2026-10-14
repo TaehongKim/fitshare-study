@@ -1,0 +1,181 @@
+"""YOLO → GrabCut masks for the local measurement service (OpenCV DNN only)."""
+
+import hashlib
+import threading
+import urllib.request
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+
+MODEL_SHA256 = '485bc106721febbd82fe24297e12a9fb49a435a552afff1e6b76308716555f76'
+MODEL_URL = 'https://huggingface.co/HasanKabir23/Yolov26s-DeepFashion2/resolve/main/best.onnx'
+MODEL_PATH = Path(__file__).resolve().parents[1] / 'server-data' / 'model-cache' / 'deepfashion2-yolo26s-seg.onnx'
+CLASS_NAMES = {
+    0: 'short_sleeve_top', 1: 'long_sleeve_top', 2: 'short_sleeve_outwear',
+    3: 'long_sleeve_outwear', 4: 'vest', 5: 'sling', 6: 'shorts', 7: 'trousers',
+    8: 'skirt', 9: 'short_sleeve_dress', 10: 'long_sleeve_dress', 11: 'vest_dress', 12: 'sling_dress',
+}
+MODEL_OUTPUTS = ('output0', 'output1')
+_load_lock = threading.Lock()
+_inference_lock = threading.Lock()
+_grabcut_lock = threading.Lock()
+_detector = None
+
+
+def _valid_model(path):
+    if not path.is_file():
+        return False
+    digest = hashlib.sha256()
+    with path.open('rb') as model_file:
+        for block in iter(lambda: model_file.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest() == MODEL_SHA256
+
+
+def _ensure_model(path=MODEL_PATH):
+    if _valid_model(path):
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + '.download')
+    try:
+        digest = hashlib.sha256()
+        with urllib.request.urlopen(MODEL_URL, timeout=60) as response, temporary.open('wb') as output:
+            while block := response.read(1024 * 1024):
+                digest.update(block)
+                output.write(block)
+        if digest.hexdigest() != MODEL_SHA256:
+            raise RuntimeError('YOLO 모델 파일의 체크섬이 맞지 않아요.')
+        temporary.replace(path)
+    except Exception as error:
+        temporary.unlink(missing_ok=True)
+        if isinstance(error, RuntimeError):
+            raise
+        raise RuntimeError('YOLO 모델을 준비하지 못했어요. 네트워크와 server-data/model-cache를 확인해 주세요.') from error
+    return path
+
+
+def _load_detector():
+    global _detector
+    if _detector is not None:
+        return _detector
+    with _load_lock:
+        if _detector is None:
+            model_path = _ensure_model()
+            try:
+                net = cv2.dnn.readNetFromONNX(str(model_path))
+                net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+                net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+                _detector = YoloDetector(net)
+            except cv2.error as error:
+                raise RuntimeError('YOLO 모델을 OpenCV DNN으로 열지 못했어요.') from error
+    return _detector
+
+
+def _preprocess(image, input_size=416):
+    height, width = image.shape[:2]
+    scale = min(input_size / width, input_size / height)
+    resized_width, resized_height = round(width * scale), round(height * scale)
+    resized = cv2.resize(image, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+    pad_left, pad_top = (input_size - resized_width) // 2, (input_size - resized_height) // 2
+    canvas = np.full((input_size, input_size, 3), 114, dtype=np.uint8)
+    canvas[pad_top:pad_top + resized_height, pad_left:pad_left + resized_width] = resized
+    tensor = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    return np.transpose(tensor, (2, 0, 1))[None, ...], (scale, pad_left, pad_top, resized_width, resized_height)
+
+
+def _category_classes(garment_id=None, category=None):
+    if garment_id == 3 or category == 'dress':
+        return {9, 10, 11, 12}
+    if garment_id == 5:
+        return {7}
+    if category in {'pants', 'bottom', 'skirt'}:
+        return {6, 7, 8}
+    if category == 'other':
+        return set(CLASS_NAMES)
+    return {0, 1, 2, 3, 4, 5}
+
+
+def _decode(output0, output1, original_shape, garment_id=None, category=None, input_size=416):
+    predictions, prototypes = np.asarray(output0)[0], np.asarray(output1)[0]
+    height, width = original_shape
+    scale = min(input_size / width, input_size / height)
+    resized_width, resized_height = round(width * scale), round(height * scale)
+    pad_left, pad_top = (input_size - resized_width) // 2, (input_size - resized_height) // 2
+    prototype_count, prototype_height, prototype_width = prototypes.shape
+    allowed_classes = _category_classes(garment_id, category)
+    results = []
+    for row in predictions:
+        confidence, class_id = float(row[4]), int(row[5])
+        if confidence < .25 or class_id not in allowed_classes or class_id not in CLASS_NAMES:
+            continue
+        x1, y1, x2, y2 = (float(value) for value in row[:4])
+        logits = row[6:6 + prototype_count] @ prototypes.reshape(prototype_count, -1)
+        logits = cv2.resize(logits.reshape(prototype_height, prototype_width), (input_size, input_size))
+        left, right = max(0, min(input_size, round(x1))), max(0, min(input_size, round(x2)))
+        top, bottom = max(0, min(input_size, round(y1))), max(0, min(input_size, round(y2)))
+        cropped = np.full((input_size, input_size), -20, dtype=np.float32)
+        if right > left and bottom > top:
+            cropped[top:bottom, left:right] = logits[top:bottom, left:right]
+        content = (cropped > 0).astype(np.uint8)[pad_top:pad_top + resized_height, pad_left:pad_left + resized_width]
+        mask = cv2.resize(content, (width, height), interpolation=cv2.INTER_NEAREST)
+        if int(mask.sum()) < height * width * .002:
+            continue
+        results.append({'classId': class_id, 'confidence': confidence, 'mask': mask,
+                        'box': [max(0, (x1 - pad_left) / scale), max(0, (y1 - pad_top) / scale),
+                                min(float(width), (x2 - pad_left) / scale), min(float(height), (y2 - pad_top) / scale)]})
+    results.sort(key=lambda item: item['confidence'], reverse=True)
+    return results
+
+
+class YoloDetector:
+    """Run a YOLO26 segmentation ONNX network through OpenCV DNN."""
+
+    def __init__(self, net):
+        self.net = net
+
+    def detect(self, image, garment_id=None, category=None):
+        tensor, _ = _preprocess(image)
+        with _inference_lock:
+            self.net.setInput(tensor)
+            outputs = self.net.forward(MODEL_OUTPUTS)
+        detections = _decode(*outputs, image.shape[:2], garment_id, category)
+        if garment_id == 5:
+            legs = [item for item in detections if item['classId'] == 7]
+            if legs:
+                combined = dict(legs[0])
+                combined['mask'] = np.maximum.reduce([item['mask'] for item in legs]).astype(np.uint8)
+                detections = [combined]
+        if not detections:
+            raise ValueError('YOLO가 옷을 찾지 못했어요. 옷 전체가 보이게 다시 찍어 주세요.')
+        return detections[0]
+
+
+def yolo_grabcut_provider(garment_id=None, category=None, detector=None, iterations=3):
+    detector = detector or _load_detector()
+
+    def provide(image, _garment_id):
+        selected_id = garment_id if garment_id is not None else _garment_id
+        mask = detector.detect(image, selected_id, category)['mask'].astype(np.uint8)
+        height, width = mask.shape
+        radius = max(3, round(min(height, width) * .02))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * radius + 1, 2 * radius + 1))
+        sure_foreground = cv2.erode(mask, kernel)
+        possible_foreground = cv2.dilate(mask, kernel)
+        labels = np.full((height, width), cv2.GC_BGD, dtype=np.uint8)
+        labels[possible_foreground > 0] = cv2.GC_PR_BGD
+        labels[mask > 0] = cv2.GC_PR_FGD
+        labels[sure_foreground > 0] = cv2.GC_FGD
+        with _grabcut_lock:
+            cv2.setRNGSeed(0)
+            cv2.grabCut(image, labels, None, np.zeros((1, 65)), np.zeros((1, 65)), iterations, cv2.GC_INIT_WITH_MASK)
+        return ((labels == cv2.GC_FGD) | (labels == cv2.GC_PR_FGD)).astype(np.uint8)
+
+    provide.mask_method = 'YOLO→GrabCut'
+    return provide
+
+
+def get_yolo_grabcut_provider(garment_id=None, category=None):
+    return yolo_grabcut_provider(garment_id, category)
+
