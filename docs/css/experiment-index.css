@@ -1,0 +1,20 @@
+.experiment-journey { margin-top:24px; }
+.experiment-steps { display:grid; gap:14px; margin:0; padding:0; list-style:none; counter-reset:none; }
+.experiment-step { position:relative; display:grid; grid-template-columns:38px minmax(0,1fr); gap:12px; }
+.experiment-step:not(:last-child)::after { position:absolute; top:40px; bottom:-16px; left:18px; width:2px; background:#dce8fb; content:""; }
+.experiment-number { z-index:1; display:grid; place-items:center; width:38px; height:38px; border:2px solid #dce8fb; border-radius:50%; background:#fff; color:#315fae; font-weight:900; }
+.experiment-step-content { min-width:0; padding:0 0 14px; }
+.experiment-step-content .primary-action { justify-content:flex-start; width:100%; }
+.experiment-step-content p { margin:9px 2px 0; color:#65738d; font-size:13px; line-height:1.7; }
+.experiment-step-content p strong { display:inline-block; min-width:122px; color:#315fae; }
+.guide-link { margin-top:8px; padding:15px 16px; border:1px solid #e4eaf4; border-radius:14px; background:#f8fbff; }
+.guide-link a { color:#315fae; font-weight:800; text-decoration:none; }
+.guide-link p { margin:6px 0 0; color:#65738d; font-size:13px; line-height:1.7; }
+@media (max-width:540px) {
+  .experiment-step { grid-template-columns:30px minmax(0,1fr); gap:9px; }
+  .experiment-step:not(:last-child)::after { left:14px; }
+  .experiment-number { width:30px; height:30px; }
+  .experiment-step-content .primary-action { padding:9px 11px; font-size:13px; }
+  .experiment-step-content p strong { min-width:0; margin-right:4px; }
+}
+
