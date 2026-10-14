@@ -36,6 +36,8 @@
 .round7-table .is-better { color:#218066; font-weight:800; }
 .round7-table .is-worse { color:#a55b57; }
 .round7-photos { display:grid; gap:10px; }
+.round7-photo-card { display:grid; grid-template-columns:120px minmax(0,1fr); align-items:start; gap:14px; padding:12px; border:1px solid #e3e9f1; border-radius:14px; background:#fff; }
+.round7-photo-thumb { display:block; width:120px; height:150px; object-fit:contain; border:1px solid #e7edf5; border-radius:10px; background:#f7f9fc; }
 .round7-photo { padding:14px 16px; border:1px solid #e3e9f1; border-radius:14px; }
 .round7-photo summary { cursor:pointer; color:#344962; font-weight:700; }
 .round7-photo summary span { color:#77849a; font-size:12px; font-weight:400; }
@@ -47,8 +49,15 @@
 .round7-license { margin-top:22px; background:#fff9ed; }
 .round7-license a { color:#315b94; }
 .round7-footnote { margin-top:18px; color:#7b8798; font-size:12px; line-height:1.7; }
+.round7-size-mapping { padding:16px; border:1px solid #dfe8f2; border-radius:14px; background:#f8fbff; color:#53647c; line-height:1.7; }
+.round7-size-mapping pre { overflow-x:auto; padding:12px; border-radius:10px; background:#26364d; color:#eff6ff; font-size:12px; line-height:1.6; }
+.round7-size-mapping table { width:100%; margin:12px 0; border-collapse:collapse; font-size:13px; }
+.round7-size-mapping th,.round7-size-mapping td { padding:8px; border-bottom:1px solid #e3e9f1; text-align:left; }
 @media (max-width:680px) {
   .round7-pipeline { grid-template-columns:1fr; }
   .round7-pipeline > b { transform:rotate(90deg); justify-self:center; }
   .round7-summary,.round7-methods { grid-template-columns:1fr; }
+  .round7-photo-card { grid-template-columns:80px minmax(0,1fr); gap:9px; }
+  .round7-photo-thumb { width:80px; height:112px; }
 }
+
