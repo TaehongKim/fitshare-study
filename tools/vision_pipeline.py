@@ -360,14 +360,17 @@ def _detect_charuco_mat(image, background_id, perspective_policy='always'):
     return flattened, applied_matrix, min(.99, .55 + inlier_ratio * .42), matched_markers, mode, perspective_score
 
 
-def rectify_photo(source, background_id, perspective_policy='always'):
+def rectify_photo(source, background_id, perspective_policy='always', preserve_resolution=False,
+                  max_output_long_side=1600):
     """Orient and perspective-correct one calibration-mat photograph to A0."""
     cv2, np = _cv2_modules()
     canonical_background = MAT_ALIASES.get(str(background_id))
     if canonical_background is None:
         return {'ok': False, 'image': None, 'confidence': 0, 'message': '배경 종류를 다시 선택해 주세요.'}
     try:
-        image = _resize_long_side(_read_image(source))
+        original = _read_image(source)
+        image = _resize_long_side(original)
+        detect_height, detect_width = image.shape[:2]
         cv2.setRNGSeed(0)
         if perspective_policy not in {'always', 'conditional'}:
             raise ValueError('사진 보정 방식이 올바르지 않아요.')
@@ -412,13 +415,35 @@ def rectify_photo(source, background_id, perspective_policy='always'):
                 image, canonical_background, perspective_policy=perspective_policy
             )
             method = 'ChArUco ID 표식'
+        output_scale = 1.0
+        if preserve_resolution:
+            output_scale = min(max_output_long_side / OUTPUT_HEIGHT,
+                               max(1.0, original.shape[0] / OUTPUT_HEIGHT))
+            output_width = round(OUTPUT_WIDTH * output_scale)
+            output_height = round(OUTPUT_HEIGHT * output_scale)
+            input_scale_x = detect_width / original.shape[1]
+            input_scale_y = detect_height / original.shape[0]
+            input_map = np.diag([input_scale_x, input_scale_y, 1.0])
+            output_map = np.diag([output_scale, output_scale, 1.0])
+            matrix_array = np.asarray(matrix, dtype=np.float64)
+            if matrix_array.shape == (2, 3):
+                matrix_array = np.vstack([matrix_array, [0, 0, 1]])
+            high_matrix = output_map @ matrix_array @ input_map
+            if mode == 'affine':
+                flattened = cv2.warpAffine(original, high_matrix[:2], (output_width, output_height),
+                                           flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            else:
+                flattened = cv2.warpPerspective(original, high_matrix, (output_width, output_height),
+                                                flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
         scale_cm_per_pixel = _measure_pattern_scale(canonical_background, pattern_reference_points)
+        scale_cm_per_pixel = {axis: value / output_scale for axis, value in scale_cm_per_pixel.items()}
         return {
             'ok': True, 'image': flattened, 'matrix': matrix.tolist(),
             'scaleCmPerPixel': scale_cm_per_pixel,
             'confidence': float(confidence), 'method': method,
             'rectificationMode': mode, 'perspectiveScore': perspective_score,
             'detectedMarkers': detected_markers,
+            'canvas': {'width': int(flattened.shape[1]), 'height': int(flattened.shape[0])},
             'message': f'{method}을 찾아 사진을 A0 정면 모양으로 펼쳤어요.'
         }
     except (ValueError, RuntimeError) as error:
@@ -440,40 +465,44 @@ CATEGORY_PROFILES = {
 }
 
 
-def _component_mask(image, garment_id=None, category=None):
+def _component_mask(image, garment_id=None, category=None, max_working_long_side=848, mask_provider=None):
     cv2, np = _cv2_modules()
     profile = GARMENT_PROFILES.get(garment_id) if garment_id in GARMENT_PROFILES else None
     width_kind = 'waist' if garment_id == 5 or category in {'pants', 'bottom'} else 'chest'
     if profile is None:
         profile = CATEGORY_PROFILES.get(category, CATEGORY_PROFILES['top'])
 
-    scale = min(1.0, 600 / max(image.shape[:2]))
+    scale = min(1.0, max_working_long_side / max(image.shape[:2]))
     working = cv2.resize(image, (round(image.shape[1] * scale), round(image.shape[0] * scale)), interpolation=cv2.INTER_AREA)
     height, width = working.shape[:2]
     is_pants = width_kind == 'waist'
     bottom_ratio = profile['bottomRatio']
-    labels = np.full((height, width), cv2.GC_PR_BGD, dtype=np.uint8)
-    left_bound = .08 if is_pants else .10
-    right_bound = .92 if is_pants else .90
-    labels[int(height * .025):int(height * bottom_ratio), int(width * left_bound):int(width * right_bound)] = cv2.GC_PR_FGD
-
-    if is_pants:
-        labels[:, :int(width * .07)] = cv2.GC_BGD
-        labels[:, int(width * .93):] = cv2.GC_BGD
-        labels[int(height * .94):, :] = cv2.GC_BGD
-        labels[int(height * .17):int(height * .55), int(width * .30):int(width * .45)] = cv2.GC_FGD
-        labels[int(height * .17):int(height * .55), int(width * .55):int(width * .70)] = cv2.GC_FGD
+    if mask_provider is not None:
+        # 실험 6: GrabCut 대신 다른 분할 모듈이 준 마스크를 같은 뒤처리로 측정한다.
+        binary = (np.asarray(mask_provider(working, garment_id)) > 0).astype(np.uint8)
     else:
-        labels[:, :int(width * .18)] = cv2.GC_BGD
-        labels[:, int(width * .82):] = cv2.GC_BGD
-        labels[int(height * bottom_ratio):, :] = cv2.GC_BGD
-        seed_top = int(height * profile['seedY'])
-        labels[seed_top:int(height * .54), int(width * .40):int(width * .60)] = cv2.GC_FGD
+        labels = np.full((height, width), cv2.GC_PR_BGD, dtype=np.uint8)
+        left_bound = .08 if is_pants else .10
+        right_bound = .92 if is_pants else .90
+        labels[int(height * .025):int(height * bottom_ratio), int(width * left_bound):int(width * right_bound)] = cv2.GC_PR_FGD
 
-    background_model = np.zeros((1, 65), dtype=np.float64)
-    foreground_model = np.zeros((1, 65), dtype=np.float64)
-    cv2.grabCut(working, labels, None, background_model, foreground_model, 3, cv2.GC_INIT_WITH_MASK)
-    binary = ((labels == cv2.GC_FGD) | (labels == cv2.GC_PR_FGD)).astype(np.uint8)
+        if is_pants:
+            labels[:, :int(width * .07)] = cv2.GC_BGD
+            labels[:, int(width * .93):] = cv2.GC_BGD
+            labels[int(height * .94):, :] = cv2.GC_BGD
+            labels[int(height * .17):int(height * .55), int(width * .30):int(width * .45)] = cv2.GC_FGD
+            labels[int(height * .17):int(height * .55), int(width * .55):int(width * .70)] = cv2.GC_FGD
+        else:
+            labels[:, :int(width * .18)] = cv2.GC_BGD
+            labels[:, int(width * .82):] = cv2.GC_BGD
+            labels[int(height * bottom_ratio):, :] = cv2.GC_BGD
+            seed_top = int(height * profile['seedY'])
+            labels[seed_top:int(height * .54), int(width * .40):int(width * .60)] = cv2.GC_FGD
+
+        background_model = np.zeros((1, 65), dtype=np.float64)
+        foreground_model = np.zeros((1, 65), dtype=np.float64)
+        cv2.grabCut(working, labels, None, background_model, foreground_model, 3, cv2.GC_INIT_WITH_MASK)
+        binary = ((labels == cv2.GC_FGD) | (labels == cv2.GC_PR_FGD)).astype(np.uint8)
     binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
     count, component_labels, stats, centers = cv2.connectedComponentsWithStats(binary, connectivity=8)
     components = []
@@ -555,10 +584,22 @@ def _dominant_color_name(image, mask):
 
 
 def measure_garment(image, garment_id=None, category=None, include_closet_image=False, *,
-                    scale_cm_per_pixel):
+                    scale_cm_per_pixel, max_working_long_side=848, mask_provider=None,
+                    width_mask_provider=None, length_mask_provider=None):
     """Measure the garment's semantic width line and length on a flattened A0 image."""
     cv2, np = _cv2_modules()
-    working, base_mask, profile, width_kind = _component_mask(image, garment_id, category)
+    if mask_provider is not None:
+        width_mask_provider = width_mask_provider or mask_provider
+        length_mask_provider = length_mask_provider or mask_provider
+    working, base_mask, profile, width_kind = _component_mask(
+        image, garment_id, category, max_working_long_side=max_working_long_side,
+        mask_provider=width_mask_provider)
+    if length_mask_provider is None or length_mask_provider is width_mask_provider:
+        length_base_mask = base_mask
+    else:
+        _, length_base_mask, _, _ = _component_mask(
+            image, garment_id, category, max_working_long_side=max_working_long_side,
+            mask_provider=length_mask_provider)
     mask = _refine_mask_by_garment_color(working, base_mask, width_kind)
     height, width = base_mask.shape
 
@@ -570,7 +611,7 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
                 spans[y] = xs[-1] - xs[0] + 1
         return spans
 
-    base_spans = row_spans(base_mask)
+    base_spans = row_spans(length_base_mask)
     maximum_span = float(base_spans.max())
     if maximum_span < width * .12:
         raise ValueError('옷의 양쪽 끝을 찾지 못했어요. 옷 전체가 사진에 들어오게 해 주세요.')
@@ -615,15 +656,16 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     ):
         raise ValueError('배경 무늬로 계산한 픽셀 크기를 확인해 주세요.')
     # 보정 사진을 마스크 크기로 줄인 비율을 반영해, 배경 무늬에서 얻은 cm/px를 적용합니다.
-    cm_per_pixel_x = scale_cm_per_pixel['x'] * (OUTPUT_WIDTH / width)
-    cm_per_pixel_y = scale_cm_per_pixel['y'] * (OUTPUT_HEIGHT / height)
+    output_height, output_width = image.shape[:2]
+    cm_per_pixel_x = scale_cm_per_pixel['x'] * (output_width / width)
+    cm_per_pixel_y = scale_cm_per_pixel['y'] * (output_height / height)
     width_cm = width_pixels * cm_per_pixel_x
     length_cm = garment_height * cm_per_pixel_y
     if not (5 <= width_cm <= 200 and 5 <= length_cm <= 300):
         raise ValueError('자동 측정 크기가 너무 커요. 옷 종류와 사진을 확인해 주세요.')
     validate_garment_dimensions(width_cm, length_cm)
 
-    full_mask = cv2.resize(mask * 255, (OUTPUT_WIDTH, OUTPUT_HEIGHT), interpolation=cv2.INTER_NEAREST)
+    full_mask = cv2.resize(length_base_mask * 255, (output_width, output_height), interpolation=cv2.INTER_NEAREST)
     left, top_box, box_width, box_height = cv2.boundingRect(full_mask)
     closet_image_data_url = None
     if include_closet_image:
@@ -633,8 +675,8 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
         margin_y = max(2, round(box_height * .025))
         cut_left = max(0, left - margin_x)
         cut_top = max(0, top_box - margin_y)
-        cut_right = min(OUTPUT_WIDTH, left + box_width + margin_x)
-        cut_bottom = min(OUTPUT_HEIGHT, top_box + box_height + margin_y)
+        cut_right = min(output_width, left + box_width + margin_x)
+        cut_bottom = min(output_height, top_box + box_height + margin_y)
         cutout = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
         cutout[:, :, 3] = full_mask
         cutout = cutout[cut_top:cut_bottom, cut_left:cut_right]
@@ -647,13 +689,13 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     tint[:, :, 1] = 210
     selected = full_mask > 0
     overlay[selected] = cv2.addWeighted(overlay[selected], .55, tint[selected], .45, 0)
-    line_x1 = int(np.flatnonzero(mask[target_y])[0] / width * OUTPUT_WIDTH)
-    line_x2 = int(np.flatnonzero(mask[target_y])[-1] / width * OUTPUT_WIDTH)
-    line_y = round(target_y / height * OUTPUT_HEIGHT)
-    top_y = round(top / height * OUTPUT_HEIGHT)
-    bottom_y = round(bottom / height * OUTPUT_HEIGHT)
+    line_x1 = int(np.flatnonzero(mask[target_y])[0] / width * output_width)
+    line_x2 = int(np.flatnonzero(mask[target_y])[-1] / width * output_width)
+    line_y = round(target_y / height * output_height)
+    top_y = round(top / height * output_height)
+    bottom_y = round(bottom / height * output_height)
     cv2.line(overlay, (line_x1, line_y), (line_x2, line_y), (255, 90, 40), 4)
-    cv2.line(overlay, (OUTPUT_WIDTH // 2, top_y), (OUTPUT_WIDTH // 2, bottom_y), (20, 90, 255), 4)
+    cv2.line(overlay, (output_width // 2, top_y), (output_width // 2, bottom_y), (20, 90, 255), 4)
     cv2.circle(overlay, (line_x1, line_y), 7, (255, 90, 40), -1)
     cv2.circle(overlay, (line_x2, line_y), 7, (255, 90, 40), -1)
     ok, encoded = cv2.imencode('.jpg', overlay, [cv2.IMWRITE_JPEG_QUALITY, 78])
@@ -667,9 +709,13 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
         'measuredLengthCm': round(length_cm, 1),
         'widthKind': width_kind,
         'colorName': _dominant_color_name(working, mask),
+        'maskMethods': {
+            'width': getattr(width_mask_provider, 'mask_method', 'custom' if width_mask_provider else 'GrabCut'),
+            'length': getattr(length_mask_provider, 'mask_method', 'custom' if length_mask_provider else 'GrabCut'),
+        },
         'box': {'left': left, 'top': top_box, 'right': left + box_width, 'bottom': top_box + box_height},
         'widthLineY': line_y,
-        'lengthLineX': OUTPUT_WIDTH // 2,
+        'lengthLineX': output_width // 2,
         'topY': top_y,
         'bottomY': bottom_y,
         'confidence': round(confidence, 2),
@@ -679,4 +725,3 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     if closet_image_data_url is not None:
         result['closetImageDataUrl'] = closet_image_data_url
     return result
-
