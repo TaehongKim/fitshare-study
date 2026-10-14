@@ -25,6 +25,7 @@ MAX_PHOTO_BYTES = 12 * 1024 * 1024
 VALID_CATEGORIES = {'top', 'bottom', 'dress', 'pants', 'skirt', 'other'}
 VALID_GENDERS = {'male', 'female', 'unisex', 'unknown'}
 GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지'}
+GARMENT_MASK_PIPELINE_VERSION = 'round7-848-yolo-grabcut-v1'
 VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
 SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
@@ -319,13 +320,16 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
                 return self.send_json(413, {'error': '원본 사진이 12MB를 넘었어요. 파일 크기를 줄여 다시 골라 주세요. 측정 전 자동 축소는 하지 않아요.'})
             try:
+                from tools.garment_segmentation import get_yolo_grabcut_provider
                 from tools.vision_pipeline import image_to_data_url, measure_garment, rectify_photo
 
-                flattened = rectify_photo(photo_bytes, background_id)
+                flattened = rectify_photo(photo_bytes, background_id, preserve_resolution=True,
+                                          max_output_long_side=848)
                 if not flattened['ok']:
                     return self.send_json(422, {'error': flattened['message']})
                 measured = measure_garment(flattened['image'], garment_id=garment_id, include_closet_image=True,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                                           length_mask_provider=get_yolo_grabcut_provider(garment_id=garment_id))
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error) or '사진 분석 도구를 준비하지 못했어요.'})
             except (ValueError, OSError) as error:
@@ -341,6 +345,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'widthCm': measured['measuredWidthCm'],
                 'widthKind': measured['widthKind'],
                 'widthLabel': width_label,
+                'maskMethods': measured['maskMethods'],
                 'colorName': measured['colorName'],
                 'box': measured['box'],
                 'confidence': measured['confidence'],
@@ -409,24 +414,32 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             garment_dir = garments_dir / garment_id
             cutout_path = garment_dir / 'closet.png'
             try:
+                item = read_json(garment_dir / 'garment.json')
+                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
+                    raise OSError('옷장 사진을 새 실측 방식으로 다시 만들어요.')
                 photo = cutout_path.read_bytes()
             except OSError:
                 item = read_json(garment_dir / 'garment.json')
                 if not item:
                     return self.send_json(404, {'error': '옷장 사진을 찾지 못했어요.'})
                 try:
+                    from tools.garment_segmentation import get_yolo_grabcut_provider
                     from tools.vision_pipeline import measure_garment, rectify_photo
 
                     source = (garment_dir / 'photo.jpg').read_bytes()
-                    flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
+                    flattened = rectify_photo(source, item.get('backgroundId', 'M4'), preserve_resolution=True,
+                                              max_output_long_side=848)
                     if not flattened.get('ok'):
                         return self.send_json(422, {'error': flattened.get('message', '옷 이미지를 만들지 못했어요.')})
                     measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
-                                               scale_cm_per_pixel=flattened['scaleCmPerPixel'])
+                                               scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                                               length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
                     photo = decode_png_data(measured.get('closetImageDataUrl'))
                     if photo is None:
                         return self.send_json(500, {'error': '투명 옷장 사진을 만들지 못했어요.'})
                     cutout_path.write_bytes(photo)
+                    item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
+                    write_json_safely(garment_dir / 'garment.json', item)
                 except (OSError, ValueError, RuntimeError, ImportError) as error:
                     return self.send_json(422, {'error': str(error) or '투명 옷장 사진을 만들지 못했어요.'})
             self.send_response(200)
@@ -442,14 +455,20 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             garment_dir = garments_dir / garment_id
             thumbnail_path = garment_dir / 'closet-thumbnail.png'
             try:
+                item = read_json(garment_dir / 'garment.json')
+                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
+                    raise OSError('옷장 사진 축소본을 새 실측 방식으로 다시 만들어요.')
                 thumbnail = thumbnail_path.read_bytes()
             except OSError:
                 try:
-                    if not (garment_dir / 'closet.png').exists():
-                        self.get_garment_closet_photo_bytes(garment_id)
+                    self.get_garment_closet_photo_bytes(garment_id)
                     cutout = (garment_dir / 'closet.png').read_bytes()
                     thumbnail = make_garment_thumbnail(cutout)
                     thumbnail_path.write_bytes(thumbnail)
+                    item = read_json(garment_dir / 'garment.json')
+                    if item:
+                        item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
+                        write_json_safely(garment_dir / 'garment.json', item)
                 except (OSError, ValueError, RuntimeError, ImportError) as error:
                     return self.send_json(422, {'error': str(error) or '작은 옷장 사진을 만들지 못했어요.'})
             self.send_response(200)
@@ -463,23 +482,31 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             garment_dir = garments_dir / garment_id
             cutout_path = garment_dir / 'closet.png'
             try:
+                item = read_json(garment_dir / 'garment.json')
+                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
+                    raise OSError('옷장 사진을 새 실측 방식으로 다시 만들어요.')
                 return cutout_path.read_bytes()
             except OSError:
                 item = read_json(garment_dir / 'garment.json')
                 if not item:
                     raise FileNotFoundError('옷장 사진을 찾지 못했어요.')
+                from tools.garment_segmentation import get_yolo_grabcut_provider
                 from tools.vision_pipeline import measure_garment, rectify_photo
 
                 source = (garment_dir / 'photo.jpg').read_bytes()
-                flattened = rectify_photo(source, item.get('backgroundId', 'M4'))
+                flattened = rectify_photo(source, item.get('backgroundId', 'M4'), preserve_resolution=True,
+                                          max_output_long_side=848)
                 if not flattened.get('ok'):
                     raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
                 measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                                           length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
                 photo = decode_png_data(measured.get('closetImageDataUrl'))
                 if photo is None:
                     raise ValueError('투명 옷장 사진을 만들지 못했어요.')
                 cutout_path.write_bytes(photo)
+                item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
+                write_json_safely(garment_dir / 'garment.json', item)
                 return photo
 
         def update_garment(self, garment_id, payload):
@@ -587,6 +614,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'photoUrl': f'/api/garments/{record_id}/photo',
                 'closetPhotoUrl': f'/api/garments/{record_id}/closet-photo',
                 'backgroundId': background_id,
+                'maskPipelineVersion': GARMENT_MASK_PIPELINE_VERSION,
             }
             temporary_dir = garments_dir / f'.tmp-{record_id}'
             final_dir = garments_dir / record_id
@@ -815,13 +843,16 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 return self.send_json(413, {'error': '사진이 너무 커요. 크기를 줄여 다시 시도해 주세요.'})
 
             try:
+                from tools.garment_segmentation import get_yolo_grabcut_provider
                 from tools.vision_pipeline import measure_garment, rectify_photo, image_to_data_url
 
-                flattened = rectify_photo(photo_bytes, mat_id)
+                flattened = rectify_photo(photo_bytes, mat_id, preserve_resolution=True,
+                                          max_output_long_side=848)
                 if not flattened['ok']:
                     return self.send_json(422, {'error': flattened['message']})
                 measured = measure_garment(flattened['image'], category=category,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'])
+                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                                           length_mask_provider=get_yolo_grabcut_provider(category=category))
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error)})
             except (ValueError, OSError) as error:
@@ -834,6 +865,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'lengthCm': measured['measuredLengthCm'],
                 'widthCm': measured['measuredWidthCm'],
                 'widthKind': measured['widthKind'],
+                'maskMethods': measured['maskMethods'],
                 'box': measured['box'],
                 'confidence': measured['confidence'],
                 'photoDataUrl': measured['overlayDataUrl'],
@@ -1001,4 +1033,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
