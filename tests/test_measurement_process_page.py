@@ -194,14 +194,22 @@ class MeasurementProcessPageTests(unittest.TestCase):
         self.assertIn('직접 바꿀 수 있어요', html)
         self.assertIn('공식 KS 변환표나 실제 상품 치수 통계가 아니며', html)
 
-    def test_size_matcher_keeps_manual_product_chart_comparison(self):
+    def test_size_matcher_omits_product_chart_and_keeps_manual_size_edit(self):
         html = PAGE.read_text(encoding='utf-8')
 
-        self.assertIn('상품별 치수표', html)
-        self.assertIn('같은 위치와 방법으로 잰 너비', html)
+        self.assertNotIn('상품별 치수표', html)
+        self.assertNotIn('data-chart-options', html)
         self.assertIn('data-measured-width', html)
         self.assertIn('data-measured-length', html)
+        self.assertIn('data-auto-size', html)
         self.assertIn('aria-live="polite"', html)
+
+    def test_code_links_include_github_pages_repository_path(self):
+        html = PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('https://taehongkim.github.io/fitshare-study/tools/vision_pipeline.py', html)
+        self.assertIn('https://taehongkim.github.io/fitshare-study/js/measurement/automaticMeasurement.js', html)
+        self.assertIn('https://taehongkim.github.io/fitshare-study/js/measurement/calibration.js', html)
 
 
 if __name__ == '__main__':
