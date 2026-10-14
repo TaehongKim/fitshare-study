@@ -409,12 +409,12 @@
           <article class="mat-card"><figure class="mat-photo-annotated"><img src="assets/photos/ChaArUco_Cross/chc_1_w55_h65.jpg" alt="M4 ChArUco 격자 기준판과 옷" loading="lazy" /><svg class="photo-annotation" viewBox="0 0 1600 2133" role="img" aria-label="사진 왼쪽 아래 가장자리의 ID 243 표식을 노란 테두리로 표시"><path d="M156 2028 L189 2025 L189 2057 L157 2059 Z" fill="none" stroke="#ffcf38" stroke-width="16"/><path d="M195 2020 L300 1900 L500 1900" fill="none" stroke="#ffcf38" stroke-width="12"/><rect x="500" y="1860" width="260" height="82" rx="18" fill="#172b3a" fill-opacity=".92"/><text x="630" y="1916" text-anchor="middle" fill="#ffdf66" font-size="52" font-weight="800">ID 243</text></svg></figure><p class="mat-photo-caption">노란 테두리: 사진의 왼쪽 아래 가장자리에서 찾은 ID 243</p><div class="mat-card-body"><h3>M4 · ChArUco 격자</h3><p>검출기는 M3와 같지만 격자형 판의 ID 배치와 기준 좌표표는 별개예요. M4 전용 좌표표에서 ID마다 기준판의 네 모서리를 찾아 사진 좌표와 연결합니다.</p><ul><li>핵심 함수: <code>ArucoDetector.detectMarkers</code>, <code>cv2.findHomography</code>, RANSAC</li><li>사진 왼쪽 아래에 검출한 ID 243을 표시했어요. ID 번호만으로 위치를 추측하지 않고, M4 기준표에서 좌표를 조회합니다.</li></ul></div></article>
         </div>
         <p class="small-note">M1·M2는 점이나 선에서 대응점을 계산하고, M3·M4는 검출한 ID로 기준 위치를 조회해요. 앞의 두 방식은 대응점으로 <code>cv2.getPerspectiveTransform</code> 또는 <code>cv2.getAffineTransform</code>을 구하고, ChArUco는 여러 표식 대응점으로 <code>cv2.findHomography</code>를 구합니다. 마지막에는 <code>cv2.warpPerspective</code> 또는 <code>cv2.warpAffine</code>으로 사진을 변환해요.</p>
-        <div class="worked-example"><h3>입력 사진을 줄이고 보정 결과를 통일하는 이유</h3><p>원본 사진은 4000×3000픽셀입니다. 표식을 찾기 전 긴 변이 최대 1000픽셀이 되도록 줄이고, 찾은 좌표를 이용해 A0 기준판을 <strong>600×848픽셀</strong> 캔버스에 맞춰요. 실제 크기 84.1×118.9cm에 맞춘 공통 좌표판이라 사진마다 픽셀과 cm의 관계를 같은 기준으로 계산할 수 있습니다.</p><p>옷 마스크 계산에서는 보정 사진을 다시 긴 변 최대 600픽셀로 줄여요. 따라서 보정 출력 기준은 약 <strong>0.140cm(1.4mm)/px</strong>이고, 마스크 분석 영상은 약 424×600픽셀로 약 <strong>0.198cm(2.0mm)/px</strong>입니다. 출력 이미지 해상도와 옷 경계를 분석하는 해상도는 같지 않아요.</p><p>입력과 마스크 크기 제한은 처리할 픽셀 수를 줄여 계산량과 메모리 사용을 낮추는 효과가 있습니다. 이는 코드의 크기 제한을 바탕으로 한 해석입니다. 축소 과정에서 작은 경계 정보가 사라질 수도 있으므로, 숫자를 크게 하면 항상 정확도가 좋아진다고 할 수 없어요.</p></div>
+        <div class="worked-example"><h3>입력 사진을 줄이고 보정 결과를 통일하는 이유</h3><p>원본 사진은 4000×3000픽셀입니다. 표식을 찾기 전 긴 변이 최대 1000픽셀이 되도록 줄이고, 찾은 좌표로 사진을 반듯하게 펴요. 화면 처리용 결과는 <strong>600×848픽셀</strong>로 통일하지만, 이 캔버스의 A0 전체 크기를 곧바로 자처럼 써서 옷 치수를 계산하지는 않아요.</p><p>cm 환산은 보정된 사진에 남은 배경 무늬의 실제 간격을 다시 읽습니다. M1 점 중심 간격은 10cm, M2 격자 한 칸은 5cm, M3·M4 체스 격자 한 칸은 <strong>2.5cm</strong>예요. ChArUco의 검은 표식 한 변은 1.875cm로 격자 한 칸보다 작습니다. 코드가 이 표식의 픽셀 크기를 읽고, 표식과 2.5cm 칸의 크기 비율을 이용해 칸 간격을 환산합니다. 옷 마스크 분석용으로 사진을 다시 줄일 때는 줄인 비율도 반영해요.</p><p>입력과 마스크 크기 제한은 처리할 픽셀 수를 줄여 계산량과 메모리 사용을 낮추는 효과가 있습니다. 축소 과정에서 작은 경계 정보가 사라질 수도 있으므로, 숫자를 크게 하면 항상 정확도가 좋아진다고 할 수 없어요.</p></div>
         <div class="resolution-results"><h3>고해상도 변경 전후를 실험 사진 20장으로 비교했어요</h3><p>현재 설정은 20/20장 성공, 너비·기장 평균 절대 오차(MAE)는 <strong>2.9cm / 4.1cm</strong>였어요. 입력·보정 출력·마스크 크기를 모두 두 배로 한 설정은 20/20장 성공했지만 오차가 <strong>5.7cm / 7.4cm</strong>로 커졌습니다. 입력 축소 한도만 1000에서 2000픽셀로 올리고 출력·마스크 크기는 그대로 둔 설정은 너비 오차 2.7cm, 기장 오차 5.7cm였어요.</p><p><strong>그래서 현재 해상도를 유지합니다.</strong> 이 20장 비교에서는 전체적으로 더 정확해지지 않았어요. 측정 오차에는 표식 검출뿐 아니라 옷 마스크와 측정선 선택도 영향을 줍니다. 이 결과는 현재 실험 사진의 결과이며 모든 옷과 촬영 조건을 보장하지 않아요.</p></div>
         <figure class="example-figure">
           <svg viewBox="0 0 760 390" role="img" aria-labelledby="scale-example-title scale-example-desc">
             <title id="scale-example-title">기준판 무늬를 이용해 픽셀을 센티미터로 바꾸는 예시</title>
-            <desc id="scale-example-desc">기울어진 기준판의 점과 격자를 찾아 실제 크기가 알려진 A0 판을 반듯하게 펴고, 600픽셀 중 240픽셀인 옷 너비를 84.1센티미터 기준으로 계산해 33.6센티미터로 바꾸는 세 단계 그림입니다.</desc>
+            <desc id="scale-example-desc">기울어진 기준판을 펴고, 배경 격자 한 칸의 알려진 5센티미터 간격이 보정 사진에서 약 35.7픽셀인 것을 이용해 옷 너비를 센티미터로 환산하는 그림입니다.</desc>
             <rect width="760" height="390" rx="12" fill="#eef4f7" />
             <text x="24" y="32" fill="#172b3a" font-size="18" font-weight="700">배경 무늬는 '크기를 아는 자'의 눈금이에요</text>
 
@@ -462,26 +462,26 @@
             <g>
               <text x="655" y="66" text-anchor="middle" fill="#175f83" font-size="15" font-weight="700">3. 픽셀을 cm로 환산</text>
               <rect x="570" y="98" width="170" height="172" rx="8" fill="#fff" stroke="#b5cbd5" stroke-width="2" />
-              <text x="655" y="126" text-anchor="middle" fill="#526575" font-size="12">판 가로 600px = 84.1cm</text>
+              <text x="655" y="126" text-anchor="middle" fill="#526575" font-size="12">격자 한 칸 35.7px = 5cm</text>
               <path d="M590 157 H720" stroke="#d3e0e6" stroke-width="10" stroke-linecap="round" />
               <path d="M590 157 H642" stroke="#0877ae" stroke-width="10" stroke-linecap="round" />
               <path d="M590 143 V171 M720 143 V171" stroke="#526575" stroke-width="2" />
               <text x="616" y="189" text-anchor="middle" fill="#075c87" font-size="12" font-weight="700">옷 240px</text>
               <text x="684" y="189" text-anchor="middle" fill="#526575" font-size="12">나머지</text>
-              <text x="655" y="218" text-anchor="middle" fill="#526575" font-size="12">240 ÷ 600 = 0.4</text>
-              <text x="655" y="244" text-anchor="middle" fill="#075c87" font-size="12" font-weight="700">0.4 × 84.1cm</text>
+              <text x="655" y="218" text-anchor="middle" fill="#526575" font-size="12">240px × (5cm ÷ 35.7px)</text>
+              <text x="655" y="244" text-anchor="middle" fill="#075c87" font-size="12" font-weight="700">= 약 33.6cm</text>
               <text x="655" y="261" text-anchor="middle" fill="#075c87" font-size="12" font-weight="700">= 33.6cm</text>
             </g>
 
             <rect x="168" y="330" width="424" height="42" rx="10" fill="#dff3eb" />
-            <text x="380" y="357" text-anchor="middle" fill="#176047" font-size="17" font-weight="700">= 약 33.6cm  (240 ÷ 600 × 84.1)</text>
-            <text x="655" y="294" text-anchor="middle" fill="#526575" font-size="12">세로 450px ÷ 848px × 118.9cm = 약 63.1cm</text>
+            <text x="380" y="357" text-anchor="middle" fill="#176047" font-size="17" font-weight="700">= 약 33.6cm  (240px × 5cm ÷ 35.7px)</text>
+            <text x="655" y="294" text-anchor="middle" fill="#526575" font-size="12">옷 길이도 세로 격자 간격으로 따로 환산해요</text>
           </svg>
-          <figcaption><strong>예시로 따라 재기:</strong> 실제 크기를 아는 기준판의 표식을 찾아 사진을 바로잡고, 너비와 기장의 픽셀을 가로·세로 기준에 맞춰 각각 cm로 바꿔요.</figcaption>
+          <figcaption><strong>예시로 따라 재기:</strong> 격자 한 칸의 실제 길이와 보정 사진 속 픽셀 간격을 비교해 너비와 기장을 각각 cm로 바꿔요.</figcaption>
         </figure>
         <p class="callout">
           <strong>중요:</strong>
-          아무 바닥 무늬나 자가 되는 것은 아니에요. 무늬의 간격이나 표식 위치, 기준판의 실제 크기를 미리 알아야 해요.
+          아무 바닥 무늬나 자가 되는 것은 아니에요. 점·격자·표식의 실제 간격이나 크기를 미리 알아야 해요.
           표식이 가려지거나 판이 사진 밖으로 잘리면 바로잡기 어렵고, 옷이 구겨져 있으면 사진만 반듯하게 고쳐도 옷 주름은 펴지지 않아요.
         </p>
       </section>
@@ -690,29 +690,30 @@
           <article class="code-card">
             <header>
               <h3>4. 픽셀 길이를 실제 cm로 환산하기</h3>
-              <p>점·격자·표식의 알려진 간격을 기준 좌표표에서 계산해 가로와 세로 픽셀을 각각 cm로 바꿉니다.</p>
+              <p>사진을 펴는 데 쓴 기준 좌표표에서 무늬의 간격을 가져와 실제 cm와 연결합니다. 보정된 사진에서 선을 다시 찾아 세지는 않습니다.</p>
             </header>
-            <pre><code><span class="tok-comment"># M1 점 간격 10cm, M2 격자 간격 5cm</span>
-<span class="tok-comment"># M3/M4 격자 한 칸 2.5cm (검은 표식 한 변 1.875cm)</span>
+            <pre><code><span class="tok-comment"># M1: 점 중심 간 10cm, M2: 격자 한 칸 5cm</span>
+<span class="tok-comment"># M3/M4: 격자 한 칸 2.5cm (표식 한 변 1.875cm로 환산)</span>
 <span class="tok-variable">scale_cm_per_pixel</span> = <span class="tok-function">_measure_pattern_scale</span>(<span class="tok-variable">background_id</span>, <span class="tok-variable">pattern_reference_points</span>)
 
 <span class="tok-variable">cm_per_pixel_x</span> = <span class="tok-variable">scale_cm_per_pixel</span>[<span class="tok-string">'x'</span>] * <span class="tok-constant">OUTPUT_WIDTH</span> / <span class="tok-variable">width</span>
 <span class="tok-variable">cm_per_pixel_y</span> = <span class="tok-variable">scale_cm_per_pixel</span>[<span class="tok-string">'y'</span>] * <span class="tok-constant">OUTPUT_HEIGHT</span> / <span class="tok-variable">height</span>
-<span class="tok-comment"># 마스크용으로 사진을 줄인 비율도 반영해요.</span>
+<span class="tok-comment"># 마스크용으로 줄인 사진의 크기 비율도 반영해요.</span>
 
 <span class="tok-variable">width_cm</span> = <span class="tok-variable">width_pixels</span> * <span class="tok-variable">cm_per_pixel_x</span>
 <span class="tok-variable">length_cm</span> = <span class="tok-variable">garment_height</span> * <span class="tok-variable">cm_per_pixel_y</span>
 <span class="tok-comment"># 옷 픽셀 길이에 무늬에서 구한 cm/px를 곱해요.</span></code></pre>
             <dl class="glossary">
-              <dt><code>_measure_pattern_scale</code></dt><dd>M1·M2는 사진을 펴는 데 사용한 기준 좌표에서 무늬 칸 수와 간격을 계산해요. M3·M4는 표식 기준 좌표의 크기를 칸 크기로 환산해요. 보정 사진에서 선을 다시 검출하지 않아요.</dd>
-              <dt><code>OUTPUT_WIDTH</code> / <code>OUTPUT_HEIGHT</code></dt><dd>반듯하게 고친 사진의 가로·세로 픽셀 수예요.</dd>
-              <dt><code>cm_per_pixel_x</code> / <code>cm_per_pixel_y</code></dt><dd>가로 또는 세로 방향의 픽셀 하나가 몇 cm인지 나타내요.</dd>
+              <dt><code>_measure_pattern_scale</code></dt><dd>M1·M2는 사진을 펴는 데 사용한 기준 좌표 사이에 몇 칸이 있는지로 픽셀 간격을 계산해요. M3·M4는 좌표표 속 ArUco 표식 크기를 칸 크기로 환산해요. 보정 사진에서 선을 다시 검출하지 않아요.</dd>
+              <dt>M3·M4 기준</dt><dd>체스 격자 한 칸은 2.5cm예요. 검은 ArUco 표식은 1.875cm이며, 그 픽셀 크기를 칸 크기로 환산하는 데 씁니다.</dd>
+              <dt><code>scale_cm_per_pixel</code></dt><dd>알려진 무늬 길이를 픽셀 간격으로 나눈 가로·세로별 환산값이에요.</dd>
+              <dt>600×848 출력 캔버스</dt><dd>사진 보정과 화면 처리를 통일하는 크기예요. A0 전체 크기만으로 옷 치수를 환산하는 기준은 아니에요.</dd>
               <dt><code>width_pixels</code> / <code>garment_height</code></dt><dd>사진에서 잰 너비와 기장의 픽셀 수예요.</dd>
               <dt><code>width_cm</code> / <code>length_cm</code></dt><dd>픽셀 계산을 마치고 얻은 너비와 기장의 cm 값이에요.</dd>
             </dl>
             <p class="code-note">
-              실제 코드에서는 마스크 분석을 위해 사진을 줄인 비율도 반영해요. 4차 실험에서는 A0 전체 크기 기준과 비교했으며, 20장 데이터에서 평균 오차가 더 낮아지지는 않았어요.
-              가로와 세로의 픽셀 크기가 같지 않을 수 있어서 두 방향을 따로 계산합니다.
+              실제 코드에서는 마스크 분석을 위해 사진을 줄인 비율도 반영해요.
+              가로와 세로의 환산값을 따로 계산합니다. 3차 실험에서는 이 계산을 A0 전체 크기 기준과 비교했으며, 20장 데이터에서 평균 오차가 더 낮아지지는 않았어요.
             </p>
           </article>
 
