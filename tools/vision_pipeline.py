@@ -457,6 +457,13 @@ GARMENT_PROFILES = {
     4: {'name': '점퍼', 'widthRatio': .20, 'lengthSpanRatio': .50, 'bottomRatio': .63, 'seedY': .22},
     5: {'name': '바지', 'widthRatio': .10, 'lengthSpanRatio': .525, 'bottomRatio': .96, 'seedY': .22},
 }
+
+
+def width_line_y(width_top, width_bottom, width_ratio):
+    if (isinstance(width_ratio, bool) or not isinstance(width_ratio, (int, float))
+            or not math.isfinite(width_ratio) or not 0 < width_ratio < 1):
+        raise ValueError('너비선 비율은 0보다 크고 1보다 작아야 해요.')
+    return int(width_top + (width_bottom - width_top) * width_ratio)
 CATEGORY_PROFILES = {
     'top': {'widthRatio': .4, 'bottomRatio': .70, 'seedY': .22},
     'dress': {'widthRatio': .22, 'bottomRatio': .80, 'seedY': .28},
@@ -585,7 +592,7 @@ def _dominant_color_name(image, mask):
 
 def measure_garment(image, garment_id=None, category=None, include_closet_image=False, *,
                     scale_cm_per_pixel, max_working_long_side=848, mask_provider=None,
-                    width_mask_provider=None, length_mask_provider=None):
+                    width_mask_provider=None, length_mask_provider=None, width_ratio_override=None):
     """Measure the garment's semantic width line and length on a flattened A0 image."""
     cv2, np = _cv2_modules()
     if mask_provider is not None:
@@ -638,8 +645,8 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     width_top = int(refined_rows[0])
     width_bottom = int(refined_rows[-1])
     width_height = width_bottom - width_top
-    target_ratio = profile['widthRatio']
-    target_y = int(width_top + width_height * target_ratio)
+    target_ratio = profile['widthRatio'] if width_ratio_override is None else width_ratio_override
+    target_y = width_line_y(width_top, width_bottom, target_ratio)
     band_radius = max(2, round(width_height * .012))
     band = spans[max(width_top, target_y - band_radius):min(width_bottom + 1, target_y + band_radius + 1)]
     valid_spans = band[band > refined_maximum_span * .55 * .60]
@@ -725,3 +732,4 @@ def measure_garment(image, garment_id=None, category=None, include_closet_image=
     if closet_image_data_url is not None:
         result['closetImageDataUrl'] = closet_image_data_url
     return result
+
