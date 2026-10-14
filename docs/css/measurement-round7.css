@@ -1,0 +1,54 @@
+.round7-shell { max-width: 1080px; }
+.round7-panel { padding-bottom: 30px; }
+.round7-pipeline { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; align-items:center; gap:12px; margin:24px 0 14px; }
+.round7-pipeline > div { display:grid; gap:5px; min-height:108px; padding:15px; border:1px solid #dce7f3; border-radius:16px; background:#f8fbff; }
+.round7-pipeline span { color:#5c7db5; font:700 12px ui-monospace,monospace; }
+.round7-pipeline strong { color:#293e5d; font-size:15px; }
+.round7-pipeline small { color:#71809a; font-size:12px; line-height:1.5; }
+.round7-pipeline > b { color:#91a4c0; }
+.round7-callout,.round7-license { padding:15px 17px; border-radius:14px; background:#f2f7fd; color:#53647f; font-size:14px; line-height:1.7; }
+.round7-callout strong,.round7-license strong { color:#2b4264; }
+.round7-status { margin:16px 0 10px; color:#71809a; font-size:13px; }
+.round7-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.round7-summary-card { padding:18px; border:1px solid #e1e8f2; border-radius:18px; background:#fff; }
+.round7-summary-card.is-integrated { border-color:#b8e4d7; background:#f5fcf9; }
+.round7-summary-card h3 { margin:0 0 14px; color:#2d4261; font:21px 'Jua',sans-serif; }
+.round7-metric-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.round7-metric { padding:11px; border-radius:12px; background:#f4f7fb; }
+.round7-metric span { display:block; color:#71809a; font-size:12px; }
+.round7-metric strong { display:block; margin-top:4px; color:#283d5b; font-size:20px; font-variant-numeric:tabular-nums; }
+.round7-metric small { display:block; margin-top:3px; color:#7b879a; font-size:11px; }
+.round7-conclusion { margin:14px 0 0; padding:15px 17px; border-left:4px solid #49ad8e; border-radius:8px; background:#f1faf6; color:#445974; line-height:1.7; }
+.round7-section { margin-top:30px; }
+.round7-section h2 { margin-bottom:7px; color:#2e4260; font:22px 'Jua',sans-serif; }
+.round7-section > p { color:#6b7890; font-size:13px; line-height:1.6; }
+.round7-methods { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.round7-method { padding:15px; border:1px solid #e1e8f2; border-radius:15px; }
+.round7-method.is-integrated { border-color:#b8e4d7; background:#f5fcf9; }
+.round7-method h3 { margin:0 0 7px; color:#304565; font:18px 'Jua',sans-serif; }
+.round7-method p { margin:0; color:#64728a; font-size:13px; line-height:1.6; }
+.round7-table-wrap { overflow-x:auto; }
+.round7-table { width:100%; border-collapse:collapse; font-size:13px; }
+.round7-table th,.round7-table td { padding:11px 12px; border-bottom:1px solid #e6ebf2; text-align:left; white-space:nowrap; }
+.round7-table thead th { background:#f3f6fa; color:#4c5d76; }
+.round7-table tbody th { color:#344862; }
+.round7-table td { color:#596982; font-variant-numeric:tabular-nums; }
+.round7-table .is-better { color:#218066; font-weight:800; }
+.round7-table .is-worse { color:#a55b57; }
+.round7-photos { display:grid; gap:10px; }
+.round7-photo { padding:14px 16px; border:1px solid #e3e9f1; border-radius:14px; }
+.round7-photo summary { cursor:pointer; color:#344962; font-weight:700; }
+.round7-photo summary span { color:#77849a; font-size:12px; font-weight:400; }
+.round7-photo table { width:100%; margin-top:10px; border-collapse:collapse; font-size:12px; }
+.round7-photo th,.round7-photo td { padding:8px; border-bottom:1px solid #edf0f4; text-align:left; }
+.round7-photo .round7-failed { color:#a04f4a; }
+.round7-reading { display:grid; gap:8px; padding-left:20px; color:#53647c; font-size:14px; line-height:1.7; }
+.round7-reading strong { color:#304765; }
+.round7-license { margin-top:22px; background:#fff9ed; }
+.round7-license a { color:#315b94; }
+.round7-footnote { margin-top:18px; color:#7b8798; font-size:12px; line-height:1.7; }
+@media (max-width:680px) {
+  .round7-pipeline { grid-template-columns:1fr; }
+  .round7-pipeline > b { transform:rotate(90deg); justify-self:center; }
+  .round7-summary,.round7-methods { grid-template-columns:1fr; }
+}
