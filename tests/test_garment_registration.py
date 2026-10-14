@@ -70,12 +70,14 @@ class GarmentRegistrationTests(unittest.TestCase):
         self.assertNotIn('gender', result)
 
     def test_registration_measurement_matches_experiment_pipeline_for_same_m4_photo(self):
+        from tools.garment_segmentation import get_yolo_grabcut_provider
         from tools.vision_pipeline import measure_garment, rectify_photo
 
         photo = Path(server.PROJECT_ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_2_w54_h50.jpg').read_bytes()
-        flattened = rectify_photo(photo, 'M4')
+        flattened = rectify_photo(photo, 'M4', preserve_resolution=True, max_output_long_side=848)
         experiment_result = measure_garment(flattened['image'], garment_id=2,
-                                             scale_cm_per_pixel=flattened['scaleCmPerPixel'])
+                                             scale_cm_per_pixel=flattened['scaleCmPerPixel'], max_working_long_side=848,
+                                             length_mask_provider=get_yolo_grabcut_provider(garment_id=2))
         photo_data = 'data:image/jpeg;base64,' + base64.b64encode(photo).decode('ascii')
         _, registration_result = self.request_json('/api/garments/analyze', 'POST', {
             'backgroundId': 'M4', 'garmentId': 2, 'photoDataUrl': photo_data
@@ -83,15 +85,24 @@ class GarmentRegistrationTests(unittest.TestCase):
 
         self.assertEqual(registration_result['lengthCm'], experiment_result['measuredLengthCm'])
         self.assertEqual(registration_result['widthCm'], experiment_result['measuredWidthCm'])
+        self.assertEqual(registration_result['maskMethods'], {'width': 'GrabCut', 'length': 'YOLO→GrabCut'})
         self.assertEqual(registration_result['analysisPhotoDataUrl'], experiment_result['overlayDataUrl'])
 
-    def test_original_pants_photo_keeps_dataset_width_without_registration_downscale(self):
+    def test_pants_registration_uses_the_selected_hybrid_pipeline(self):
+        from tools.garment_segmentation import get_yolo_grabcut_provider
+        from tools.vision_pipeline import measure_garment, rectify_photo
+
         path = Path(server.PROJECT_ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_5_w42_h90.jpg')
+        flattened = rectify_photo(path.read_bytes(), 'M4', preserve_resolution=True, max_output_long_side=848)
+        expected = measure_garment(flattened['image'], garment_id=5,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'], max_working_long_side=848,
+                                   length_mask_provider=get_yolo_grabcut_provider(garment_id=5))
         photo_data = 'data:image/jpeg;base64,' + base64.b64encode(path.read_bytes()).decode('ascii')
         _, result = self.request_json('/api/garments/analyze', 'POST', {
             'backgroundId': 'M4', 'garmentId': 5, 'photoDataUrl': photo_data
         })
-        self.assertEqual(result['widthCm'], 42.0)
+        self.assertEqual(result['widthCm'], expected['measuredWidthCm'])
+        self.assertEqual(result['lengthCm'], expected['measuredLengthCm'])
 
     def test_analysis_accepts_each_supported_mat_using_its_matching_sample(self):
         samples = {'M1': ('point', 'p_1_w55_h65.jpg'), 'M2': ('cross', 'c_1_w55_h65.jpg'),
@@ -249,4 +260,3 @@ class GarmentRegistrationTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
