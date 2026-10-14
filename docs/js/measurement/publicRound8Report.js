@@ -46,7 +46,7 @@ function renderSummary(report) {
 
 function renderGarments(report) {
   const ids = Object.keys(report.byGarment);
-  garmentRoot.innerHTML = `<thead><tr><th>옷 종류</th><th>통합 기준<br>성공 · 너비/기장 MAE</th><th>6차 60%<br>성공 · 너비/기장 MAE</th><th>너비 오차 변화</th></tr></thead><tbody>${ids.map((id) => {
+  garmentRoot.innerHTML = `<thead><tr><th>옷 종류</th><th>선택 조합 기준<br>성공 · 너비/기장 MAE</th><th>6차 60%<br>성공 · 너비/기장 MAE</th><th>너비 오차 변화</th></tr></thead><tbody>${ids.map((id) => {
     const baseline = report.byGarment[id].round7;
     const candidate = report.byGarment[id].round8;
     const delta = candidate.maeWidthCm - baseline.maeWidthCm;
@@ -67,7 +67,7 @@ function renderPhotos(report) {
     return `<article class="round8-photo-card"><img src="${safe(row.sourceUrl)}" alt="${safe(garmentNames[row.garmentId] || '옷')} 원본 사진" loading="lazy" />
       <div><h3>${safe(backgrounds[row.backgroundId] || row.backgroundId)} · ${safe(garmentNames[row.garmentId] || row.garmentId)} · 기준 너비 ${cm(row.referenceWidthCm)} / 기장 ${cm(row.referenceLengthCm)}</h3>
       <table><thead><tr><th>방식</th><th>측정 너비 / 기장</th><th>너비 / 기장 오차</th></tr></thead><tbody>
-      ${methodLine(baseline, '통합 기준')}${methodLine(candidate, '6차 60%')}</tbody></table></div></article>`;
+      ${methodLine(baseline, '선택 조합 기준')}${methodLine(candidate, '6차 60%')}</tbody></table></div></article>`;
   }).join('');
 }
 
