@@ -135,5 +135,6 @@ fetch('./data/measure-dataset-round6.json').then((response) => {
   renderPhotos(report, ids);
   status.textContent = `${new Date(report.generatedAt).toLocaleString('ko-KR')} · 사진 ${report.imageCount}장 · ${ids.length}가지 방법을 비교했어요.`;
 }).catch(() => {
-  status.textContent = '6차 실험 결과 파일을 불러오지 못했어요.';
+  status.textContent = '5차 실험 결과 파일을 불러오지 못했어요.';
 });
+
