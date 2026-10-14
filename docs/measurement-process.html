@@ -775,12 +775,45 @@
         <div class="info-box">
           <h3>자동 매핑은 이렇게 해요</h3>
           <p>
-            옷 종류를 고르고 사진에서 확인한 너비·기장을 입력하면 내장 참고 치수표에서
-            너비와 기장이 가장 가까운 90~160호 하나를 바로 선택해요.
-            선택된 호수는 바로 아래 상자에서 직접 바꿀 수 있어요.
+            먼저 옷 종류를 고릅니다. 아래 표는 프로그램에 들어 있는 호수별 기준 너비와 기장(cm)이에요.
+            너비는 옷을 펼쳐 잰 좌우 길이이고, 둘레가 아니에요. 원피스와 바지는 상의와 기준표가 달라요.
+          </p>
+          <div class="mat-table-wrap">
+            <table class="size-source-table">
+              <caption>FitShare 자동 매핑 참고 치수 (단위: cm)</caption>
+              <thead><tr><th scope="col">호수</th><th scope="col">상의·점퍼<br>너비 × 기장</th><th scope="col">원피스<br>너비 × 기장</th><th scope="col">바지<br>너비 × 기장</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">90호</th><td>28 × 38</td><td>26 × 48</td><td>21 × 50</td></tr>
+                <tr><th scope="row">100호</th><td>30 × 42</td><td>28 × 54</td><td>22 × 56</td></tr>
+                <tr><th scope="row">110호</th><td>32 × 46</td><td>30 × 60</td><td>23 × 62</td></tr>
+                <tr><th scope="row">120호</th><td>34 × 50</td><td>32 × 66</td><td>24 × 68</td></tr>
+                <tr><th scope="row">130호</th><td>36 × 54</td><td>34 × 72</td><td>25 × 74</td></tr>
+                <tr><th scope="row">140호</th><td>38 × 58</td><td>36 × 78</td><td>26.5 × 80</td></tr>
+                <tr><th scope="row">150호</th><td>41 × 62</td><td>38 × 84</td><td>28 × 86</td></tr>
+                <tr><th scope="row">160호</th><td>44 × 66</td><td>40 × 90</td><td>29.5 × 92</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>너비와 기장 차이를 같은 비율로 비교해요</h3>
+          <p>
+            예를 들어 상의·점퍼를 너비 34.5cm, 기장 50.5cm로 쟀다면 120호 기준(34 × 50cm)과의 차이는
+            너비 약 1.45%, 기장 약 0.99%예요. 두 비율의 평균 점수는 약 1.22%입니다.
+            프로그램은 같은 방법으로 각 호수 점수를 계산한 뒤 가장 작은 점수의 호수를 자동 선택해요.
+            너비와 기장을 각각 cm 차이로만 더하지 않고, 실측 크기에 대한 비율로 바꿔 비교합니다.
+          </p>
+          <pre><code>너비 차이 = |기준 너비 - 잰 너비|
+기장 차이 = |기준 기장 - 잰 기장|
+점수 = (너비 차이 / 잰 너비 + 기장 차이 / 잰 기장) / 2
+가장 작은 점수의 호수를 자동 선택</code></pre>
+          <p class="small-note">
+            코드에서는 <code>KOREAN_KIDS_SIZE_REFERENCE</code>에 위 기준값을 두고,
+            <code>rankSizeCandidates()</code>가 호수별 점수를 계산해 정렬해요.
+            <code>mapKoreanKidsSize()</code>가 가장 가까운 하나를 돌려주고,
+            <code>initializeSizeMatcher()</code>가 입력할 때마다 선택 상자를 갱신해요.
+            선택 상자는 직접 바꿀 수 있습니다.
           </p>
           <p class="small-note">
-            내장 너비·기장 값은 FitShare가 정한 임시 참고값이에요. 공식 KS 변환표나 실제 상품 치수 통계가 아니며,
+            표의 값은 FitShare가 정한 임시 참고값이에요. 공식 KS 변환표나 실제 상품 치수 통계가 아니며,
             여러 브랜드의 옷을 재어 검증한 값도 아니에요. KS 호수는 아이 키 기준이라 옷 실측만으로 아이에게 맞는 크기를 보장할 수 없어요.
             브랜드와 디자인에 따라 다르니 상품을 고를 때 판매처의 안내와 아이의 키도 확인해 주세요.
           </p>
