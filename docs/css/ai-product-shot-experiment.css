@@ -20,3 +20,6 @@
 .ai-shot-caution { padding: 16px; border-left: 4px solid #dfaa41; background: #fff8e8; }
 .ai-shot-sources a { overflow-wrap: anywhere; }
 @media (max-width: 600px) { .ai-shot-panel { padding: 20px 16px; } .ai-shot-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .ai-shot-card figcaption { padding: 11px; font-size: .92rem; } }
+
+.ai-shot-selected { border:3px solid #4b83f5; box-shadow:0 10px 28px rgba(44,75,120,.16); }
+.ai-shot-selected figcaption strong::after { content:'  선택'; display:inline-block; margin-left:6px; padding:2px 7px; border-radius:999px; color:#fff; background:#4b83f5; font-size:10px; }
