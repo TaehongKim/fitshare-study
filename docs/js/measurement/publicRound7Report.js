@@ -32,7 +32,7 @@ function renderSummary(report) {
     return `<article class="round7-summary-card ${tone}">
       <h3>${safe(report.methodLabels[id].label)}</h3>
       <div class="round7-metric-grid">
-        <div class="round7-metric"><span>성공 장수</span><strong>${value.successCount}/${value.imageCount}</strong><small>성공률 ${value.successRatePct}% · 실패 ${value.failureCount}장</small></div>
+        <div class="round7-metric"><span>성공 장수</span><strong>${value.successCount}/${value.imageCount}</strong><small>성공률 ${value.successRatePct}% · 실패 ${value.failureCount}장</small><small>\uB300\uCCB4 \uCE21\uC815 ${value.fallbackCount ?? 0}\uC7A5</small></div>
         <div class="round7-metric"><span>너비 평균 절대 오차</span><strong>${cm(value.maeWidthCm)}</strong><small>기준 치수와의 평균 차이</small></div>
         <div class="round7-metric"><span>기장 평균 절대 오차</span><strong>${cm(value.maeLengthCm)}</strong><small>기준 치수와의 평균 차이</small></div>
         <div class="round7-metric"><span>사진당 평균 처리 시간</span><strong>${elapsed(value.averageElapsedMs)}</strong><small>사진 보정부터 치수 계산까지</small></div>
@@ -73,7 +73,7 @@ function renderPhotos(report) {
       if (result.status !== 'done') {
         return `<tr class="round7-failed"><th>${safe(report.methodLabels[id].label)}</th><td colspan="3">측정 실패: ${safe(result.message || '원인을 기록하지 못했어요.')} · ${elapsed(result.elapsedMs)}</td></tr>`;
       }
-      return `<tr><th>${safe(report.methodLabels[id].label)}</th><td>${cm(result.measuredWidthCm)} / ${cm(result.measuredLengthCm)}</td><td>${cm(result.absoluteWidthErrorCm)} / ${cm(result.absoluteLengthErrorCm)}</td><td>${elapsed(result.elapsedMs)}</td></tr>`;
+      return `<tr><th>${safe(report.methodLabels[id].label)}</th><td>${cm(result.measuredWidthCm)} / ${cm(result.measuredLengthCm)}</td><td>${cm(result.absoluteWidthErrorCm)} / ${cm(result.absoluteLengthErrorCm)}</td><td>${elapsed(result.elapsedMs)}<small>${result.fallbackUsed ? '\uB300\uCCB4\uACBD\uB85C: 600px GrabCut' : '848px hybrid'}${result.fallbackReason ? ` ? ${safe(result.fallbackReason)}` : ''}</small></td></tr>`;
     }).join('');
     return `<article class="round7-photo-card"><img class="round7-photo-thumb" src="${safe(row.sourceUrl)}" alt="${safe(row.garmentName)} 원본 사진" loading="lazy" />
       <div><details class="round7-photo" open><summary>${safe(backgroundNames[row.backgroundId] || row.backgroundId)} · ${safe(row.garmentName)} <span>기준 너비 ${cm(row.referenceWidthCm)} / 기장 ${cm(row.referenceLengthCm)}</span></summary>
@@ -95,14 +95,18 @@ function renderReading(report) {
   const base = report.methods.baseline;
   const next = report.methods.integrated;
   const failed = report.rows.filter((row) => row.integrated.status !== 'done');
+  const fallbackRows = report.rows.filter((row) => row.integrated.status === 'done' && row.integrated.fallbackUsed);
   const failureText = failed.length
-    ? `실패한 사진은 ${failed.map((row) => `${backgroundNames[row.backgroundId] || row.backgroundId} · ${row.garmentName}`).join(', ')}이고, 옷 마스크가 너무 작다고 판단됐어요.`
-    : '통합 방식에서 실패한 사진은 없어요.';
+    ? `\uC2E4\uD328\uD55C \uC0AC\uC9C4\uC740 ${failed.map((row) => `${backgroundNames[row.backgroundId] || row.backgroundId} ? ${row.garmentName}`).join(', ')}\uC774\uC5D0\uC694.`
+    : `\uCD5C\uC885 \uC2E4\uD328\uB294 \uC5C6\uC5B4\uC694.`;
+  const fallbackText = fallbackRows.length
+    ? `${fallbackRows.length}\uC7A5\uC740 848px \uAE30\uBCF8 \uACBD\uB85C\uC5D0\uC11C \uC2E4\uD328\uD574 600px GrabCut\uC73C\uB85C \uB300\uCCB4 \uCE21\uC815\uD588\uC5B4\uC694: ${fallbackRows.map((row) => `${backgroundNames[row.backgroundId] || row.backgroundId} ? ${row.garmentName}`).join(', ')}.`
+    : `\uB300\uCCB4 \uACBD\uB85C\uB97C \uC0AC\uC6A9\uD55C \uC0AC\uC9C4\uC740 \uC5C6\uC5B4\uC694.`;
   document.querySelector('#round7-reading').innerHTML = [
     `<strong>기장:</strong> 평균 오차가 ${cm(base.maeLengthCm)}에서 ${cm(next.maeLengthCm)}로 줄었어요. 기장 끝점을 찾는 데 YOLO가 옷을 먼저 찾고 GrabCut이 경계를 다듬는 방식이 이번 표본에서 더 잘 맞았어요.`,
     `<strong>너비:</strong> 평균 오차가 ${cm(base.maeWidthCm)}에서 ${cm(next.maeWidthCm)}로 늘었어요. 너비는 기존 GrabCut을 유지했지만, 작업 해상도 변화가 너비선을 포함한 전체 분할에 영향을 줄 수 있어요.`,
     `<strong>시간:</strong> 통합 방식은 사진당 평균 ${elapsed(next.averageElapsedMs)}가 걸렸어요. 보고서에는 실험 중 모델을 처음 읽는 시간이 포함됐고, 이미 저장된 모델 파일을 사용해 다운로드는 없었어요. 모델 캐시가 비어 있으면 첫 사용 시간은 더 길 수 있어요.`,
-    `<strong>실패 사례:</strong> ${safe(failureText)}`,
+    `<strong>실패 사례:</strong> ${safe(failureText)} ${safe(fallbackText)}`,
     '<strong>해석 범위:</strong> 알고리즘을 선택한 4·5차와 같은 20장으로 통합 결과를 다시 확인했어요. 별도의 새 사진 검증이 아니므로 다른 촬영 조건에서의 결과는 추가 실험이 필요해요.'
   ].map((line) => `<li>${line}</li>`).join('');
 }
@@ -124,4 +128,3 @@ fetch('./data/measure-dataset-round7.json').then((response) => {
 }).catch(() => {
   status.textContent = '7차 실험 결과 파일을 불러오지 못했어요.';
 });
-
