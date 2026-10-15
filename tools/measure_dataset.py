@@ -12,13 +12,13 @@ from datetime import datetime, timezone
 
 try:
     from tools.vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
-                                      _cv2_modules, measure_garment, rectify_photo, width_line_y)
+                                      _cv2_modules, measure_garment, measure_photo_with_fallback, rectify_photo, width_line_y)
 except ModuleNotFoundError as error:
     # 직접 파일을 실행할 때는 같은 폴더에서 분석 도구를 가져온다.
     if error.name != 'tools':
         raise
     from vision_pipeline import (A0_HEIGHT_CM, A0_WIDTH_CM, OUTPUT_HEIGHT, OUTPUT_WIDTH,
-                                 _cv2_modules, measure_garment, rectify_photo, width_line_y)
+                                 _cv2_modules, measure_garment, measure_photo_with_fallback, rectify_photo, width_line_y)
 
 
 DATASET_PATTERN = re.compile(r'^(p|c|ch|chc)_([1-5])_w(\d+(?:\.\d+)?)_h(\d+(?:\.\d+)?)\.jpg$', re.IGNORECASE)
@@ -292,6 +292,7 @@ def summarize_round7(rows, method_id):
     return {
         'imageCount': len(rows), 'successCount': count, 'failureCount': len(rows) - count,
         'successRatePct': round(count / len(rows) * 100, 1) if rows else 0,
+        'fallbackCount': sum(bool(row.get('fallbackUsed')) for row in successful),
         'maeWidthCm': round(sum(row['absoluteWidthErrorCm'] for row in successful) / count, 2) if count else None,
         'maeLengthCm': round(sum(row['absoluteLengthErrorCm'] for row in successful) / count, 2) if count else None,
         'averageElapsedMs': round(sum(row['elapsedMs'] for row in successful) / count, 1) if count else None,
@@ -391,46 +392,50 @@ def analyze_round8_dataset(dataset_root, output_path=None):
 
 
 def analyze_round7_dataset(dataset_root, output_path=None):
-    """Compare today's 600px GrabCut service with the selected 848px hybrid pipeline."""
-    try:
-        from tools.garment_segmentation import get_yolo_grabcut_provider
-    except ModuleNotFoundError as error:
-        if error.name != 'tools':
-            raise
-        from garment_segmentation import get_yolo_grabcut_provider
-
+    """Compare 600px GrabCut with 848px hybrid, retrying only primary failures."""
     cv2, _ = _cv2_modules()
     root = Path(dataset_root)
     image_paths = sorted(root.rglob('*.jpg')) if root.is_dir() else []
     rows = []
     for image_path in image_paths:
         label = read_dataset_label(image_path)
-        row = {**label, 'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg"}
+        row = {
+            **label,
+            'imagePath': f"measure_dataset/{image_path.relative_to(root).as_posix()}",
+            'sourceUrl': f"assets/photos/{label['backgroundId']}/{image_path.stem}.jpg",
+        }
         for method_id in ('baseline', 'integrated'):
             started = time.perf_counter()
             try:
+                cv2.setRNGSeed(0)
                 if method_id == 'baseline':
                     rectified = rectify_photo(image_path, label['backgroundId'])
-                    working_side, length_provider = 600, None
+                    working_side = 600
+                    if not rectified.get('ok'):
+                        raise ValueError(rectified.get('message', '사진을 보정하지 못했어요.'))
+                    measured = measure_garment(
+                        rectified['image'], garment_id=label['garmentId'],
+                        scale_cm_per_pixel=rectified['scaleCmPerPixel'],
+                        max_working_long_side=working_side)
+                    fallback_used, fallback_reason = False, None
+                    pipeline_mode = '600px GrabCut'
                 else:
-                    rectified = rectify_photo(image_path, label['backgroundId'], preserve_resolution=True,
-                                              max_output_long_side=848)
-                    working_side = 848
-                    length_provider = get_yolo_grabcut_provider(garment_id=label['garmentId'])
-                if not rectified.get('ok'):
-                    raise ValueError(rectified.get('message', '사진을 보정하지 못했어요.'))
-                cv2.setRNGSeed(0)
-                measured = measure_garment(
-                    rectified['image'], garment_id=label['garmentId'],
-                    scale_cm_per_pixel=rectified['scaleCmPerPixel'], max_working_long_side=working_side,
-                    length_mask_provider=length_provider)
+                    analysis = measure_photo_with_fallback(
+                        image_path, label['backgroundId'], garment_id=label['garmentId'])
+                    rectified, measured = analysis['rectified'], analysis['measurement']
+                    fallback_used = analysis['fallbackUsed']
+                    fallback_reason = analysis['fallbackReason']
+                    pipeline_mode = analysis['pipelineMode']
                 row[method_id] = {
                     'status': 'done', 'canvas': rectified['canvas'],
-                    'measuredWidthCm': measured['measuredWidthCm'], 'measuredLengthCm': measured['measuredLengthCm'],
+                    'measuredWidthCm': measured['measuredWidthCm'],
+                    'measuredLengthCm': measured['measuredLengthCm'],
                     'absoluteWidthErrorCm': round(abs(measured['measuredWidthCm'] - label['referenceWidthCm']), 1),
                     'absoluteLengthErrorCm': round(abs(measured['measuredLengthCm'] - label['referenceLengthCm']), 1),
                     'elapsedMs': round((time.perf_counter() - started) * 1000, 1),
                     'maskMethods': measured['maskMethods'],
+                    'fallbackUsed': fallback_used, 'fallbackReason': fallback_reason,
+                    'pipelineMode': pipeline_mode,
                 }
             except (ValueError, RuntimeError, OSError) as error:
                 row[method_id] = {'status': 'failed', 'message': str(error),
@@ -445,12 +450,13 @@ def analyze_round7_dataset(dataset_root, output_path=None):
         'experiment': 'round7-integrated-pipeline', 'imageCount': len(rows), 'resolutionLongSidePx': 848,
         'methodLabels': {
             'baseline': {'label': '현재 기준', 'description': '600px 작업 크기 · 너비와 기장 GrabCut'},
-            'integrated': {'label': '7차 통합', 'description': '848px 비율 유지 · 너비 GrabCut · 기장 YOLO→GrabCut'},
+            'integrated': {'label': '7차 통합', 'description': '848px 혼합 경로 우선, 실패 때만 600px GrabCut 대체'},
         },
         'notes': [
             '848px는 입력 원본과 A0 보정 사진의 비율을 유지하면서 처리 긴 변을 제한한 값입니다.',
             '오차와 성공률은 이 20장 데이터셋에서 다시 측정한 값이며, 새로운 사진에서의 성능을 보장하지 않습니다.',
             '처리 시간은 보정과 마스크 생성, 치수 계산 및 실험 중 모델을 처음 읽는 시간을 포함합니다. 이 실행은 이미 저장된 모델 파일을 사용했고 다운로드하지 않았습니다. 캐시가 비어 있으면 첫 실행 시간은 더 길 수 있습니다.',
+            '848px 혼합 측정이 실패한 사진에만 600px GrabCut 대체 측정을 실행합니다. 기본 경로 성공 사진은 대체 경로를 실행하지 않습니다.',
         ],
         'methods': {method: summarize_round7(rows, method) for method in methods},
         'byBackground': {background: {method: summarize_round7(
