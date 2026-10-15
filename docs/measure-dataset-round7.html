@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="848px 작업 크기와 너비 GrabCut, 기장 YOLO→GrabCut 조합을 기존 FitShare 실측 서비스와 20장으로 비교한 7차 실험" />
+<meta name="description" content="848px 혼합 측정을 먼저 실행하고 실패한 사진만 600px GrabCut으로 다시 측정한 7차 실험" />
   <title>실측 7차 실험 · 통합 개선 | FitShare</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/measurement.css" />
@@ -18,7 +18,7 @@
     <section class="measurement-panel round7-panel" aria-labelledby="round7-title">
       <p class="eyebrow">ROUND 7 · 실험에서 고른 방법을 한 흐름으로 적용해요</p>
       <h1 id="round7-title">848px와 치수별 옷 분할을 함께 적용했어요</h1>
-      <p class="measurement-intro">5차에서 고른 848px 작업 크기와 6차에서 치수별로 고른 분할 방법을 실제 실측 파이프라인에 연결했어요. 같은 20장을 기존 서비스와 다시 비교해 통합 결과를 따로 확인합니다.</p>
+      <p class="measurement-intro">5차에서 고른 848px 작업 크기와 6차에서 치수별로 고른 분할 방법을 실측 파이프라인에 연결했어요. 같은 20장으로 기존 서비스와 비교하고, 848px 측정이 실패할 때만 기존 600px 방식으로 다시 측정했어요.</p>
 
       <section class="round7-pipeline" aria-label="7차 통합 측정 순서">
         <div><span>01</span><strong>기준 무늬로 사진 보정</strong><small>원본 비율 유지 · 캔버스 긴 변 최대 848px</small></div>
@@ -28,6 +28,7 @@
         <div><span>03</span><strong>기장 계산</strong><small>YOLO 옷 검출 → GrabCut 윤곽 다듬기</small></div>
       </section>
       <div class="round7-callout"><strong>848px는 어떤 크기인가요?</strong> 기준판을 펼친 결과는 긴 변이 최대 848px인 동일 비율 이미지예요. 기존 서비스는 마스크 계산 전에 긴 변을 600px로 줄였고, 통합 방식은 원본에서 평판화한 뒤 그 재축소를 생략합니다. 원본이 더 작으면 확대하지 않아요.</div>
+      <div class="round7-callout"><strong>기본 측정이 실패할 때만 대체 측정해요.</strong> 먼저 848px에서 너비 GrabCut과 기장 YOLO→GrabCut을 실행합니다. 이 단계가 실패한 경우에만 600px GrabCut으로 다시 측정하고, 기본 경로가 성공한 사진은 대체 경로를 실행하지 않아요. 두 경로가 모두 실패하면 각 실패 이유를 기록합니다. 이번 실험에서는 20장 중 1장이 대체 경로를 사용해 측정에 성공했어요.</div>
       <p id="round7-status" class="round7-status" role="status" aria-live="polite">저장된 7차 실험 결과를 불러오고 있어요.</p>
       <section id="round7-summary" class="round7-summary" aria-label="전체 결과 비교"></section>
       <p id="round7-conclusion" class="round7-conclusion" role="status"></p>
@@ -47,8 +48,8 @@
         <div class="round7-table-wrap"><table id="round7-background-table" class="round7-table"></table></div>
       </section>
       <section class="round7-section" aria-labelledby="round7-photos-heading">
-        <h2 id="round7-photos-heading">사진별 측정값과 실패 기록</h2>
-        <p>기준 치수, 각 방식의 측정값과 절대 오차를 확인할 수 있어요.</p>
+        <h2 id="round7-photos-heading">사진별 측정값과 재시도 기록</h2>
+        <p>기준 치수, 측정값과 절대 오차를 확인할 수 있어요. 대체 경로를 사용한 사진에는 첫 실패 이유와 재측정 방식이 표시됩니다.</p>
         <div id="round7-photos" class="round7-photos"></div>
       </section>
       <section class="round7-section" aria-labelledby="round7-reading-heading">
@@ -72,10 +73,9 @@
         </div>
       </section>
       <aside class="round7-license"><strong>모델 출처와 사용 조건</strong><br />실험에서 사용한 <a href="https://huggingface.co/HasanKabir23/Yolov26s-DeepFashion2" target="_blank" rel="noreferrer">DeepFashion2 YOLO 모델 카드</a>의 라이선스 표기와 내려받은 ONNX 파일의 메타데이터 표기가 서로 달라 추가 확인이 필요해요. 모델 파일은 저장소나 GitHub Pages에 올리지 않았습니다. 이번 공개 페이지는 알고리즘과 측정 결과를 기록하며, 모델 배포나 사용 권한을 단정하지 않습니다.</aside>
-      <p class="round7-footnote">같은 데이터셋으로 실험 방법을 선택하고 다시 비교했으므로 독립 검증은 아니에요. 사진 20장 결과는 실제 환경의 정확도를 보장하지 않습니다. 통합 흐름은 기장 오차를 낮췄지만 너비 오차와 처리 시간이 늘었고 1장이 실패했어요.</p>
+      <p class="round7-footnote">같은 데이터셋으로 방법을 선택하고 다시 비교했으므로 독립 검증은 아니에요. 사진 20장 결과가 실제 환경의 정확도를 보장하지는 않습니다. 통합 흐름은 기장 오차를 낮췄지만 너비 오차와 처리 시간은 늘었어요. 848px 기본 경로에서 실패한 1장은 600px 대체 경로로 복구되어 최종 성공은 20/20장이에요.</p>
     </section>
   </main>
   <script type="module" src="js/measurement/publicRound7Report.js"></script>
 </body>
 </html>
-
