@@ -21,6 +21,62 @@ OUTPUT_HEIGHT = 848
 CHARUCO_SQUARE_SIZE_CM = 2.5
 CHARUCO_MARKER_SIZE_CM = 1.875
 
+def run_with_fallback(primary_attempt, fallback_attempt):
+    """Run the alternate attempt only when the primary attempt fails."""
+    try:
+        result = primary_attempt()
+    except Exception as primary_error:
+        try:
+            result = fallback_attempt()
+        except Exception as fallback_error:
+            raise ValueError(
+                f'848px measurement failed: {primary_error}; '
+                f'600px GrabCut fallback failed: {fallback_error}'
+            ) from fallback_error
+        return {**result, 'fallbackUsed': True, 'fallbackReason': str(primary_error)}
+    return {**result, 'fallbackUsed': False, 'fallbackReason': None}
+
+
+def measure_photo_with_fallback(photo, background_id, *, garment_id=None, category=None,
+                                include_closet_image=False):
+    """Use 848px hybrid first; retry with 600px GrabCut only after failure."""
+    def analyze(*, integrated):
+        if integrated:
+            flattened = rectify_photo(photo, background_id, preserve_resolution=True,
+                                      max_output_long_side=848)
+            working_side = 848
+        else:
+            flattened = rectify_photo(photo, background_id)
+            working_side = 600
+        if not flattened.get('ok'):
+            raise ValueError(flattened.get('message', 'Photo correction failed.'))
+
+        options = {}
+        if integrated:
+            try:
+                from .garment_segmentation import get_yolo_grabcut_provider
+            except ImportError:
+                from garment_segmentation import get_yolo_grabcut_provider
+            options['length_mask_provider'] = get_yolo_grabcut_provider(
+                garment_id=garment_id, category=category
+            )
+        cv2, _ = _cv2_modules()
+        cv2.setRNGSeed(0)
+        measurement = measure_garment(
+            flattened['image'], garment_id=garment_id, category=category,
+            include_closet_image=include_closet_image,
+            scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+            max_working_long_side=working_side,
+            **options,
+        )
+        return {'measurement': measurement, 'rectified': flattened}
+
+    result = run_with_fallback(lambda: analyze(integrated=True),
+                               lambda: analyze(integrated=False))
+    result['pipelineMode'] = '600px GrabCut fallback' if result['fallbackUsed'] else '848px hybrid'
+    return result
+
+
 
 def _cv2_modules():
     try:
