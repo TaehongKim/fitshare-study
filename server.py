@@ -320,16 +320,12 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
                 return self.send_json(413, {'error': '원본 사진이 12MB를 넘었어요. 파일 크기를 줄여 다시 골라 주세요. 측정 전 자동 축소는 하지 않아요.'})
             try:
-                from tools.garment_segmentation import get_yolo_grabcut_provider
-                from tools.vision_pipeline import image_to_data_url, measure_garment, rectify_photo
+                from tools.vision_pipeline import image_to_data_url, measure_photo_with_fallback
 
-                flattened = rectify_photo(photo_bytes, background_id, preserve_resolution=True,
-                                          max_output_long_side=848)
-                if not flattened['ok']:
-                    return self.send_json(422, {'error': flattened['message']})
-                measured = measure_garment(flattened['image'], garment_id=garment_id, include_closet_image=True,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                                           length_mask_provider=get_yolo_grabcut_provider(garment_id=garment_id))
+                analysis = measure_photo_with_fallback(
+                    photo_bytes, background_id, garment_id=garment_id, include_closet_image=True)
+                flattened = analysis['rectified']
+                measured = analysis['measurement']
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error) or '사진 분석 도구를 준비하지 못했어요.'})
             except (ValueError, OSError) as error:
@@ -353,7 +349,10 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'closetImageDataUrl': measured['closetImageDataUrl'],
                 'fullPhotoDataUrl': image_to_data_url(flattened['image']),
                 'rectificationMethod': flattened['method'],
-                'message': measured['message'],
+                'message': measured['message'] + (' 첫 분석이 실패해 600px 대체 방식으로 측정했어요. 결과를 확인해 주세요.' if analysis['fallbackUsed'] else ''),
+                'fallbackUsed': analysis['fallbackUsed'],
+                'fallbackReason': analysis['fallbackReason'],
+                'pipelineMode': analysis['pipelineMode'],
             })
 
         def get_ranking(self):
@@ -843,16 +842,11 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 return self.send_json(413, {'error': '사진이 너무 커요. 크기를 줄여 다시 시도해 주세요.'})
 
             try:
-                from tools.garment_segmentation import get_yolo_grabcut_provider
-                from tools.vision_pipeline import measure_garment, rectify_photo, image_to_data_url
+                from tools.vision_pipeline import image_to_data_url, measure_photo_with_fallback
 
-                flattened = rectify_photo(photo_bytes, mat_id, preserve_resolution=True,
-                                          max_output_long_side=848)
-                if not flattened['ok']:
-                    return self.send_json(422, {'error': flattened['message']})
-                measured = measure_garment(flattened['image'], category=category,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                                           length_mask_provider=get_yolo_grabcut_provider(category=category))
+                analysis = measure_photo_with_fallback(photo_bytes, mat_id, category=category)
+                flattened = analysis['rectified']
+                measured = analysis['measurement']
             except (ImportError, RuntimeError) as error:
                 return self.send_json(503, {'error': str(error)})
             except (ValueError, OSError) as error:
@@ -871,7 +865,10 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'photoDataUrl': measured['overlayDataUrl'],
                 'fullPhotoDataUrl': image_to_data_url(flattened['image']),
                 'rectificationMethod': flattened['method'],
-                'message': measured['message'],
+                'message': measured['message'] + (' 첫 분석이 실패해 600px 대체 방식으로 측정했어요. 결과를 확인해 주세요.' if analysis['fallbackUsed'] else ''),
+                'fallbackUsed': analysis['fallbackUsed'],
+                'fallbackReason': analysis['fallbackReason'],
+                'pipelineMode': analysis['pipelineMode'],
             })
 
         def read_experiment(self, run_id):
