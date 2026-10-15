@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="옷의 팔 줄무늬가 사라지는 문제를 해결하기 위해 프롬프트와 이미지 편집 모델을 비교한 FitShare AI 상품샷 실험입니다." />
+  <title>8차 실험 · 옷 디자인을 지키는 AI 상품샷 | FitShare</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/measurement.css" />
+  <link rel="stylesheet" href="css/ai-product-shot-experiment.css" />
+</head>
+<body class="measurement-page">
+  <main class="measurement-shell ai-shot-shell">
+    <header class="measurement-header">
+      <a class="measurement-brand" href="index.html">FitShare 실험 결과</a>
+      <span>8차 실험 · AI 상품샷</span>
+    </header>
+    <article class="measurement-panel ai-shot-panel">
+      <p class="eyebrow">FITSHARE IMAGE EDITING LAB · EXPERIMENT 8</p>
+      <h1>배경을 바꾸면서 옷의 무늬와 모양을 지킬 수 있을까요?</h1>
+      <p class="measurement-intro ai-shot-lead">AI 상품 사진을 만들었더니 원래 점퍼에 있던 팔 줄무늬가 사라졌어요. “옷은 그대로 두고 배경만 바꿔 달라”고 프롬프트를 강하게 써도 해결되지 않아, 이미지 편집 모델을 바꾸어 같은 옷 사진으로 비교했어요.</p>
+
+      <section class="ai-shot-section" aria-labelledby="problem-title">
+        <h2 id="problem-title">문제와 처음 세운 생각</h2>
+        <p><strong>문제:</strong> 생성형 모델은 배경을 바꾸는 동안 옷도 다시 그릴 수 있어요. 이번 점퍼에서는 두 FLUX Kontext 결과 모두 팔의 흰 줄무늬가 없어졌어요.</p>
+        <p><strong>생각:</strong> 옷을 설명하는 문장을 더 분명하게 쓰고, 편집 영역을 투명 배경으로 한정하는 마스크 기반 모델을 쓰면 옷의 디자인을 더 잘 남길 수 있을 거예요.</p>
+      </section>
+
+      <section class="ai-shot-section" aria-labelledby="input-title">
+        <h2 id="input-title">비교에 사용한 같은 옷 사진</h2>
+        <p>투명 배경으로 분리한 점퍼 한 벌을 각 모델에 입력했어요. 바뀐 조건은 모델과 프롬프트예요. 이 비교는 사진 한 장의 탐색 결과라서 모든 옷에서 같은 결과가 난다고 볼 수는 없어요.</p>
+        <div class="ai-shot-grid">
+          <figure class="ai-shot-card">
+            <img class="ai-shot-transparent" src="assets/ai-product-shot/input-cutout.png" alt="투명 배경으로 분리한 원래 점퍼. 양쪽 소매에 흰 줄무늬 세 줄이 보임" />
+            <figcaption><strong>입력 사진</strong>양쪽 소매의 흰 줄무늬와 점퍼의 펼친 모양을 결과와 비교했어요.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="ai-shot-section" aria-labelledby="method-title">
+        <h2 id="method-title">무엇을 바꾸어 비교했나요?</h2>
+        <div class="ai-shot-table-wrap">
+          <table class="ai-shot-table">
+            <thead><tr><th>방법</th><th>바꾼 점</th><th>이번 사진에서 본 결과</th></tr></thead>
+            <tbody>
+              <tr><td>FLUX Kontext Pro · 처음 프롬프트</td><td>옷의 모양과 세부를 유지하고 배경·조명 변경</td><td>팔 줄무늬가 사라졌어요.</td></tr>
+              <tr><td>FLUX Kontext Pro · 강화 프롬프트</td><td>로고·무늬·재봉선·지퍼까지 바꾸지 말라고 구체적으로 지시</td><td>팔 줄무늬가 여전히 사라졌어요. 문장만 강하게 써도 보장되지 않았어요.</td></tr>
+              <tr><td>Qwen Image Edit Plus</td><td>같은 옷 사진에 배경만 바꾸고 줄무늬를 그대로 두라고 지시</td><td>줄무늬는 보였지만 소매가 접힌 모양으로 바뀌어 점퍼의 실루엣과 자세가 달라졌어요.</td></tr>
+              <tr><td>FLUX Fill Pro · 투명 영역 마스크</td><td>투명한 배경 영역을 채우고 불투명한 옷 영역은 보존하도록 지정</td><td>이번 사진에서는 줄무늬와 펼친 형태가 가장 잘 남았어요.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre class="ai-shot-code"><code>prompt = (
+    "Use the transparent alpha area as the only editable area. "
+    "Fill only the transparent background with a warm off-white studio surface. "
+    "Preserve every opaque garment pixel, including stripes, logo, shape, pose, and details."
+)
+input = {"image": cutout_url, "prompt": prompt, "output_format": "jpg"}</code></pre>
+      </section>
+
+      <section class="ai-shot-section" aria-labelledby="results-title">
+        <h2 id="results-title">결과 사진을 나란히 확인해요</h2>
+        <div class="ai-shot-grid">
+          <figure class="ai-shot-card">
+            <img src="assets/ai-product-shot/flux-kontext-original.jpg" alt="처음 프롬프트를 사용한 FLUX Kontext 결과. 소매 줄무늬가 보이지 않음" loading="lazy" />
+            <figcaption><strong>처음 프롬프트</strong>옷의 줄무늬와 재봉선을 일부 바꾸었어요.</figcaption>
+          </figure>
+          <figure class="ai-shot-card">
+            <img src="assets/ai-product-shot/flux-kontext-strong-prompt.jpg" alt="옷 세부 보존 지시를 강화한 FLUX Kontext 결과. 소매 줄무늬가 여전히 없음" loading="lazy" />
+            <figcaption><strong>강화 프롬프트</strong>금지 내용을 더 자세히 적었지만 줄무늬가 돌아오지 않았어요.</figcaption>
+          </figure>
+          <figure class="ai-shot-card">
+            <img src="assets/ai-product-shot/qwen-image-edit-plus.jpg" alt="Qwen 결과. 줄무늬는 보이지만 소매가 접힌 모양으로 달라짐" loading="lazy" />
+            <figcaption><strong>Qwen Image Edit Plus</strong>줄무늬는 남았지만 소매 모양과 점퍼 실루엣이 달라졌어요.</figcaption>
+          </figure>
+          <figure class="ai-shot-card">
+            <img src="assets/ai-product-shot/flux-fill-pro-alpha-mask.jpg" alt="투명 영역 마스크를 사용한 FLUX Fill Pro 결과. 줄무늬와 펼친 형태가 남아 있음" loading="lazy" />
+            <figcaption><strong>FLUX Fill Pro · 알파 마스크</strong>이번 한 장에서는 소매 줄무늬와 원래 펼친 형태가 가장 잘 보존됐어요.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="ai-shot-section" aria-labelledby="conclusion-title">
+        <h2 id="conclusion-title">이번 실험에서 배운 점</h2>
+        <div class="ai-shot-result">
+          <p><strong>프롬프트만으로 옷 디자인을 지키기는 어려웠어요.</strong> 두 FLUX Kontext 결과에서 팔 줄무늬가 모두 없어졌고, Qwen 결과는 줄무늬를 살렸지만 점퍼의 모양을 바꿨어요.</p>
+          <p>투명 배경을 편집 영역으로 주는 FLUX Fill Pro가 이번 사진에서는 가장 나았어요. 그래서 다음 개선 대상으로 투명 마스크를 활용하는 방식을 선택했어요. 다만 사진 한 장의 결과이므로 다른 옷에서도 항상 세부가 유지된다고 단정하지 않아요.</p>
+        </div>
+        <p class="ai-shot-caution">AI 결과는 상품 정보와 치수를 확인하는 자료가 아니에요. 원래 옷의 디자인을 확인할 때는 보관된 원본 사진을 함께 보세요. 새 모델의 안내 가격은 이미지 1장당 약 US$0.05예요.</p>
+      </section>
+
+      <section class="ai-shot-section ai-shot-sources" aria-labelledby="sources-title">
+        <h2 id="sources-title">모델 안내</h2>
+        <p>가격과 입력 방식은 모델 제공처의 안내를 참고했어요: <a href="https://replicate.com/black-forest-labs/flux-fill-pro" rel="noopener">FLUX Fill Pro</a> · <a href="https://replicate.com/qwen/qwen-image-edit-plus" rel="noopener">Qwen Image Edit Plus</a>.</p>
+        <a class="primary-action" href="index.html">실험 흐름으로 돌아가기 →</a>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

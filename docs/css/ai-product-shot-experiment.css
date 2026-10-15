@@ -1,0 +1,22 @@
+.ai-shot-shell { max-width: 1080px; }
+.ai-shot-panel { padding: clamp(22px, 5vw, 54px); }
+.ai-shot-panel h1 { max-width: 820px; line-height: 1.25; }
+.ai-shot-lead { max-width: 850px; }
+.ai-shot-section { margin-top: 34px; padding-top: 28px; border-top: 1px solid #e4eaf0; }
+.ai-shot-section h2 { margin: 0 0 12px; color: #1d344d; }
+.ai-shot-section p { line-height: 1.75; }
+.ai-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 18px; }
+.ai-shot-card { overflow: hidden; border: 1px solid #dfe7ee; border-radius: 16px; background: #fff; }
+.ai-shot-card img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; background: #f5f6f7; }
+.ai-shot-card figcaption { padding: 14px 16px 17px; line-height: 1.6; }
+.ai-shot-card figcaption strong { display: block; margin-bottom: 5px; color: #213c56; }
+.ai-shot-transparent { background-color: #f7f8fa !important; background-image: linear-gradient(45deg,#e4e8ed 25%,transparent 25%),linear-gradient(-45deg,#e4e8ed 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e4e8ed 75%),linear-gradient(-45deg,transparent 75%,#e4e8ed 75%) !important; background-size: 24px 24px !important; background-position: 0 0,0 12px,12px -12px,-12px 0 !important; }
+.ai-shot-table-wrap { overflow-x: auto; }
+.ai-shot-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.ai-shot-table th,.ai-shot-table td { padding: 12px; border: 1px solid #e0e7ee; text-align: left; vertical-align: top; line-height: 1.55; }
+.ai-shot-table th { background: #f3f7fa; color: #29435d; }
+.ai-shot-code { overflow-x: auto; padding: 16px; border-radius: 12px; background: #172332; color: #e8f1f7; line-height: 1.65; }
+.ai-shot-result { padding: 18px; border-radius: 14px; background: #eff8f3; border: 1px solid #d6ebdf; }
+.ai-shot-caution { padding: 16px; border-left: 4px solid #dfaa41; background: #fff8e8; }
+.ai-shot-sources a { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .ai-shot-panel { padding: 20px 16px; } .ai-shot-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .ai-shot-card figcaption { padding: 11px; font-size: .92rem; } }
