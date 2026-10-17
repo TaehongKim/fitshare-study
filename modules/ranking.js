@@ -3,6 +3,7 @@ import {
   finalizeMonths, formatMonth, getExchangePoints, getMonthKey, getPendingExchanges, getProfile, getRatingView,
   getRecentRevealed, getReservations, getReviewable, getReviewsFor, submitRating
 } from './rankingLogic.js';
+import { avatarHtml, openProfileDialog } from './profile.js';
 import { loadState, loadViewerName, mutateState, pullState, subscribe } from './rankingStore.js';
 
 const CSS_ID = 'ranking-style';
@@ -15,7 +16,7 @@ function escapeHtml(text) {
 function ensureStyle() {
   if (document.getElementById(CSS_ID)) return;
   const link = document.createElement('link');
-  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-4', import.meta.url).href;
+  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-8', import.meta.url).href;
   document.head.append(link);
 }
 
@@ -137,7 +138,7 @@ export function renderRanking(root) {
     $('#rk-board').innerHTML = ranking.length ? ranking.map((row) => `
       <li class="rk-rank rk-rank-${row.rank <= 3 ? row.rank : 'n'}">
         <span class="rk-place">${BADGE_ICONS[row.rank] ?? row.rank}</span>
-        <button type="button" class="rk-name" data-profile="${escapeHtml(row.userId)}">${escapeHtml(row.name)}</button>
+        <button type="button" class="rk-name" data-profile="${escapeHtml(row.userId)}">${avatarHtml(data.users.find((user) => user.id === row.userId)?.avatar, 26)} ${escapeHtml(row.name)}</button>
         <span class="rk-pts">${row.points}점</span>
         <span class="rk-sub">기부 ${row.donations} · 받음 ${row.receipts}</span>
       </li>`).join('') : '<li class="rk-empty">이번 달에 공개된 점수가 아직 없어요. 첫 나눔의 주인공이 되어 보세요!</li>';
@@ -162,12 +163,12 @@ export function renderRanking(root) {
         return `<li><b>${escapeHtml(item.itemName)}</b> · ${iGave ? `내가 ${partner}에게 준 옷` : `${partner}에게 받은 옷`}<span>${status}</span></li>`;
       }).join('') : '';
       $('#rk-profile').innerHTML = `
-        <p class="rk-profile-name">${escapeHtml(profile.user.name)}</p>
-        ${isMine ? '' : '<button type="button" class="rk-ghost" data-profile="">내 페이지로 돌아가기</button>'}
+        <div class="profile-head">${avatarHtml(profile.user.avatar, 64)}<p class="rk-profile-name">${escapeHtml(profile.user.name)}</p></div>
+        ${isMine ? '<button type="button" class="rk-ghost" data-edit-avatar>🎨 아바타 꾸미기 · 프로필 보기</button>' : '<button type="button" class="rk-ghost" data-profile="">내 페이지로 돌아가기</button>'}
         <dl class="rk-stats">
           <div><dt>이번 달 포인트</dt><dd>${profile.monthPoints}점${profile.monthRank ? ` · ${profile.monthRank}위` : ''}</dd></div>
-          <div><dt>기부한 횟수</dt><dd>${profile.donations}번</dd></div>
-          <div><dt>받은 횟수</dt><dd>${profile.receipts}번</dd></div>
+          <div><dt>나눔한 횟수</dt><dd>${profile.donations}번</dd></div>
+          <div><dt>수령한 횟수</dt><dd>${profile.receipts}번</dd></div>
         </dl>
         ${isMine ? `<p class="rk-label">내 나눔 내역</p>${ledger ? `<ul class="rk-recent">${ledger}</ul>` : '<p class="rk-empty">아직 나눔 기록이 없어요. 옷장에서 옷을 예약해 보세요.</p>'}` : ''}
         <p class="rk-label">받은 후기</p>
@@ -206,6 +207,10 @@ export function renderRanking(root) {
     attempt((state) => addReview(state, form.dataset.exchange, viewerIdNow(), text).state, '후기를 남겼어요.');
   });
   const openProfile = (event) => {
+    if (event.target.closest('[data-edit-avatar]')) {
+      openProfileDialog(() => { data = finalizeMonths(loadState()); refresh(); });
+      return;
+    }
     const button = event.target.closest('[data-profile]');
     if (button) { profileId = button.dataset.profile; refresh(); }
   };

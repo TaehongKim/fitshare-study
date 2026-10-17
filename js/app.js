@@ -1,7 +1,7 @@
 ﻿import { state, markTabVisited } from './state.js';
 import { renderMeasurement } from '../modules/measurement.js?v=garment-registration-1';
 import { renderRecommendation } from '../modules/recommendation.js';
-import { renderRanking } from '../modules/ranking.js?v=ranking-6';
+import { renderRanking } from '../modules/ranking.js?v=ranking-8';
 import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-2';
 import { openProfileDialog } from '../modules/profile.js?v=profile-2';
 import { createSchoolEntryResult } from './schoolEntry.js';

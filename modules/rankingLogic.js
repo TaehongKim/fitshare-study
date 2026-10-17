@@ -12,11 +12,32 @@ export const MIN_SCORE = 1;
 export const MAX_SCORE = 10;
 export const BADGE_RANKS = [1, 2, 3];
 export const BADGE_ICONS = { 1: '🥇', 2: '🥈', 3: '🥉' };
-const NAME_MAX = 10;
+const NAME_MAX = 200;
 const ITEM_MAX = 30;
 export const REVIEW_MAX = 100;
 // 예약(reserved) → 직접 만나 옷을 건넴(completed) → 점수·후기. 취소(cancelled)하면 다시 예약할 수 있어요.
 export const EXCHANGE_STATUSES = ['reserved', 'completed', 'cancelled'];
+
+export const AVATAR_OPTIONS = {
+  bg: ['#ffd9d9', '#ffe8c2', '#fff3b0', '#d6f5d6', '#cfeaff', '#e3d9ff', '#ffd6f0', '#e0e0e0'],
+  face: ['🙂', '😀', '😎', '🥳', '😺', '🐶', '🐰', '🐻', '🦊', '🐼', '🐯', '🐸'],
+  hat: ['', '🎩', '🧢', '👑', '🎀', '🎓', '👒'],
+  outfit: ['', '👕', '🧥', '👗', '👖', '🧣', '🥼']
+};
+
+export function defaultAvatar() {
+  return { bg: AVATAR_OPTIONS.bg[4], face: AVATAR_OPTIONS.face[0], hat: '', outfit: '' };
+}
+
+export function sanitizeAvatar(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const clean = {};
+  for (const key of Object.keys(AVATAR_OPTIONS)) {
+    if (typeof value[key] !== 'string' || !AVATAR_OPTIONS[key].includes(value[key])) return null;
+    clean[key] = value[key];
+  }
+  return clean;
+}
 
 export function createEmptyState() {
   return { version: 1, users: [], exchanges: [], badges: [], finalizedMonths: [] };
@@ -27,7 +48,12 @@ export function normalizeState(value) {
   const base = createEmptyState();
   if (!value || typeof value !== 'object') return base;
   const list = (name) => (Array.isArray(value[name]) ? value[name] : []);
-  const users = list('users').filter((user) => user && typeof user.id === 'string' && typeof user.name === 'string');
+  const users = list('users').filter((user) => user && typeof user.id === 'string' && typeof user.name === 'string')
+    .map((user) => {
+      const { avatar, ...rest } = user;
+      const clean = sanitizeAvatar(avatar);
+      return clean ? { ...rest, avatar: clean } : rest;
+    });
   const userIds = new Set(users.map((user) => user.id));
   const exchanges = list('exchanges').filter((item) => item && userIds.has(item.giverId) && userIds.has(item.receiverId) && item.giverId !== item.receiverId);
   const exchangesClean = exchanges.map((raw) => {
@@ -117,6 +143,14 @@ export function ensureUser(state, name) {
   const found = state.users.find((user) => user.name.toLowerCase() === clean.toLowerCase());
   if (found) return { state, user: found };
   return addUser(state, clean);
+}
+
+export function setAvatar(state, userId, avatar) {
+  const user = findUser(state, userId);
+  const clean = sanitizeAvatar(avatar);
+  if (!clean) throw new RangeError('아바타 모양을 목록에서 골라 주세요.');
+  const next = { ...user, avatar: clean };
+  return { state: { ...state, users: state.users.map((item) => (item.id === userId ? next : item)) }, user: next };
 }
 
 // 옷장의 옷 하나에 걸려 있는 예약/나눔을 찾습니다. 취소된 것은 없는 것으로 봐요.
