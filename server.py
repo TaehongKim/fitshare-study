@@ -478,7 +478,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 from tools.vision_pipeline import image_to_data_url, measure_photo_with_fallback
 
                 analysis = measure_photo_with_fallback(
-                    photo_bytes, background_id, garment_id=garment_id, include_closet_image=True)
+                    photo_bytes, background_id, garment_id=garment_id, include_closet_image=True,
+                    allow_fallback=False)
                 flattened = analysis['rectified']
                 measured = analysis['measurement']
             except (ImportError, RuntimeError) as error:

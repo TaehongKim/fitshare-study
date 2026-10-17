@@ -152,7 +152,8 @@ class YoloDetector:
                 detections = [combined]
         if not detections:
             raise ValueError('YOLO가 옷을 찾지 못했어요. 옷 전체가 보이게 다시 찍어 주세요.')
-        return detections[0]
+        # 옷걸이처럼 작은 조각이 신뢰도만 높게 나와도 옷 본체가 뽑히도록 크기를 함께 본다.
+        return max(detections, key=lambda item: item['confidence'] * int(np.asarray(item['mask']).sum()))
 
 
 def yolo_grabcut_provider(garment_id=None, category=None, detector=None, iterations=3):

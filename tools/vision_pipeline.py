@@ -38,8 +38,11 @@ def run_with_fallback(primary_attempt, fallback_attempt):
 
 
 def measure_photo_with_fallback(photo, background_id, *, garment_id=None, category=None,
-                                include_closet_image=False):
-    """Use 848px hybrid first; retry with 600px GrabCut only after failure."""
+                                include_closet_image=False, allow_fallback=True):
+    """Use 848px hybrid first; retry with 600px GrabCut only after failure.
+
+    allow_fallback=False (옷 등록): 기장은 항상 YOLO→GrabCut이라 600px GrabCut 대체 측정을 하지 않는다.
+    """
     def analyze(*, integrated):
         if integrated:
             flattened = rectify_photo(photo, background_id, preserve_resolution=True,
@@ -71,8 +74,11 @@ def measure_photo_with_fallback(photo, background_id, *, garment_id=None, catego
         )
         return {'measurement': measurement, 'rectified': flattened}
 
-    result = run_with_fallback(lambda: analyze(integrated=True),
-                               lambda: analyze(integrated=False))
+    if allow_fallback:
+        result = run_with_fallback(lambda: analyze(integrated=True),
+                                   lambda: analyze(integrated=False))
+    else:
+        result = {**analyze(integrated=True), 'fallbackUsed': False, 'fallbackReason': None}
     result['pipelineMode'] = '600px GrabCut fallback' if result['fallbackUsed'] else '848px hybrid'
     return result
 
