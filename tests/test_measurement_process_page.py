@@ -54,6 +54,7 @@ class MeasurementProcessPageTests(unittest.TestCase):
         index = (PAGE.parent / 'index.html').read_text(encoding='utf-8')
 
         self.assertIn('href="measurement-process.html"', index)
+        self.assertIn('id="ratio-example"', PAGE.read_text(encoding='utf-8'))
 
     def test_page_explains_the_full_flow_and_its_limits(self):
         html = PAGE.read_text(encoding='utf-8')
