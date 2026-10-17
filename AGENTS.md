@@ -14,7 +14,8 @@ GitHub Pull Request로 하나의 웹앱에 통합한다.
 - 공통 코드는 `js/`, 개별 기능은 `modules/`에 둔다.
 - `index.html`에 큰 기능 로직을 직접 작성하지 않는다.
 - 사진과 실험 회차를 PC에 저장하기 위해 `server.py`에 Python 표준 라이브러리 서버/API를 둘 수 있다. 추가 pip/npm 패키지 없이 `server-data/`에 파일로 저장한다.
-- 실험 사진이 든 `server-data/`는 GitHub에 올리지 않는다.
+- `server-data/`에 저장되는 계정 식별 정보, 비밀번호·인증·세션 정보, 사용자 업로드 사진과 개인 실험 기록은 GitHub에 올리지 않는다.
+- 프로젝트 검증용 샘플 데이터인 `measure_dataset/`은 코드와 테스트에 필요하므로 GitHub에 올릴 수 있다.
 
 ## 3. 파일 담당
 
