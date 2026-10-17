@@ -1,5 +1,5 @@
 ﻿import { readRegistrationPhoto } from './registrationPhoto.js?v=garment-registration-2';
-import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-3';
+import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-5';
 import { fetchMe } from '../auth.js?v=auth-1';
 import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
 
@@ -181,4 +181,3 @@ fetchMe().then((user) => {
   notice.innerHTML = '<h1>먼저 로그인해 주세요</h1><p class="measurement-intro">옷을 등록하려면 로그인이 필요해요.</p><a class="primary-action" href="../index.html">로그인하러 가기 →</a>';
   main.after(notice);
 });
-

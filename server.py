@@ -246,6 +246,25 @@ def get_garment_thumbnail_bytes(garments_dir, garment_id, metadata_lock=None):
         raise
 
 
+def get_product_thumbnail_bytes(garments_dir, garment_id):
+    garment_dir = Path(garments_dir) / garment_id
+    item = read_json(garment_dir / 'garment.json')
+    filename = item.get('productPhotoFile') if isinstance(item, dict) else None
+    if filename not in {'product-photo.png', 'product-photo.jpg', 'product-photo.webp'}:
+        raise FileNotFoundError('아직 AI 상품 사진이 없어요.')
+    source_path = garment_dir / filename
+    thumbnail_path = garment_dir / 'product-thumbnail.jpg'
+    source_time = source_path.stat().st_mtime_ns
+    try:
+        if thumbnail_path.stat().st_mtime_ns >= source_time:
+            return thumbnail_path.read_bytes()
+    except FileNotFoundError:
+        pass
+    thumbnail = make_source_photo_thumbnail(source_path.read_bytes())
+    write_bytes_safely(thumbnail_path, thumbnail)
+    return thumbnail
+
+
 def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
     """Create a testable HTTP server; tests can pass a temporary data directory."""
     storage = Path(data_dir).resolve()
@@ -554,23 +573,34 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
 
         def get_garment_thumbnail(self, garment_id):
             if not valid_garment_record_id(garment_id):
-                return self.send_json(404, {'error': '? ??? ?? ????.'})
+                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
+            thumbnail = None
+            content_type = 'image/jpeg'
+            cache_control = 'no-cache'
             try:
-                thumbnail = get_garment_thumbnail_bytes(garments_dir, garment_id, lock)
-                content_type = 'image/png'
-                cache_control = 'public, max-age=604800'
+                thumbnail = get_product_thumbnail_bytes(garments_dir, garment_id)
             except FileNotFoundError:
+                pass
+            except (OSError, ValueError, RuntimeError, ImportError) as error:
+                self.log_error('AI thumbnail unavailable for %s: %s', garment_id, error)
+            if thumbnail is None:
+                try:
+                    thumbnail = get_garment_thumbnail_bytes(garments_dir, garment_id, lock)
+                    content_type = 'image/png'
+                except FileNotFoundError:
+                    pass
+                except (OSError, ValueError, RuntimeError, ImportError) as error:
+                    self.log_error('Closet thumbnail unavailable for %s: %s', garment_id, error)
+            if thumbnail is None:
                 try:
                     source = (garments_dir / garment_id / 'photo.jpg').read_bytes()
                     thumbnail = make_source_photo_thumbnail(source)
                     content_type = 'image/jpeg'
                     cache_control = 'no-store'
                 except FileNotFoundError:
-                    return self.send_json(404, {'error': '? ?? ??? ?? ????.'})
+                    return self.send_json(404, {'error': '옷 원본 사진을 찾지 못했어요.'})
                 except (OSError, ValueError, RuntimeError, ImportError) as error:
-                    return self.send_json(422, {'error': str(error) or '?? ????? ??? ????.'})
-            except (OSError, ValueError, RuntimeError, ImportError) as error:
-                return self.send_json(422, {'error': str(error) or '?? ?? ??? ??? ????.'})
+                    return self.send_json(422, {'error': str(error) or '사진 미리보기를 만들지 못했어요.'})
             self.send_response(200)
             self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(thumbnail)))
@@ -648,7 +678,10 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 source = ensure_garment_cutout(garments_dir, garment_id, lock, for_product_photo=True)
                 prompt = ('Create a clean ecommerce studio product photograph of this exact garment on a warm ivory background. '
                           'Preserve the photographed garment identity, silhouette, color, fabric texture, print, logo, seams, '
-                          'buttons, sleeve stripes, flat laid-out pose, and proportions. Change only the background and lighting. '
+                          'buttons, flat laid-out pose, and proportions. Preserve only patterns and details actually visible in the source. '
+                          'Do not invent, add, repeat, or extend stripes, prints, logos, or decorations onto plain, hidden, or occluded areas. '
+                          'Do not copy body patterns onto sleeves or infer matching patterns on unseen parts. Keep plain fabric plain. '
+                          'Change only the background and lighting. '
                           'Do not fold sleeves or change the pose. Do not add a person, mannequin, hanger, text, label, '
                           'or other object.')
                 photo, mime = generate_product_photo(source, prompt, token, model_version)

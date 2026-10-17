@@ -68,7 +68,7 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
     function showCleanPhoto() {
       const id = encodeURIComponent(garment.id);
       const choices = [
-        `/api/garments/${id}/thumbnail`,
+        `/api/garments/${id}/thumbnail?v=image-priority-1`,
         `/api/garments/${id}/closet-photo`,
         `/api/garments/${id}/photo`
       ];

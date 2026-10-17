@@ -1,5 +1,7 @@
 import json
+import os
 import tempfile
+import threading
 import unittest
 import urllib.error
 import urllib.request
@@ -15,6 +17,94 @@ from tools.garment_thumbnails import prepare_garment_thumbnails
 
 
 class GarmentThumbnailLoadingTests(unittest.TestCase):
+    def test_product_thumbnail_cache_refreshes_when_photo_changes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            garment_id = str(uuid.uuid4())
+            folder = root / garment_id
+            folder.mkdir()
+            source = folder / 'product-photo.png'
+            (folder / 'garment.json').write_text(json.dumps({'productPhotoFile': 'product-photo.png'}), encoding='utf-8')
+            _, first = cv2.imencode('.png', np.full((400, 300, 3), (10, 20, 230), dtype=np.uint8))
+            source.write_bytes(first.tobytes())
+            original_thumbnail = server.get_product_thumbnail_bytes(root, garment_id)
+            with patch('server.make_source_photo_thumbnail', side_effect=AssertionError('unnecessary resize')):
+                self.assertEqual(server.get_product_thumbnail_bytes(root, garment_id), original_thumbnail)
+            _, second = cv2.imencode('.png', np.full((400, 300, 3), (210, 30, 40), dtype=np.uint8))
+            source.write_bytes(second.tobytes())
+            newer = (folder / 'product-thumbnail.jpg').stat().st_mtime_ns + 1_000_000_000
+            os.utime(source, ns=(newer, newer))
+            updated = server.get_product_thumbnail_bytes(root, garment_id)
+            image = cv2.imdecode(np.frombuffer(updated, dtype=np.uint8), cv2.IMREAD_COLOR)
+            np.testing.assert_allclose(image[50, 50], (210, 30, 40), atol=3)
+            self.assertLessEqual(max(image.shape[:2]), 200)
+
+    def test_thumbnail_prefers_product_then_closet_then_original(self):
+        cases = [
+            ('product', True, True, (10, 20, 230)),
+            ('missing-product', False, True, (20, 210, 30)),
+            ('corrupt-product', b'broken', True, (20, 210, 30)),
+            ('missing-closet', False, False, (220, 30, 20)),
+            ('corrupt-closet', False, b'broken', (220, 30, 20)),
+            ('unsafe-product-path', '../outside.jpg', True, (20, 210, 30)),
+        ]
+        for name, product, closet, expected_color in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                garment_id = str(uuid.uuid4())
+                folder = root / 'garments' / garment_id
+                folder.mkdir(parents=True)
+                _, original = cv2.imencode('.jpg', np.full((600, 400, 3), (220, 30, 20), dtype=np.uint8))
+                (folder / 'photo.jpg').write_bytes(original.tobytes())
+                item = {'id': garment_id, 'maskPipelineVersion': server.GARMENT_MASK_PIPELINE_VERSION,
+                        'productPhotoFile': 'product-photo.jpg'}
+                if product:
+                    _, generated = cv2.imencode('.jpg', np.full((500, 400, 3), (10, 20, 230), dtype=np.uint8))
+                    (folder / 'product-photo.jpg').write_bytes(product if isinstance(product, bytes) else generated.tobytes())
+                if isinstance(product, str):
+                    item['productPhotoFile'] = product
+                    (folder.parent / 'outside.jpg').write_bytes(generated.tobytes())
+                if closet:
+                    image = np.full((480, 320, 4), (20, 210, 30, 255), dtype=np.uint8)
+                    _, cutout = cv2.imencode('.png', image)
+                    (folder / 'closet.png').write_bytes(closet if isinstance(closet, bytes) else cutout.tobytes())
+                (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
+                httpd = server.create_server('127.0.0.1', 0, root)
+                thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    url = f'http://127.0.0.1:{httpd.server_address[1]}/api/garments/{garment_id}/thumbnail'
+                    with urllib.request.urlopen(url, timeout=5) as response:
+                        image = cv2.imdecode(np.frombuffer(response.read(), dtype=np.uint8), cv2.IMREAD_COLOR)
+                        self.assertLessEqual(max(image.shape[:2]), 200)
+                        np.testing.assert_allclose(image[50, 50], expected_color, atol=3)
+                        self.assertIn(response.headers['Cache-Control'], ('no-cache', 'no-store'))
+                    self.assertEqual((folder / 'photo.jpg').read_bytes(), original.tobytes())
+                finally:
+                    httpd.shutdown()
+                    httpd.server_close()
+                    thread.join(timeout=2)
+
+    def test_thumbnail_reports_invalid_original_when_no_usable_image_exists(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            garment_id = str(uuid.uuid4())
+            folder = root / 'garments' / garment_id
+            folder.mkdir(parents=True)
+            (folder / 'photo.jpg').write_bytes(b'broken')
+            (folder / 'garment.json').write_text(json.dumps({'id': garment_id}), encoding='utf-8')
+            httpd = server.create_server('127.0.0.1', 0, root)
+            thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+            thread.start()
+            try:
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(f'http://127.0.0.1:{httpd.server_address[1]}/api/garments/{garment_id}/thumbnail')
+                self.assertEqual(error.exception.code, 422)
+            finally:
+                httpd.shutdown()
+                httpd.server_close()
+                thread.join(timeout=2)
+
     def make_cutout(self, size=(480, 320)):
         image = np.zeros((size[0], size[1], 4), dtype=np.uint8)
         image[20:-20, 30:-30] = (20, 120, 220, 255)

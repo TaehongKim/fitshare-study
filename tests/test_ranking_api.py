@@ -262,6 +262,11 @@ class RankingApiTests(unittest.TestCase):
         self.assertEqual(denied.exception.code, 403)
         folder = Path(self.temp_dir.name) / 'garments' / garment_id
         self.assertEqual(generate.call_args.args[0], (folder / 'product-cutout.png').read_bytes())
+        prompt = generate.call_args.args[1]
+        self.assertIn('only patterns and details actually visible in the source', prompt)
+        self.assertIn('Do not invent', prompt)
+        self.assertIn('plain, hidden, or occluded', prompt)
+        self.assertNotIn('buttons, sleeve stripes', prompt)
         self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
         self.assertTrue((folder / 'product-photo.png').exists())
         saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))

@@ -27,7 +27,7 @@ export function openGarmentDetail(garment) {
   const id = encodeURIComponent(garment.id);
   const image = el('img', 'garment-detail-photo');
   image.alt = `${garment.name} 사진`;
-  const choices = [`/api/garments/${id}/thumbnail`, `/api/garments/${id}/closet-photo`, `/api/garments/${id}/photo`];
+  const choices = [`/api/garments/${id}/thumbnail?v=image-priority-1`, `/api/garments/${id}/closet-photo`, `/api/garments/${id}/photo`];
   let choice = 0;
   image.onerror = () => { choice += 1; if (choice < choices.length) image.src = choices[choice]; else image.onerror = null; };
   image.src = choices[0];
@@ -39,7 +39,7 @@ export function openGarmentDetail(garment) {
   const closetPhoto = el('button', 'rk-ghost', '옷장 사진');
   closetPhoto.type = 'button';
   closetPhoto.addEventListener('click', () => {
-    choice = 0;
+    choice = 1;
     image.onerror = () => { choice += 1; if (choice < choices.length) image.src = choices[choice]; else image.onerror = null; };
     image.classList.remove('is-product-photo');
     image.src = choices[choice];
