@@ -74,6 +74,9 @@
 .garment-detail-message { min-height:1.2em; margin:6px 0; font-size:12px; font-weight:700; color:#368c71; }
 .garment-detail-message.is-error { color:#c0392b; }
 .garment-detail-buttons { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.garment-detail-delete { border:1px solid #e3a3a3; border-radius:8px; padding:7px 10px; color:#a63232; background:#fff7f7; font-weight:800; cursor:pointer; }
+.garment-detail-delete:hover:not(:disabled) { background:#ffeaea; }
+.garment-detail-delete:disabled { opacity:.6; cursor:wait; }
 
 .avatar { position:relative; display:inline-block; vertical-align:middle; flex:none; width:var(--av-size); height:var(--av-size); border-radius:50%; background:var(--av-bg); box-shadow:inset 0 0 0 2px #ffffffaa, 0 1px 4px #0002; font-size:calc(var(--av-size) * .56); line-height:var(--av-size); text-align:center; overflow:visible; }
 .avatar .av-hat { position:absolute; left:50%; top:-.36em; transform:translateX(-50%); font-size:.62em; line-height:1; }

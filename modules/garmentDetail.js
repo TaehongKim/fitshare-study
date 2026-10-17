@@ -4,13 +4,13 @@ import { cancelReservation, getGarmentExchange, reserveGarment } from './ranking
 import { loadState, loadViewerName, mutateState, pullState } from './rankingStore.js';
 import { getUser, requestApi } from '../js/auth.js?v=auth-2';
 
-const CSS_ID = 'ranking-style';
+const CSS_ID = 'garment-detail-style';
 const GENDER_NAMES = { male: '남성용', female: '여성용', unisex: '공용', unknown: '모름' };
 
 function ensureStyle() {
   if (document.getElementById(CSS_ID)) return;
   const link = document.createElement('link');
-  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-8', import.meta.url).href;
+  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-9', import.meta.url).href;
   document.head.append(link);
 }
 
@@ -21,7 +21,7 @@ function el(tag, className, text) {
   return node;
 }
 
-export function openGarmentDetail(garment, onPhotoUpdated) {
+export function openGarmentDetail(garment, onClosetUpdated) {
   ensureStyle();
   const dialog = el('dialog', 'garment-detail');
   const id = encodeURIComponent(garment.id);
@@ -88,7 +88,7 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
         regeneratePhoto.hidden = false;
         showProductPhoto();
         message.textContent = regenerate ? '새 AI 사진으로 바꿨어요. 원본 사진은 그대로 있어요.' : 'AI 상품 사진을 저장했어요. 원본 사진은 그대로 있어요.';
-        if (typeof onPhotoUpdated === 'function') onPhotoUpdated();
+        if (typeof onClosetUpdated === 'function') onClosetUpdated();
       } catch (error) {
         message.classList.add('is-error');
         message.textContent = error.message || 'AI 상품 사진을 만들지 못했어요.';
@@ -136,7 +136,31 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
   close.type = 'button';
   close.addEventListener('click', () => dialog.close());
   const buttons = el('div', 'garment-detail-buttons');
-  buttons.append(reserve, cancel, close);
+  buttons.append(reserve, cancel);
+  if (getUser()?.role === 'teacher') {
+    const remove = el('button', 'garment-detail-delete', '옷 삭제');
+    remove.type = 'button';
+    remove.addEventListener('click', async () => {
+      if (!window.confirm(`“${garment.name}”과 원본·AI 사진을 모두 삭제합니다. 되돌릴 수 없어요. 삭제할까요?`)) return;
+      remove.disabled = true;
+      message.classList.remove('is-error');
+      message.textContent = '옷과 사진을 삭제하고 있어요.';
+      try {
+        const response = await fetch(`/api/garments/${id}`, { method: 'DELETE', cache: 'no-store' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || '옷을 삭제하지 못했어요.');
+        message.textContent = '옷과 사진을 삭제했어요.';
+        dialog.close();
+        if (typeof onClosetUpdated === 'function') onClosetUpdated();
+      } catch (error) {
+        remove.disabled = false;
+        message.classList.add('is-error');
+        message.textContent = error.message || '옷을 삭제하지 못했어요. 다시 시도해 주세요.';
+      }
+    });
+    buttons.append(remove);
+  }
+  buttons.append(close);
   dialog.append(el('h2', '', garment.name), image, photoControls, generationProgress, info, status, message, buttons);
 
   // 지금 이 옷이 예약 가능한지 서버 기록을 보고 화면을 맞춥니다.

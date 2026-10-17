@@ -11,6 +11,7 @@ let role = 'teacher';
 let confirmed = true;
 let confirmations = 0;
 let requests = [];
+let deleteRequests = [];
 let generate;
 let updates = 0;
 const photoUrl = '/api/garments/test-product/product-photo';
@@ -41,7 +42,8 @@ async function check(name, action) {
 
 window.confirm = (text) => {
   confirmations += 1;
-  assert(text.includes('비용'), 'Confirmation must explain generation cost');
+  if (text.includes('되돌릴 수 없어요')) assert(text.includes(garment.name), 'Deletion must name the garment');
+  else assert(text.includes('비용'), 'Confirmation must explain generation cost');
   return confirmed;
 };
 window.fetch = async (url, options) => {
@@ -50,6 +52,10 @@ window.fetch = async (url, options) => {
   if (url === photoUrl && options?.method === 'POST') {
     requests.push(JSON.parse(options.body));
     return generate();
+  }
+  if (url === `/api/garments/${encodeURIComponent(garment.id)}` && options?.method === 'DELETE') {
+    deleteRequests.push(options.method);
+    return json({ ok: true });
   }
   throw new Error(`Unexpected request: ${url}`);
 };
@@ -129,6 +135,25 @@ try {
     openGarmentDetail({ ...garment });
     assert(!button('AI 사진 다시 만들기') && !button('AI 상품 사진 만들기') && !button('AI 상품 사진 보기'),
       'Teacher controls must not be shown to students');
+    assert(!button('옷 삭제'), 'Students must not receive a delete control');
+  });
+  await check('Teacher delete requires confirmation and refreshes the closet after success', async () => {
+    role = 'teacher';
+    await fetchMe();
+    confirmed = false;
+    deleteRequests = [];
+    updates = 0;
+    openGarmentDetail({ ...garment }, () => { updates += 1; });
+    const remove = button('옷 삭제');
+    assert(remove, 'Teacher delete control is missing');
+    remove.click();
+    await settle();
+    assert(deleteRequests.length === 0 && !remove.disabled, 'Canceling must not send a delete request');
+    confirmed = true;
+    remove.click();
+    await waitFor(() => deleteRequests.length === 1, 'Confirmed deletion was not sent');
+    assert(deleteRequests[0] === 'DELETE' && updates === 1, 'Success must delete and refresh the closet');
+    await waitFor(() => !document.querySelector('dialog.garment-detail'), 'Successful deletion must close the detail dialog');
   });
   await check('Students edit only their own cards and teachers edit all cards', async () => {
     const root = document.createElement('section');

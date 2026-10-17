@@ -6,7 +6,7 @@ import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-2';
 import { openProfileDialog } from '../modules/profile.js?v=profile-2';
 import { createSchoolEntryResult } from './schoolEntry.js';
 import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-6';
-import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-5';
+import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-6';
 
 const root = document.querySelector('#module-root');
 const tabs = document.querySelectorAll('.tab');

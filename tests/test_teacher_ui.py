@@ -39,6 +39,14 @@ class TeacherUiTests(unittest.TestCase):
         self.assertIn('AI 상품 사진 만들기', detail)
         self.assertIn("/api/garments/${id}/photo", detail)
 
+    def test_garment_delete_action_is_teacher_only_and_confirms_before_deleting(self):
+        detail = (ROOT / 'modules/garmentDetail.js').read_text(encoding='utf-8')
+        self.assertIn("getUser()?.role === 'teacher'", detail)
+        self.assertIn('옷 삭제', detail)
+        self.assertIn('window.confirm', detail)
+        self.assertIn('method: \'DELETE\'', detail)
+        self.assertIn('onClosetUpdated', detail)
+
 
 if __name__ == '__main__':
     unittest.main()

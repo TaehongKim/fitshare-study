@@ -7,6 +7,7 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest.mock import patch
 
 import server
 
@@ -38,6 +39,12 @@ class GarmentRegistrationTests(unittest.TestCase):
         body = json.dumps(payload).encode('utf-8')
         request = urllib.request.Request(self.base_url + path, data=body, method='POST')
         request.add_header('Content-Type', 'application/json')
+        with self.assertRaises(urllib.error.HTTPError) as error:
+            self.opener.open(request, timeout=15)
+        self.assertEqual(error.exception.code, expected_status)
+
+    def request_error(self, path, method, expected_status):
+        request = urllib.request.Request(self.base_url + path, method=method)
         with self.assertRaises(urllib.error.HTTPError) as error:
             self.opener.open(request, timeout=15)
         self.assertEqual(error.exception.code, expected_status)
@@ -245,6 +252,85 @@ class GarmentRegistrationTests(unittest.TestCase):
         }, 400)
         _, detail = self.request_json(f"/api/garments/{saved['id']}")
         self.assertEqual(detail['name'], '원래 이름')
+
+    def test_teacher_can_delete_any_garment_and_its_files(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student', 'password': 'pw', 'name': 'Student'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': '학생이 올린 옷', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': '파랑', 'photoDataUrl': photo,
+        })
+        garment_dir = Path(self.temp_dir.name) / 'garments' / saved['id']
+        (garment_dir / 'product-photo.jpg').write_bytes(b'product photo')
+        (garment_dir / 'product-thumbnail.jpg').write_bytes(b'product thumbnail')
+
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
+        status, result = self.request_json(f"/api/garments/{saved['id']}", 'DELETE')
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result, {'ok': True})
+        self.assertFalse(garment_dir.exists())
+        _, garments = self.request_json('/api/garments')
+        self.assertNotIn(saved['id'], [item['id'] for item in garments])
+
+    def test_student_cannot_delete_even_their_own_garment(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student', 'password': 'pw', 'name': 'Student'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': '학생이 올린 옷', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': '파랑', 'photoDataUrl': photo,
+        })
+        garment_dir = Path(self.temp_dir.name) / 'garments' / saved['id']
+
+        self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 403)
+
+        self.assertTrue((garment_dir / 'photo.jpg').is_file())
+        _, garments = self.request_json('/api/garments')
+        self.assertIn(saved['id'], [item['id'] for item in garments])
+
+    def test_garment_delete_requires_teacher_login_and_existing_id(self):
+        self.request_error('/api/garments/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'DELETE', 401)
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
+        self.request_error('/api/garments/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'DELETE', 404)
+
+    def test_garment_delete_keeps_files_and_index_if_index_is_corrupt(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': '보호할 옷', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': '파랑', 'photoDataUrl': photo,
+        })
+        garment_dir = Path(self.temp_dir.name) / 'garments' / saved['id']
+        index_path = Path(self.temp_dir.name) / 'garments' / 'index.json'
+        index_path.write_text('{broken', encoding='utf-8')
+
+        self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 500)
+
+        self.assertTrue((garment_dir / 'photo.jpg').is_file())
+        self.assertEqual(index_path.read_text(encoding='utf-8'), '{broken')
+
+    def test_garment_delete_restores_index_and_directory_if_file_cleanup_fails(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': '복구할 옷', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': '파랑', 'photoDataUrl': photo,
+        })
+        garment_dir = Path(self.temp_dir.name) / 'garments' / saved['id']
+
+        with patch('server.shutil.rmtree', side_effect=OSError('simulated cleanup failure')):
+            self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 500)
+
+        self.assertTrue((garment_dir / 'photo.jpg').is_file())
+        _, garments = self.request_json('/api/garments')
+        self.assertIn(saved['id'], [item['id'] for item in garments])
 
     def test_saved_garment_rejects_missing_or_invalid_values(self):
         photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffjpeg').decode('ascii')

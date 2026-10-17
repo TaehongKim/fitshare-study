@@ -380,6 +380,17 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             except OSError:
                 return self.send_json(500, {'error': 'PC에 파일을 저장하지 못했어요. 디스크 여유 공간을 확인해 주세요.'})
 
+        def do_DELETE(self):
+            parts = self.api_parts()
+            if parts is None:
+                return self.send_json(404, {'error': '삭제할 API 주소가 없어요.'})
+            try:
+                if len(parts) == 2 and parts[0] == 'garments':
+                    return self.delete_garment(parts[1])
+                return self.send_json(404, {'error': '삭제할 API 주소가 없어요.'})
+            except OSError:
+                return self.send_json(500, {'error': '옷 사진과 정보를 삭제하지 못했어요. 저장 공간 권한을 확인해 주세요.'})
+
         def api_parts(self):
             path = urlsplit(self.path).path
             if not path.startswith('/api/'):
@@ -816,6 +827,55 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     garment_index.insert(0, list_item)
                 write_json_safely(garments_dir / 'index.json', garment_index)
             return self.send_json(200, updated)
+
+        def delete_garment(self, garment_id):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인한 뒤 옷을 삭제할 수 있어요.'})
+            if user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '선생님만 등록된 옷을 삭제할 수 있어요.'})
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '삭제할 옷을 찾지 못했어요.'})
+
+            with product_generation_locks_guard:
+                generation_lock = product_generation_locks.setdefault(garment_id, threading.Lock())
+            if not generation_lock.acquire(blocking=False):
+                return self.send_json(409, {'error': 'AI 사진을 만들고 있어 지금은 삭제할 수 없어요. 잠시 뒤 다시 시도해 주세요.'})
+
+            try:
+                garment_dir = garments_dir / garment_id
+                item_path = garment_dir / 'garment.json'
+                if not isinstance(read_json(item_path), dict):
+                    return self.send_json(404, {'error': '삭제할 옷을 찾지 못했어요.'})
+
+                index_path = garments_dir / 'index.json'
+                with lock:
+                    index = read_json(index_path)
+                    if index is None and index_path.exists():
+                        return self.send_json(500, {'error': '옷 목록을 읽지 못해 삭제할 수 없어요.'})
+                    if index is None:
+                        index = []
+                    if not isinstance(index, list):
+                        return self.send_json(500, {'error': '옷 목록을 읽지 못해 삭제할 수 없어요.'})
+                    updated_index = [item for item in index
+                                     if not isinstance(item, dict) or item.get('id') != garment_id]
+                    previous_index = index_path.read_bytes() if index_path.exists() else None
+                    deleting_dir = garments_dir / f'.deleting-{garment_id}-{uuid.uuid4().hex}'
+                    garment_dir.replace(deleting_dir)
+                    try:
+                        write_json_safely(index_path, updated_index)
+                        shutil.rmtree(deleting_dir)
+                    except OSError:
+                        if deleting_dir.exists() and not garment_dir.exists():
+                            deleting_dir.replace(garment_dir)
+                        if previous_index is None:
+                            index_path.unlink(missing_ok=True)
+                        else:
+                            write_bytes_safely(index_path, previous_index)
+                        raise
+                return self.send_json(200, {'ok': True})
+            finally:
+                generation_lock.release()
 
         def save_garment(self, payload):
             name = payload.get('name')
