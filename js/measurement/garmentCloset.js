@@ -57,8 +57,8 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
     image.alt = `${garment.name} 사진`;
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.width = 320;
-    image.height = 320;
+    image.width = 200;
+    image.height = 200;
     let showingOriginal = false;
     const togglePhoto = document.createElement('button');
     togglePhoto.type = 'button';

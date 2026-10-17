@@ -1,11 +1,12 @@
 ﻿import { state, markTabVisited } from './state.js';
 import { renderMeasurement } from '../modules/measurement.js?v=garment-registration-1';
 import { renderRecommendation } from '../modules/recommendation.js';
-import { renderRanking } from '../modules/ranking.js?v=ranking-5';
-import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-1';
+import { renderRanking } from '../modules/ranking.js?v=ranking-6';
+import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-2';
+import { openProfileDialog } from '../modules/profile.js?v=profile-2';
 import { createSchoolEntryResult } from './schoolEntry.js';
-import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-3';
-import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-2';
+import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-4';
+import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-3';
 
 const root = document.querySelector('#module-root');
 const tabs = document.querySelectorAll('.tab');
@@ -66,6 +67,9 @@ function setAuthMode(isSignup) {
   document.querySelector('#auth-tab-signup').setAttribute('aria-selected', String(isSignup));
   document.querySelector('#auth-name-row').hidden = !isSignup;
   document.querySelector('#auth-name').required = isSignup;
+  document.querySelector('#auth-role-row').hidden = !isSignup;
+  document.querySelector('#auth-teacher-code-row').hidden = !isSignup || document.querySelector('#auth-role').value !== 'teacher';
+  document.querySelector('#auth-teacher-code').required = isSignup && document.querySelector('#auth-role').value === 'teacher';
   document.querySelector('#auth-submit').textContent = isSignup ? '회원가입하고 시작하기' : '로그인';
   document.querySelector('#auth-password').autocomplete = isSignup ? 'new-password' : 'current-password';
   authMessage.textContent = '';
@@ -76,13 +80,19 @@ function showApp() {
   authPanel.hidden = Boolean(user);
   appMain.hidden = !user;
   userBox.hidden = !user;
-  document.querySelector('#user-name').textContent = user ? `${user.name} 님` : '';
+  document.querySelector('#user-name').textContent = user ? `🙂 ${user.name} 님 · 프로필` : '';
+  document.querySelector('#user-name').hidden = !user;
   if (user) selectTab(state.activeTab);
   else document.querySelector('#auth-username').focus();
 }
 
 document.querySelector('#auth-tab-login').addEventListener('click', () => setAuthMode(false));
 document.querySelector('#auth-tab-signup').addEventListener('click', () => setAuthMode(true));
+document.querySelector('#auth-role').addEventListener('change', () => {
+  const teacher = signupMode && document.querySelector('#auth-role').value === 'teacher';
+  document.querySelector('#auth-teacher-code-row').hidden = !teacher;
+  document.querySelector('#auth-teacher-code').required = teacher;
+});
 authForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submitButton = document.querySelector('#auth-submit');
@@ -92,7 +102,11 @@ authForm.addEventListener('submit', async (event) => {
   try {
     const username = document.querySelector('#auth-username').value;
     const password = document.querySelector('#auth-password').value;
-    if (signupMode) await signup(username, password, document.querySelector('#auth-name').value);
+    if (signupMode) {
+      const teacherCode = document.querySelector('#auth-role').value === 'teacher'
+        ? document.querySelector('#auth-teacher-code').value : '';
+      await signup(username, password, document.querySelector('#auth-name').value, teacherCode);
+    }
     else await login(username, password);
     authForm.reset();
     authMessage.textContent = '';
@@ -104,6 +118,7 @@ authForm.addEventListener('submit', async (event) => {
     submitButton.disabled = false;
   }
 });
+document.querySelector('#user-name').addEventListener('click', () => openProfileDialog());
 document.querySelector('#logout-button').addEventListener('click', async () => {
   await logout();
   schoolCloset.hidden = true;

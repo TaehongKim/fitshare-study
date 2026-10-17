@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="학교 의류 자원 순환을 돕는 FitShare 공통 화면" />
     <title>FitShare | 함께 입고, 함께 나누는 스마트 옷장</title>
-    <link rel="stylesheet" href="css/styles.css?v=auth-1" />
+    <link rel="stylesheet" href="css/styles.css?v=auth-2" />
     <link rel="stylesheet" href="css/measurement.css?v=school-closet-2" />
   </head>
   <body>
@@ -16,7 +16,7 @@
           <span><strong>FitShare</strong><small>학교 의류 순환 놀이터</small></span>
         </a>
         <div class="header-badge"><span class="status-dot"></span> 우리 학교 스마트 옷장</div>
-        <div id="user-box" class="user-box" hidden><span id="user-name"></span><button id="logout-button" type="button">로그아웃</button></div>
+        <div id="user-box" class="user-box" hidden><button id="user-name" class="user-name" type="button" title="내 프로필 보기" hidden></button><button id="logout-button" type="button">로그아웃</button></div>
       </header>
 
       <section id="auth-panel" class="auth-panel" aria-labelledby="auth-title" hidden>
@@ -28,9 +28,11 @@
           <button id="auth-tab-signup" type="button" role="tab" aria-selected="false">회원가입</button>
         </div>
         <form id="auth-form" autocomplete="on">
-          <label>아이디<input id="auth-username" name="username" maxlength="20" autocomplete="username" placeholder="영어 소문자, 숫자, _ (3~20글자)" required></label>
-          <label id="auth-name-row" hidden>이름(별명)<input id="auth-name" name="name" maxlength="10" autocomplete="nickname" placeholder="친구들에게 보이는 이름 (10글자까지)"></label>
-          <label>비밀번호<input id="auth-password" name="password" type="password" maxlength="64" autocomplete="current-password" placeholder="6글자 이상" required></label>
+          <label>아이디<input id="auth-username" name="username" maxlength="200" autocomplete="username" placeholder="아이디 (아무 글자나 OK)" required></label>
+          <label id="auth-name-row" hidden>이름(별명)<input id="auth-name" name="name" maxlength="200" autocomplete="nickname" placeholder="친구들에게 보이는 이름"></label>
+          <label id="auth-role-row" hidden>계정 종류<select id="auth-role" name="role"><option value="student">학생</option><option value="teacher">선생님</option></select></label>
+          <label id="auth-teacher-code-row" hidden>선생님 인증 코드<input id="auth-teacher-code" name="teacherCode" type="password" maxlength="200" autocomplete="off" placeholder="선생님 인증 코드를 입력해 주세요"></label>
+          <label>비밀번호<input id="auth-password" name="password" type="password" maxlength="200" autocomplete="current-password" placeholder="비밀번호" required></label>
           <button id="auth-submit" class="primary-action" type="submit">로그인</button>
           <p id="auth-message" class="auth-message" role="status" aria-live="polite"></p>
         </form>
@@ -75,6 +77,6 @@
 
       <footer class="site-footer"><p><strong>FitShare 개발팀</strong> · 초등 코딩 페스티벌 테스트 버전</p><p>아이디어를 나누고, 지구를 가볍게 🌱</p><p><a href="measure-dataset.html">실측 배경 비교 결과 보기</a></p></footer>
     </div>
-    <script type="module" src="js/app.js?v=auth-1"></script>
+    <script type="module" src="js/app.js?v=profile-2"></script>
   </body>
 </html>

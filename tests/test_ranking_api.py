@@ -14,6 +14,9 @@ import urllib.error
 
 import urllib.request
 
+import os
+from unittest.mock import patch
+
 from pathlib import Path
 
 
@@ -146,7 +149,7 @@ class RankingApiTests(unittest.TestCase):
 
         self.login('minsu', '민수')
 
-        self.assertEqual(self.call('/api/auth/me')[1]['user'], {'username': 'minsu', 'name': '민수'})
+        self.assertEqual(self.call('/api/auth/me')[1]['user'], {'username': 'minsu', 'name': '민수', 'role': 'student'})
 
         self.call('/api/auth/logout', {})
 
@@ -162,9 +165,9 @@ class RankingApiTests(unittest.TestCase):
 
         base = {'username': 'minsu', 'password': 'secret1', 'name': '민수'}
 
-        for change in ({'username': 'ab'}, {'username': 'Has Space'}, {'username': '한글아이디'}, {'password': '12345'},
+        for change in ({'username': ''}, {'username': '   '}, {'username': 'a' * 201}, {'password': ''},
 
-                       {'password': 'minsu'}, {'name': ''}, {'name': '열글자를넘는아주긴이름'}, {'password': 'x' * 65}):
+                       {'name': ''}, {'name': '가' * 201}, {'password': 'x' * 201}):
 
             self.assertEqual(self.call('/api/auth/signup', {**base, **change})[0], 400, change)
 
@@ -174,7 +177,160 @@ class RankingApiTests(unittest.TestCase):
 
         self.assertEqual(self.call('/api/auth/signup', {**base, 'username': 'other'})[0], 409)  # 같은 이름
 
+    def test_teacher_signup_requires_code_and_client_role_is_ignored(self):
+        self.assertEqual(self.call('/api/auth/signup', {'username': 'badteacher', 'password': 'pw',
+                                                        'name': 'Bad', 'role': 'teacher'})[1]['user']['role'], 'student')
+        status, teacher = self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw',
+                                                         'name': 'Teacher', 'role': 'student',
+                                                         'teacherCode': 'fitshare'})
+        self.assertEqual(status, 201)
+        self.assertEqual(teacher['user']['role'], 'teacher')
 
+    def test_teacher_account_routes_require_teacher_and_revoke_student_sessions(self):
+        self.assertEqual(self.call('/api/auth/teacher-code', {'newCode': 'changed'})[0], 401)
+        self.login('student', 'Student')
+        self.assertEqual(self.call('/api/auth/teacher-code', {'newCode': 'changed'})[0], 403)
+        self.call('/api/auth/logout', {})
+        status, teacher = self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                                        'teacherCode': 'fitshare'})
+        self.assertEqual((status, teacher['user']['role']), (201, 'teacher'))
+        student_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        login = urllib.request.Request(self.base_url + '/api/auth/login', data=json.dumps(
+            {'username': 'student', 'password': 'secret1'}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        student_opener.open(login).read()
+        self.assertEqual(self.call('/api/auth/teacher-code', {'newCode': 'changed'}), (200, {'ok': True}))
+        status, result = self.call('/api/auth/reset-student-password',
+                                   {'username': 'student', 'newPassword': 'reset'})
+        self.assertEqual((status, result), (200, {'ok': True}))
+        self.assertIsNone(json.loads(student_opener.open(self.base_url + '/api/auth/me').read())['user'])
+        self.assertEqual(self.call('/api/auth/signup', {'username': 'oldcode', 'password': 'pw', 'name': 'Old',
+                                                        'teacherCode': 'fitshare'})[0], 400)
+        status, new_teacher = self.call('/api/auth/signup', {'username': 'newcode', 'password': 'pw', 'name': 'New',
+                                                             'teacherCode': 'changed'})
+        self.assertEqual((status, new_teacher['user']['role']), (201, 'teacher'))
+
+    def add_saved_garment(self):
+        garment_id = 'a4831e58-d3d0-4e96-a7c8-b12734037a6c'
+        root = Path(self.temp_dir.name) / 'garments'
+        folder = root / garment_id
+        folder.mkdir(parents=True)
+        source = b'original photo stays unchanged'
+        cutout = b'\x89PNG\r\n\x1a\ntransparent cutout'
+        (folder / 'photo.jpg').write_bytes(source)
+        (folder / 'closet.png').write_bytes(cutout)
+        item = {'id': garment_id, 'name': 'Sample', 'maskPipelineVersion': server.GARMENT_MASK_PIPELINE_VERSION,
+                'photoUrl': f'/api/garments/{garment_id}/photo'}
+        (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
+        (root / 'index.json').write_text(json.dumps([item]), encoding='utf-8')
+        return garment_id, source
+
+    def test_product_photo_is_teacher_only_and_saved_separately(self):
+        garment_id, source = self.add_saved_garment()
+        self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 401)
+        for suffix in range(10):
+            self.assertEqual(self.call(f'/api/garments/missing-{suffix}/product-photo', {})[0], 401)
+        self.assertEqual(self.httpd.product_generation_locks, {})
+        self.login('student', 'Student')
+        self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 403)
+        self.call('/api/auth/logout', {})
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        generated = b'\x89PNG\r\n\x1a\nproduct photo'
+        with patch('tools.replicate_product_photo.generate_product_photo', return_value=(generated, 'image/png')) as generate:
+            with patch.dict(os.environ, {'REPLICATE_API_TOKEN': 'test-token', 'REPLICATE_PRODUCT_MODEL_VERSION': 'test-version'}):
+                status, response = self.call(f'/api/garments/{garment_id}/product-photo', {})
+                self.assertEqual(status, 201)
+                self.assertEqual(response['productPhotoUrl'], f'/api/garments/{garment_id}/product-photo')
+                status, cached = self.call(f'/api/garments/{garment_id}/product-photo', {})
+                self.assertEqual(status, 200)
+                self.assertEqual(cached, response)
+                request = urllib.request.Request(self.base_url + response['productPhotoUrl'])
+                with self.opener.open(request) as result:
+                    self.assertEqual(result.headers.get_content_type(), 'image/png')
+                    self.assertEqual(result.read(), generated)
+            self.assertEqual(generate.call_count, 1)
+        student_opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        signup = urllib.request.Request(self.base_url + '/api/auth/signup', data=json.dumps(
+            {'username': 'viewer', 'password': 'pw', 'name': 'Viewer'}).encode(),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        student_opener.open(signup).read()
+        with self.assertRaises(urllib.error.HTTPError) as denied:
+            student_opener.open(self.base_url + f'/api/garments/{garment_id}/product-photo')
+        self.assertEqual(denied.exception.code, 403)
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
+        self.assertTrue((folder / 'product-photo.png').exists())
+        saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        self.assertEqual(saved['photoUrl'], f'/api/garments/{garment_id}/photo')
+        self.assertEqual(saved['productPhotoFile'], 'product-photo.png')
+
+    def test_product_photo_reports_missing_server_configuration(self):
+        garment_id, _ = self.add_saved_garment()
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        with patch('server.get_replicate_api_token', return_value=''), patch(
+                'server.get_replicate_product_model_version', return_value=''):
+            status, result = self.call(f'/api/garments/{garment_id}/product-photo', {})
+        self.assertEqual(status, 503)
+        self.assertIn('서버에', result['error'])
+
+    def test_nonexistent_garments_do_not_allocate_generation_locks(self):
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        for suffix in range(10):
+            self.assertEqual(self.call(f'/api/garments/{suffix:08d}-0000-4000-8000-000000000000/product-photo', {})[0], 404)
+        self.assertEqual(self.httpd.product_generation_locks, {})
+
+    def test_malformed_garment_metadata_does_not_allocate_generation_lock(self):
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        garment_id = '00000000-0000-4000-8000-000000000010'
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        folder.mkdir(parents=True)
+        (folder / 'garment.json').write_text('[]', encoding='utf-8')
+        self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 404)
+        self.assertEqual(self.httpd.product_generation_locks, {})
+
+    def test_concurrent_product_photo_requests_generate_once(self):
+        garment_id, _ = self.add_saved_garment()
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        generated = b'\x89PNG\r\n\x1a\nproduct photo'
+        statuses = []
+
+        def slow_generate(*_args):
+            import time
+            time.sleep(0.25)
+            return generated, 'image/png'
+
+        def request_photo():
+            statuses.append(self.call(f'/api/garments/{garment_id}/product-photo', {})[0])
+
+        with patch('tools.replicate_product_photo.generate_product_photo', side_effect=slow_generate) as generate:
+            with patch.dict(os.environ, {'REPLICATE_API_TOKEN': 'test-token', 'REPLICATE_PRODUCT_MODEL_VERSION': 'test-version'}):
+                requests = [threading.Thread(target=request_photo) for _ in range(2)]
+                for request in requests:
+                    request.start()
+                for request in requests:
+                    request.join(timeout=5)
+            self.assertEqual(generate.call_count, 1)
+        self.assertEqual(sorted(statuses), [200, 201])
+
+    def test_failed_product_generation_leaves_source_and_record_untouched(self):
+        garment_id, source = self.add_saved_garment()
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        from tools.replicate_product_photo import ProductPhotoError
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', side_effect=ProductPhotoError('provider failed')):
+            status, result = self.call(f'/api/garments/{garment_id}/product-photo', {})
+        self.assertEqual(status, 502)
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
+        saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        self.assertNotIn('productPhotoFile', saved)
 
     def test_wrong_password_is_refused_and_locks_after_five_tries(self):
 
@@ -246,7 +402,7 @@ class RankingApiTests(unittest.TestCase):
 
         self.assertEqual(self.call('/api/garments')[1][0]['ownerName'], '지수')
 
-        self.assertEqual(self.call('/api/garments', {**garment, 'ownerName': '열글자를넘는아주긴이름'})[0], 400)
+        self.assertEqual(self.call('/api/garments', {**garment, 'ownerName': '가' * 201})[0], 400)
 
         update = {'name': '점퍼', 'category': 'top', 'garmentTypeId': 4, 'gender': 'unknown',
 
@@ -256,7 +412,7 @@ class RankingApiTests(unittest.TestCase):
 
         self.assertEqual((status, updated['ownerName']), (200, '하준'))
 
-        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {**update, 'ownerName': 'x' * 11})[0], 400)
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {**update, 'ownerName': 'x' * 201})[0], 400)
 
         legacy = {**garment}  # 올린 사람 없이 등록하는 예전 방식
 

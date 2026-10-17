@@ -13,10 +13,8 @@ import threading
 import time
 from pathlib import Path
 
-USERNAME_PATTERN = re.compile(r'^[a-z0-9_]{3,20}$')
-NICKNAME_MAX = 10
-PASSWORD_MIN = 6
-PASSWORD_MAX = 64
+# 데모라서 글자 수·글자 종류 제한을 없앴어요. 비어 있지만 않으면 되고, 너무 긴 입력만 막는 안전 상한(200글자)이 있어요.
+TEXT_MAX = 200
 MAX_ACCOUNTS = 1000
 ITERATIONS = 200_000
 SESSION_SECONDS = 30 * 24 * 60 * 60
@@ -59,34 +57,61 @@ class AccountStore:
     def __init__(self, directory, clock=time.time):
         self.accounts_path = Path(directory) / 'accounts.json'
         self.sessions_path = Path(directory) / 'sessions.json'
+        self.teacher_code_path = Path(directory) / 'teacher-code.json'
         self.clock = clock
         self.lock = threading.Lock()
         self.failures = {}  # 아이디 -> (틀린 횟수, 막힌 시각)
 
+    def _teacher_code_record(self):
+        record = _read(self.teacher_code_path, {})
+        if isinstance(record.get('salt'), str) and isinstance(record.get('hash'), str):
+            return record
+        if self.teacher_code_path.exists():
+            raise AuthError('교사 인증 설정을 읽지 못했어요. 서버 관리자에게 확인해 주세요.', 503)
+        salt = secrets.token_bytes(16)
+        record = {'salt': salt.hex(), 'hash': _hash_password('fitshare', salt)}
+        _write(self.teacher_code_path, record)
+        return record
+
+    def _teacher_code_matches(self, candidate):
+        record = self._teacher_code_record()
+        salt = bytes.fromhex(record['salt'])
+        return hmac.compare_digest(_hash_password(candidate, salt), record['hash'])
+
     def clean_username(self, username):
         value = username.strip().lower() if isinstance(username, str) else ''
-        if not USERNAME_PATTERN.match(value):
-            raise AuthError('아이디는 영어 소문자, 숫자, _ 로 3~20글자로 만들어 주세요.')
+        if not value:
+            raise AuthError('아이디를 입력해 주세요.')
+        if len(value) > TEXT_MAX:
+            raise AuthError(f'아이디는 {TEXT_MAX}글자까지 쓸 수 있어요.')
         return value
 
     def clean_nickname(self, nickname):
         value = re.sub(r'\s+', ' ', nickname).strip() if isinstance(nickname, str) else ''
         if not value:
             raise AuthError('이름(별명)을 입력해 주세요.')
-        if len(value) > NICKNAME_MAX:
-            raise AuthError(f'이름(별명)은 {NICKNAME_MAX}글자까지 쓸 수 있어요.')
+        if len(value) > TEXT_MAX:
+            raise AuthError(f'이름(별명)은 {TEXT_MAX}글자까지 쓸 수 있어요.')
         return value
 
-    def signup(self, username, password, nickname):
+    def signup(self, username, password, nickname, teacher_code=None):
         username = self.clean_username(username)
         nickname = self.clean_nickname(nickname)
-        if not isinstance(password, str) or not PASSWORD_MIN <= len(password) <= PASSWORD_MAX:
-            raise AuthError(f'비밀번호는 {PASSWORD_MIN}~{PASSWORD_MAX}글자로 만들어 주세요.')
-        if password.lower() == username:
-            raise AuthError('비밀번호를 아이디와 다르게 만들어 주세요.')
+        if not isinstance(password, str) or not password:
+            raise AuthError('비밀번호를 입력해 주세요.')
+        if len(password) > TEXT_MAX:
+            raise AuthError(f'비밀번호는 {TEXT_MAX}글자까지 쓸 수 있어요.')
         salt = secrets.token_bytes(16)
         password_hash = _hash_password(password, salt)
         with self.lock:
+            role = 'student'
+            if teacher_code is not None:
+                if not isinstance(teacher_code, str) or not teacher_code.strip() or len(teacher_code) > TEXT_MAX:
+                    raise AuthError('교사 인증 코드를 확인해 주세요.')
+                teacher_code = teacher_code.strip()
+                if not self._teacher_code_matches(teacher_code):
+                    raise AuthError('교사 인증 코드가 맞지 않아요.')
+                role = 'teacher'
             accounts = _read(self.accounts_path, {})
             if username in accounts:
                 raise AuthError('이미 있는 아이디예요. 다른 아이디를 써 주세요.', 409)
@@ -94,15 +119,16 @@ class AccountStore:
                 raise AuthError('이미 있는 이름(별명)이에요. 다른 이름을 써 주세요.', 409)
             if len(accounts) >= MAX_ACCOUNTS:
                 raise AuthError('가입할 수 있는 사람 수가 가득 찼어요.', 409)
-            accounts[username] = {'name': nickname, 'salt': salt.hex(), 'hash': password_hash, 'createdAt': int(self.clock())}
+            accounts[username] = {'name': nickname, 'salt': salt.hex(), 'hash': password_hash,
+                                  'createdAt': int(self.clock()), 'role': role}
             _write(self.accounts_path, accounts)
-        return {'username': username, 'name': nickname}
+        return {'username': username, 'name': nickname, 'role': role}
 
     def login(self, username, password):
         # 틀린 이유(아이디/비밀번호)를 알려 주지 않아서 아이디 존재 여부를 추측하기 어렵게 해요.
         wrong = AuthError('아이디 또는 비밀번호가 맞지 않아요.', 401)
         username = username.strip().lower() if isinstance(username, str) else ''
-        if not isinstance(password, str) or len(password) > PASSWORD_MAX:
+        if not isinstance(password, str) or len(password) > TEXT_MAX:
             raise wrong
         now = self.clock()
         with self.lock:
@@ -119,7 +145,7 @@ class AccountStore:
                 self.failures[username] = (0, now + LOCK_SECONDS) if fails >= LOCK_AFTER_FAILS else (fails, 0)
                 raise wrong
             self.failures.pop(username, None)
-        return {'username': username, 'name': account['name']}
+        return {'username': username, 'name': account['name'], 'role': account.get('role', 'student')}
 
     def create_session(self, username):
         token = secrets.token_urlsafe(32)
@@ -138,7 +164,43 @@ class AccountStore:
             if not session or session.get('expires', 0) <= self.clock():
                 return None
             account = _read(self.accounts_path, {}).get(session.get('username'))
-        return {'username': session['username'], 'name': account['name']} if account else None
+        return {'username': session['username'], 'name': account['name'], 'role': account.get('role', 'student')} if account else None
+
+    def change_teacher_code(self, actor_username, new_code):
+        actor = actor_username.strip().lower() if isinstance(actor_username, str) else ''
+        if not isinstance(new_code, str) or not new_code.strip() or len(new_code) > TEXT_MAX:
+            raise AuthError('새 교사 인증 코드를 1~200글자로 입력해 주세요.')
+        with self.lock:
+            accounts = _read(self.accounts_path, {})
+            if accounts.get(actor, {}).get('role', 'student') != 'teacher':
+                raise AuthError('교사만 인증 코드를 바꿀 수 있어요.', 403)
+            salt = secrets.token_bytes(16)
+            _write(self.teacher_code_path, {'salt': salt.hex(), 'hash': _hash_password(new_code.strip(), salt)})
+
+    def reset_student_password(self, actor_username, student_username, new_password):
+        actor = actor_username.strip().lower() if isinstance(actor_username, str) else ''
+        target = student_username.strip().lower() if isinstance(student_username, str) else ''
+        if not isinstance(new_password, str) or not new_password.strip() or len(new_password) > TEXT_MAX:
+            raise AuthError('새 비밀번호를 1~200글자로 입력해 주세요.')
+        with self.lock:
+            accounts = _read(self.accounts_path, {})
+            actor_record = accounts.get(actor)
+            target_record = accounts.get(target)
+            if not actor_record or actor_record.get('role', 'student') != 'teacher':
+                raise AuthError('교사만 학생 비밀번호를 바꿀 수 있어요.', 403)
+            if not target_record or target_record.get('role', 'student') != 'student':
+                raise AuthError('비밀번호를 바꿀 학생 아이디를 찾지 못했어요.', 404)
+            salt = secrets.token_bytes(16)
+            target_record['salt'] = salt.hex()
+            target_record['hash'] = _hash_password(new_password, salt)
+            accounts[target] = target_record
+            sessions = _read(self.sessions_path, {})
+            active = {key: item for key, item in sessions.items() if item.get('username') != target}
+            if len(active) != len(sessions):
+                _write(self.sessions_path, active)
+            # If persisting the password fails, the old password still works,
+            # but every existing session has already been revoked.
+            _write(self.accounts_path, accounts)
 
     def destroy_session(self, token):
         if not isinstance(token, str) or not token:
