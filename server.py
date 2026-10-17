@@ -599,6 +599,16 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             self.wfile.write(photo)
 
         def create_garment_product_photo(self, garment_id):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '濡쒓렇?명빐 二쇱꽭??'})
+            if user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '援먯궗留?AI ?곹뭹 ?ъ쭊??留뚮뱾 ???덉뼱??'})
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '???ъ쭊??李얠? 紐삵뻽?댁슂.'})
+            garment_dir = garments_dir / garment_id
+            if not read_json(garment_dir / 'garment.json'):
+                return self.send_json(404, {'error': '?깅줉???룹쓣 李얠? 紐삵뻽?댁슂.'})
             with product_generation_locks_guard:
                 generation_lock = product_generation_locks.setdefault(garment_id, threading.Lock())
             with generation_lock:
@@ -1168,6 +1178,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
 
     httpd = ThreadingHTTPServer((host, port), FitShareHandler)
     httpd.garment_metadata_lock = lock
+    httpd.product_generation_locks = product_generation_locks
     return httpd
 
 

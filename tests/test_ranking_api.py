@@ -228,6 +228,9 @@ class RankingApiTests(unittest.TestCase):
     def test_product_photo_is_teacher_only_and_saved_separately(self):
         garment_id, source = self.add_saved_garment()
         self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 401)
+        for suffix in range(10):
+            self.assertEqual(self.call(f'/api/garments/missing-{suffix}/product-photo', {})[0], 401)
+        self.assertEqual(self.httpd.product_generation_locks, {})
         self.login('student', 'Student')
         self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 403)
         self.call('/api/auth/logout', {})
@@ -271,6 +274,13 @@ class RankingApiTests(unittest.TestCase):
             status, result = self.call(f'/api/garments/{garment_id}/product-photo', {})
         self.assertEqual(status, 503)
         self.assertIn('서버에', result['error'])
+
+    def test_nonexistent_garments_do_not_allocate_generation_locks(self):
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        for suffix in range(10):
+            self.assertEqual(self.call(f'/api/garments/{suffix:08d}-0000-4000-8000-000000000000/product-photo', {})[0], 404)
+        self.assertEqual(self.httpd.product_generation_locks, {})
 
     def test_concurrent_product_photo_requests_generate_once(self):
         garment_id, _ = self.add_saved_garment()
