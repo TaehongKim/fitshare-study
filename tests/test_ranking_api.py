@@ -282,6 +282,16 @@ class RankingApiTests(unittest.TestCase):
             self.assertEqual(self.call(f'/api/garments/{suffix:08d}-0000-4000-8000-000000000000/product-photo', {})[0], 404)
         self.assertEqual(self.httpd.product_generation_locks, {})
 
+    def test_malformed_garment_metadata_does_not_allocate_generation_lock(self):
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        garment_id = '00000000-0000-4000-8000-000000000010'
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        folder.mkdir(parents=True)
+        (folder / 'garment.json').write_text('[]', encoding='utf-8')
+        self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 404)
+        self.assertEqual(self.httpd.product_generation_locks, {})
+
     def test_concurrent_product_photo_requests_generate_once(self):
         garment_id, _ = self.add_saved_garment()
         self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
