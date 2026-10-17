@@ -20,7 +20,7 @@
         <ol class="registration-steps">
           <li><b>1</b><span><strong>옷을 펴요</strong><small>ChArUco 교차점 매트 위에 한 벌만 놓아요.</small></span></li>
           <li><b>2</b><span><strong>사진을 찍어요</strong><small>매트 바깥 표식과 옷 전체가 보이게 찍어요.</small></span></li>
-          <li><b>3</b><span><strong>확인하고 저장해요</strong><small>종류와 숫자를 고친 뒤 옷장에 넣어요.</small></span></li>
+          <li><b>3</b><span><strong>확인하고 저장해요</strong><small>종류와 숫자를 고쳐 등록하면 AI 상품 사진도 자동으로 만들어요.</small></span></li>
         </ol>
         <label class="registration-type-label" for="background-id">사진에 놓인 배경을 골라 주세요
           <select id="background-id" required>
@@ -74,6 +74,7 @@
             <option value="" selected disabled>직접 골라 주세요</option><option value="male">남성용</option><option value="female">여성용</option><option value="unisex">공용</option><option value="unknown">잘 모르겠어요</option>
           </select></label>
           <p class="registration-help">옷 사진만으로 남성용·여성용을 정확히 나눌 수는 없어요. 옷의 표기를 보거나 어른과 함께 골라 주세요.</p>
+          <p class="registration-help">등록 후 AI 상품 사진을 자동으로 만들어요. 생성이 끝날 때까지 이 화면을 열어 두세요. AI 사진 생성에 실패해도 옷과 실측값은 저장돼요.</p>
           <button class="primary-action" type="submit">이 옷을 저장하기</button>
           <p id="save-status" class="registration-status" role="status"></p>
         </form>
@@ -88,6 +89,6 @@
     </main>
     <footer class="measurement-footer">사진은 FitShare를 실행하는 서버 PC에 저장돼요. 선생님과 함께 사용해요.</footer>
   </div>
-  <script type="module" src="../js/measurement/register.js?v=registration-camera-1"></script>
+  <script type="module" src="../js/measurement/register.js?v=registration-product-photo-1"></script>
 </body>
 </html>

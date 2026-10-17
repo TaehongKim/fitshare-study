@@ -27,7 +27,6 @@ class TeacherUiTests(unittest.TestCase):
         self.assertIn("getUser()?.role === 'teacher'", detail)
         self.assertIn('AI 상품 사진 만들기', detail)
         self.assertIn("/api/garments/${id}/photo", detail)
-        self.assertIn('requestApi(`/api/garments/${id}/product-photo`, {})', detail)
 
 
 if __name__ == '__main__':

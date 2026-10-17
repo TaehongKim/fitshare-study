@@ -283,6 +283,192 @@ class RankingApiTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertIn('서버에', result['error'])
 
+    def prepare_saved_product_photo(self):
+        garment_id, source = self.add_saved_garment()
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        old_photo = b'previous AI photo'
+        (folder / 'product-photo.png').write_bytes(old_photo)
+        (folder / 'product-thumbnail.jpg').write_bytes(b'previous thumbnail')
+        item = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        item.update(productPhotoFile='product-photo.png',
+                    productPhotoUrl=f'/api/garments/{garment_id}/product-photo',
+                    productPhotoGeneratedAt='2026-01-01T00:00:00+00:00')
+        (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
+        (folder.parent / 'index.json').write_text(json.dumps([item]), encoding='utf-8')
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        return garment_id, folder, source, old_photo
+
+    def test_student_can_generate_own_first_photo_but_not_regenerate_or_generate_for_others(self):
+        garment_id, _ = self.add_saved_garment()
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        item = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        item.update(ownerName='Student', ownerUsername='student')
+        (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
+        self.login('student', 'Student')
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', return_value=(b'first photo', 'image/png')) as generate:
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 201)
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 200)
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})[0], 403)
+            self.call('/api/auth/logout', {})
+            self.login('another', 'Another')
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 403)
+            self.assertEqual(generate.call_count, 1)
+        self.assertEqual((folder / 'product-photo.png').read_bytes(), b'first photo')
+
+    def test_teacher_edits_other_students_clothes_without_taking_ownership(self):
+        self.login('student', 'Student')
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xfforiginal').decode('ascii')
+        payload = {'name': 'Shirt', 'category': 'top', 'garmentTypeId': 2, 'gender': 'unknown',
+                   'lengthCm': 50, 'widthCm': 45, 'colorName': 'White', 'photoDataUrl': photo}
+        status, saved = self.call('/api/garments', payload)
+        self.assertEqual(status, 201)
+        self.assertEqual(saved.get('ownerUsername'), 'student')
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {'name': 'My shirt'})[0], 200)
+        self.call('/api/auth/logout', {})
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {'name': 'Guest edit'})[0], 401)
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        status, updated = self.call(f"/api/garments/{saved['id']}/update", {'name': 'Reviewed shirt'})
+        self.assertEqual(status, 200)
+        self.assertEqual((updated['name'], updated['ownerName'], updated['ownerUsername']),
+                         ('Reviewed shirt', 'Student', 'student'))
+        self.call('/api/auth/logout', {})
+        self.login('other', 'Other')
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {'name': 'Stolen'})[0], 403)
+        self.call('/api/auth/logout', {})
+        self.call('/api/auth/login', {'username': 'student', 'password': 'secret1'})
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {'name': 'Still mine'})[0], 200)
+
+    def test_teacher_can_regenerate_saved_photo_and_invalidate_thumbnail(self):
+        garment_id, folder, source, _ = self.prepare_saved_product_photo()
+        new_photo = b'new AI photo'
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', return_value=(new_photo, 'image/png')) as generate:
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {})[0], 200)
+            generate.assert_not_called()
+            status, result = self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})
+        self.assertEqual(status, 201)
+        self.assertEqual((folder / 'product-photo.png').read_bytes(), new_photo)
+        self.assertFalse((folder / 'product-thumbnail.jpg').exists())
+        self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
+        self.assertEqual(generate.call_args.args[0], (folder / 'product-cutout.png').read_bytes())
+        saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        indexed = json.loads((folder.parent / 'index.json').read_text(encoding='utf-8'))[0]
+        self.assertNotEqual(saved['productPhotoGeneratedAt'], '2026-01-01T00:00:00+00:00')
+        self.assertEqual(saved['productPhotoGeneratedAt'], result['generatedAt'])
+        self.assertEqual(saved, indexed)
+        with self.opener.open(self.base_url + result['productPhotoUrl']) as response:
+            self.assertEqual(response.read(), new_photo)
+            self.assertEqual(response.headers['Cache-Control'], 'private, no-cache')
+
+    def test_failed_regeneration_preserves_existing_photo_thumbnail_and_metadata(self):
+        garment_id, folder, _, old_photo = self.prepare_saved_product_photo()
+        before = {path.name: path.read_bytes() for path in folder.iterdir() if path.is_file()}
+        from tools.replicate_product_photo import ProductPhotoError
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', side_effect=ProductPhotoError('provider failed')):
+            status, result = self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})
+        self.assertEqual(status, 502)
+        self.assertEqual(result['error'], 'provider failed')
+        self.assertEqual({path.name: path.read_bytes() for path in folder.iterdir() if path.is_file()}, before)
+        with self.opener.open(self.base_url + f'/api/garments/{garment_id}/product-photo') as response:
+            self.assertEqual(response.read(), old_photo)
+
+    def test_regeneration_storage_failure_restores_previous_photo_and_record(self):
+        garment_id, folder, _, _ = self.prepare_saved_product_photo()
+        before = {path.name: path.read_bytes() for path in folder.iterdir() if path.is_file()}
+        original_write = server.write_json_safely
+
+        def fail_metadata_write(path, value):
+            if path == folder / 'garment.json':
+                raise OSError('disk write failed')
+            return original_write(path, value)
+
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', return_value=(b'new image', 'image/png')), patch(
+                'server.write_json_safely', side_effect=fail_metadata_write):
+            status, _ = self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})
+        self.assertEqual(status, 500)
+        self.assertEqual({path.name: path.read_bytes() for path in folder.iterdir() if path.is_file()}, before)
+
+    def test_regeneration_rejects_students_and_invalid_flags(self):
+        garment_id, folder, _, old_photo = self.prepare_saved_product_photo()
+        with patch('tools.replicate_product_photo.generate_product_photo') as generate:
+            for value in ('true', 1, None, [], {}):
+                self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': value})[0], 400)
+            self.call('/api/auth/logout', {})
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})[0], 401)
+            self.login('student', 'Student')
+            self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})[0], 403)
+            generate.assert_not_called()
+        self.assertEqual((folder / 'product-photo.png').read_bytes(), old_photo)
+
+    def test_edit_during_generation_does_not_discard_new_photo_metadata(self):
+        garment_id, folder, _, _ = self.prepare_saved_product_photo()
+        entered, proceed = threading.Event(), threading.Event()
+        results = []
+        original_validate = server.valid_measurement
+
+        def validate(value):
+            if threading.current_thread().name != 'MainThread' and not entered.is_set():
+                entered.set()
+                if not proceed.wait(timeout=5):
+                    raise RuntimeError('test edit did not resume')
+            return original_validate(value)
+
+        update = {'name': 'Edited shirt', 'category': 'top', 'garmentTypeId': 2, 'gender': 'unknown',
+                  'lengthCm': 50, 'widthCm': 45, 'colorName': 'White'}
+        with patch('server.valid_measurement', side_effect=validate), patch(
+                'server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', return_value=(b'new photo', 'image/png')):
+            edit = threading.Thread(target=lambda: results.append(
+                self.call(f'/api/garments/{garment_id}/update', update)))
+            edit.start()
+            try:
+                self.assertTrue(entered.wait(timeout=3))
+                status, generated = self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})
+                self.assertEqual(status, 201)
+            finally:
+                proceed.set()
+                edit.join(timeout=5)
+        self.assertEqual(results[0][0], 200)
+        saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        self.assertEqual(saved['productPhotoGeneratedAt'], generated['generatedAt'])
+        self.assertEqual(saved['name'], 'Edited shirt')
+
+    def test_regeneration_rejects_duplicate_request_while_generation_is_running(self):
+        garment_id, _, _, _ = self.prepare_saved_product_photo()
+        started, finish = threading.Event(), threading.Event()
+        statuses = []
+
+        def generate_photo(*_):
+            started.set()
+            if not finish.wait(timeout=5):
+                raise RuntimeError('test generation did not finish')
+            return b'updated AI photo', 'image/png'
+
+        with patch('server.get_replicate_api_token', return_value='test-token'), patch(
+                'server.get_replicate_product_model_version', return_value='test-version'), patch(
+                'tools.replicate_product_photo.generate_product_photo', side_effect=generate_photo) as generate:
+            first = threading.Thread(target=lambda: statuses.append(
+                self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})[0]))
+            first.start()
+            try:
+                self.assertTrue(started.wait(timeout=3), 'saved photo was returned instead of regenerated')
+                self.assertEqual(self.call(f'/api/garments/{garment_id}/product-photo', {'regenerate': True})[0], 409)
+            finally:
+                finish.set()
+                first.join(timeout=5)
+            self.assertEqual(statuses, [201])
+            self.assertEqual(generate.call_count, 1)
+
     def test_nonexistent_garments_do_not_allocate_generation_locks(self):
         self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
                                        'teacherCode': 'fitshare'})
@@ -416,14 +602,18 @@ class RankingApiTests(unittest.TestCase):
 
                   'lengthCm': 50, 'widthCm': 45, 'colorName': '파랑', 'ownerName': '하준'}
 
+        self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", update)[0], 401)
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
         status, updated = self.call(f"/api/garments/{saved['id']}/update", update)
 
-        self.assertEqual((status, updated['ownerName']), (200, '하준'))
+        self.assertEqual((status, updated['ownerName']), (200, '지수'))
 
         self.assertEqual(self.call(f"/api/garments/{saved['id']}/update", {**update, 'ownerName': 'x' * 201})[0], 400)
 
         legacy = {**garment}  # 올린 사람 없이 등록하는 예전 방식
 
+        self.call('/api/auth/logout', {})
         self.assertEqual(self.call('/api/garments', legacy)[1].get('ownerName'), '')
 
 

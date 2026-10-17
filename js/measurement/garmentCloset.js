@@ -1,4 +1,6 @@
 // 메인 화면과 등록 화면이 같은 옷 카드, 페이지 나누기, 정보 수정 기능을 씁니다.
+import { getUser } from '../auth.js?v=auth-2';
+
 const PAGE_SIZE = 10;
 const GARMENT_TYPES = [
   { id: 1, name: '상의 외투' },
@@ -98,21 +100,26 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
     size.textContent = `길이 ${garment.lengthCm}cm · 너비 ${garment.widthCm}cm`;
     const actions = document.createElement('div');
     actions.className = 'closet-card-actions';
-    const edit = document.createElement('button');
-    edit.type = 'button';
-    edit.className = 'closet-edit-action';
-    edit.textContent = '정보 수정';
-    edit.addEventListener('click', () => openEditDialog(garment));
-    actions.append(togglePhoto, edit);
+    actions.append(togglePhoto);
+    const user = getUser();
+    const mine = user && (garment.ownerUsername ? garment.ownerUsername === user.username : garment.ownerName === user.name);
+    if (user && (user.role === 'teacher' || mine)) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'closet-edit-action';
+      edit.textContent = '정보 수정';
+      edit.addEventListener('click', () => openEditDialog(garment));
+      actions.append(edit);
+    }
     card.append(image, title, kind, size, actions);
     if (typeof onOpen === 'function') {
       card.classList.add('is-openable');
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
       card.setAttribute('aria-label', `${garment.name} 자세히 보기`);
-      const open = (event) => { if (!event.target.closest('.closet-card-actions')) onOpen(garment); };
+      const open = (event) => { if (!event.target.closest('.closet-card-actions')) onOpen(garment, reload); };
       card.addEventListener('click', open);
-      card.addEventListener('keydown', (event) => { if ((event.key === 'Enter' || event.key === ' ') && event.target === card) { event.preventDefault(); onOpen(garment); } });
+      card.addEventListener('keydown', (event) => { if ((event.key === 'Enter' || event.key === ' ') && event.target === card) { event.preventDefault(); onOpen(garment, reload); } });
     }
     return card;
   }

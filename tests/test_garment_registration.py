@@ -1,5 +1,6 @@
 import base64
 import json
+import http.cookiejar
 import tempfile
 import threading
 import unittest
@@ -17,6 +18,7 @@ class GarmentRegistrationTests(unittest.TestCase):
         self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
         self.thread.start()
         self.base_url = f'http://127.0.0.1:{self.httpd.server_address[1]}'
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
     def tearDown(self):
         self.httpd.shutdown()
@@ -29,7 +31,7 @@ class GarmentRegistrationTests(unittest.TestCase):
         request = urllib.request.Request(self.base_url + path, data=body, method=method)
         if body is not None:
             request.add_header('Content-Type', 'application/json')
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with self.opener.open(request, timeout=15) as response:
             return response.status, json.loads(response.read().decode('utf-8'))
 
     def post_error(self, path, payload, expected_status):
@@ -37,7 +39,7 @@ class GarmentRegistrationTests(unittest.TestCase):
         request = urllib.request.Request(self.base_url + path, data=body, method='POST')
         request.add_header('Content-Type', 'application/json')
         with self.assertRaises(urllib.error.HTTPError) as error:
-            urllib.request.urlopen(request, timeout=15)
+            self.opener.open(request, timeout=15)
         self.assertEqual(error.exception.code, expected_status)
 
     def test_m4_sample_photo_returns_measurements_color_and_review_fields(self):
@@ -208,6 +210,8 @@ class GarmentRegistrationTests(unittest.TestCase):
         self.assertLessEqual(max(decoded.shape[:2]), 200)
 
     def test_garment_information_can_be_updated_without_changing_the_photo(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
         original = b'\xff\xd8\xffsample original'
         photo = 'data:image/jpeg;base64,' + base64.b64encode(original).decode('ascii')
         _, saved = self.request_json('/api/garments', 'POST', {
@@ -227,6 +231,8 @@ class GarmentRegistrationTests(unittest.TestCase):
             self.assertEqual(response.read(), original)
 
     def test_garment_information_update_rejects_invalid_fields(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
         original = b'\xff\xd8\xffsample original'
         photo = 'data:image/jpeg;base64,' + base64.b64encode(original).decode('ascii')
         _, saved = self.request_json('/api/garments', 'POST', {

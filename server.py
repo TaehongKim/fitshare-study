@@ -33,6 +33,13 @@ SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
 PRODUCT_MASK_PIPELINE_VERSION = 'yolo-sam-vit-b-v1'
 
 
+def owns_garment(user, garment):
+    owner_username = garment.get('ownerUsername')
+    if owner_username:
+        return owner_username == user['username']
+    return bool(garment.get('ownerName')) and garment['ownerName'] == user['name']
+
+
 def load_env_file(path=None, environ=None):
     """Load simple KEY=VALUE settings from .env without replacing shell settings."""
     target = os.environ if environ is None else environ
@@ -364,7 +371,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'update':
                     return self.update_garment(parts[1], payload)
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'product-photo':
-                    return self.create_garment_product_photo(parts[1])
+                    return self.create_garment_product_photo(parts[1], payload)
                 if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'records':
                     return self.save_record(parts[1], payload)
                 if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'complete':
@@ -630,32 +637,40 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             self.send_response(200)
             self.send_header('Content-Type', mime)
             self.send_header('Content-Length', str(len(photo)))
-            self.send_header('Cache-Control', 'private, max-age=3600')
+            self.send_header('Cache-Control', 'private, no-cache')
             self.end_headers()
             self.wfile.write(photo)
 
-        def create_garment_product_photo(self, garment_id):
-            user = self.current_user()
-            if user is None:
-                return self.send_json(401, {'error': '濡쒓렇?명빐 二쇱꽭??'})
-            if user.get('role') != 'teacher':
-                return self.send_json(403, {'error': '援먯궗留?AI ?곹뭹 ?ъ쭊??留뚮뱾 ???덉뼱??'})
-            if not valid_garment_record_id(garment_id):
-                return self.send_json(404, {'error': '???ъ쭊??李얠? 紐삵뻽?댁슂.'})
-            garment_dir = garments_dir / garment_id
-            if not isinstance(read_json(garment_dir / 'garment.json'), dict):
-                return self.send_json(404, {'error': '?깅줉???룹쓣 李얠? 紐삵뻽?댁슂.'})
-            with product_generation_locks_guard:
-                generation_lock = product_generation_locks.setdefault(garment_id, threading.Lock())
-            with generation_lock:
-                return self._create_garment_product_photo_locked(garment_id)
-
-        def _create_garment_product_photo_locked(self, garment_id):
+        def create_garment_product_photo(self, garment_id, payload):
             user = self.current_user()
             if user is None:
                 return self.send_json(401, {'error': '로그인해 주세요.'})
-            if user.get('role') != 'teacher':
-                return self.send_json(403, {'error': '교사만 AI 상품 사진을 만들 수 있어요.'})
+            regenerate = payload.get('regenerate', False)
+            if not isinstance(regenerate, bool):
+                return self.send_json(400, {'error': '재생성 여부는 true 또는 false로 보내 주세요.'})
+            if regenerate and user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '선생님만 AI 사진을 다시 만들 수 있어요.'})
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
+            garment_dir = garments_dir / garment_id
+            item = read_json(garment_dir / 'garment.json')
+            if not isinstance(item, dict):
+                return self.send_json(404, {'error': '등록된 옷을 찾지 못했어요.'})
+            if user.get('role') != 'teacher' and not owns_garment(user, item):
+                return self.send_json(403, {'error': '내가 등록한 옷의 AI 사진만 처음 만들 수 있어요.'})
+            with product_generation_locks_guard:
+                generation_lock = product_generation_locks.setdefault(garment_id, threading.Lock())
+            if not generation_lock.acquire(blocking=not regenerate):
+                return self.send_json(409, {'error': '이미 이 옷의 AI 사진을 만들고 있어요. 잠시 기다려 주세요.'})
+            try:
+                return self._create_garment_product_photo_locked(garment_id, regenerate=regenerate)
+            finally:
+                generation_lock.release()
+
+        def _create_garment_product_photo_locked(self, garment_id, *, regenerate=False):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인해 주세요.'})
             if not valid_garment_record_id(garment_id):
                 return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
             garment_dir = garments_dir / garment_id
@@ -663,11 +678,15 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             item = read_json(item_path)
             if not item:
                 return self.send_json(404, {'error': '등록된 옷을 찾지 못했어요.'})
-            if item.get('productPhotoFile') in {'product-photo.png', 'product-photo.jpg', 'product-photo.webp'}:
+            if user.get('role') != 'teacher' and (regenerate or not owns_garment(user, item)):
+                return self.send_json(403, {'error': '내가 등록한 옷의 AI 사진만 처음 만들 수 있어요.'})
+            if not regenerate and item.get('productPhotoFile') in {'product-photo.png', 'product-photo.jpg', 'product-photo.webp'}:
                 image_path = garment_dir / item['productPhotoFile']
                 if image_path.is_file():
                     return self.send_json(200, {'productPhotoUrl': f'/api/garments/{garment_id}/product-photo',
                                                 'generatedAt': item.get('productPhotoGeneratedAt')})
+            if item.get('productPhotoGeneratedAt') and user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '저장된 AI 사진이 없어요. 선생님에게 재생성을 요청해 주세요.'})
             token = get_replicate_api_token()
             model_version = get_replicate_product_model_version()
             if not token or not model_version:
@@ -698,19 +717,35 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             temporary = garment_dir / f'.{filename}.{uuid.uuid4().hex}.tmp'
             try:
                 temporary.write_bytes(photo)
-                temporary.replace(garment_dir / filename)
                 with lock:
-                    item = read_json(item_path) or item
-                    item['productPhotoFile'] = filename
-                    item['productPhotoUrl'] = f'/api/garments/{garment_id}/product-photo'
-                    item['productPhotoGeneratedAt'] = now_text()
-                    write_json_safely(item_path, item)
-                    index = read_json(garments_dir / 'index.json') or []
-                    for index_item in index:
-                        if isinstance(index_item, dict) and index_item.get('id') == garment_id:
-                            index_item.update({key: item[key] for key in ('productPhotoFile', 'productPhotoUrl', 'productPhotoGeneratedAt')})
-                            break
-                    write_json_safely(garments_dir / 'index.json', index)
+                    index_path = garments_dir / 'index.json'
+                    destination = garment_dir / filename
+                    previous = {path: path.read_bytes() if path.exists() else None
+                                for path in (destination, item_path, index_path)}
+                    try:
+                        temporary.replace(destination)
+                        item = read_json(item_path) or item
+                        item['productPhotoFile'] = filename
+                        item['productPhotoUrl'] = f'/api/garments/{garment_id}/product-photo'
+                        item['productPhotoGeneratedAt'] = datetime.now(timezone.utc).isoformat(timespec='microseconds')
+                        write_json_safely(item_path, item)
+                        index = read_json(index_path) or []
+                        for index_item in index:
+                            if isinstance(index_item, dict) and index_item.get('id') == garment_id:
+                                index_item.update({key: item[key] for key in ('productPhotoFile', 'productPhotoUrl', 'productPhotoGeneratedAt')})
+                                break
+                        write_json_safely(index_path, index)
+                        (garment_dir / 'product-thumbnail.jpg').unlink(missing_ok=True)
+                    except OSError:
+                        for path, content in previous.items():
+                            try:
+                                if content is None:
+                                    path.unlink(missing_ok=True)
+                                else:
+                                    write_bytes_safely(path, content)
+                            except OSError as error:
+                                self.log_error('Could not restore product photo record %s: %s', garment_id, error)
+                        raise
             except OSError:
                 temporary.unlink(missing_ok=True)
                 return self.send_json(500, {'error': '생성 사진을 PC에 저장하지 못했어요.'})
@@ -718,12 +753,17 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                                         'generatedAt': item['productPhotoGeneratedAt']})
 
         def update_garment(self, garment_id, payload):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인한 뒤 옷 정보를 수정할 수 있어요.'})
             if not valid_garment_record_id(garment_id):
                 return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
             item_path = garments_dir / garment_id / 'garment.json'
             item = read_json(item_path)
             if not item:
                 return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+            if user.get('role') != 'teacher' and not owns_garment(user, item):
+                return self.send_json(403, {'error': '내가 올린 옷만 고칠 수 있어요.'})
             updated = dict(item)
             for key in ('name', 'category', 'gender', 'garmentTypeId', 'colorName', 'lengthCm', 'widthCm', 'ownerName'):
                 if key in payload:
@@ -735,17 +775,10 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             color_name = updated.get('colorName')
             length = updated.get('lengthCm')
             width = updated.get('widthCm')
-            owner_name = updated.get('ownerName', '')
-            user = self.current_user()
-            if user is not None:
-                # 로그인했다면 내가 올린 옷(또는 아직 주인이 없는 옷)만 고칠 수 있고, 올린 사람은 나로 정해져요.
-                old_owner = item.get('ownerName', '')
-                if old_owner and old_owner != user['name']:
-                    return self.send_json(403, {'error': '내가 올린 옷만 고칠 수 있어요.'})
-                owner_name = user['name']
-                updated['ownerName'] = owner_name
-            if not isinstance(owner_name, str) or len(owner_name.strip()) > 200:
+            requested_owner = updated.get('ownerName', '')
+            if not isinstance(requested_owner, str) or len(requested_owner.strip()) > 200:
                 return self.send_json(400, {'error': '올린 사람 이름은 200글자까지 쓸 수 있어요.'})
+            owner_name = item.get('ownerName', '')
             expected_category = 'dress' if garment_type_id == 3 else 'pants' if garment_type_id == 5 else 'top'
             if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
                     or category != expected_category or category not in VALID_CATEGORIES
@@ -764,6 +797,13 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             updated['photoUrl'] = f'/api/garments/{garment_id}/photo'
             updated['closetPhotoUrl'] = f'/api/garments/{garment_id}/closet-photo'
             with lock:
+                latest = read_json(item_path)
+                if not isinstance(latest, dict):
+                    return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+                for key in ('name', 'category', 'gender', 'garmentTypeId', 'colorName', 'lengthCm',
+                            'widthCm', 'garmentTypeName', 'photoUrl', 'closetPhotoUrl'):
+                    latest[key] = updated[key]
+                updated = latest
                 write_json_safely(item_path, updated)
                 garment_index = read_json(garments_dir / 'index.json') or []
                 list_item = {key: value for key, value in updated.items() if key != 'photoUrl'}
@@ -825,6 +865,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'maskPipelineVersion': GARMENT_MASK_PIPELINE_VERSION,
                 'thumbnailVersion': 2 if thumbnail is not None else 0,
             }
+            if user is not None:
+                item['ownerUsername'] = user['username']
             temporary_dir = garments_dir / f'.tmp-{record_id}'
             final_dir = garments_dir / record_id
             try:

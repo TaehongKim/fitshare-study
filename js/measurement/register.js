@@ -1,6 +1,6 @@
 ﻿import { readRegistrationPhoto } from './registrationPhoto.js?v=garment-registration-2';
-import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-5';
-import { fetchMe } from '../auth.js?v=auth-1';
+import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-6';
+import { fetchMe } from '../auth.js?v=auth-2';
 import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
 
 const photoInputs = [document.querySelector('#camera-photo'), document.querySelector('#gallery-photo')];
@@ -106,7 +106,7 @@ form.addEventListener('submit', async (event) => {
   showStatus(saveStatus, '옷과 사진을 서버에 저장하고 있어요.');
   try {
     const saved = await requestJson('/api/garments', { method: 'POST', body: JSON.stringify(payload) });
-    showStatus(analysisStatus, `${saved.name}을(를) 옷장에 저장했어요!`);
+    showStatus(analysisStatus, `${saved.name}을(를) 저장했어요. AI 상품 사진을 자동으로 만들고 있어요.`);
     await loadGarments();
     form.reset();
     form.hidden = true;
@@ -117,6 +117,13 @@ form.addEventListener('submit', async (event) => {
     garmentTypeInput.value = '';
     photoPreview.hidden = true;
     analyzeButton.disabled = true;
+    try {
+      await requestJson(`/api/garments/${encodeURIComponent(saved.id)}/product-photo`, { method: 'POST', body: '{}' });
+      showStatus(analysisStatus, `${saved.name}의 등록과 AI 상품 사진 생성이 끝났어요!`);
+    } catch (error) {
+      showStatus(analysisStatus, `옷과 실측값은 저장했지만 AI 상품 사진을 만들지 못했어요. ${error.message} 선생님에게 사진 생성을 요청해 주세요.`, true);
+    }
+    await loadGarments();
   } catch (error) {
     showStatus(saveStatus, error.message, true);
   } finally {
@@ -166,13 +173,12 @@ function showStatus(target, message, isError = false) {
   target.classList.toggle('is-error', isError);
 }
 
-loadGarments();
-
 // 옷을 올리려면 로그인해야 해요. 로그인하지 않았으면 등록 화면 대신 안내를 보여 줍니다.
 fetchMe().then((user) => {
   const main = document.querySelector('#garment-registration');
   if (user) {
     document.querySelector('#owner-note').textContent = `올린 사람은 로그인한 ${user.name} 님으로 자동으로 적혀요.`;
+    loadGarments();
     return;
   }
   main.hidden = true;

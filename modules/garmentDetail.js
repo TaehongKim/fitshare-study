@@ -21,7 +21,7 @@ function el(tag, className, text) {
   return node;
 }
 
-export function openGarmentDetail(garment) {
+export function openGarmentDetail(garment, onPhotoUpdated) {
   ensureStyle();
   const dialog = el('dialog', 'garment-detail');
   const id = encodeURIComponent(garment.id);
@@ -46,36 +46,55 @@ export function openGarmentDetail(garment) {
   });
   photoControls.append(originalPhoto, closetPhoto);
   let productPhotoUrl = garment.productPhotoUrl || null;
+  let productPhotoVersion = garment.productPhotoGeneratedAt || '';
   if (getUser()?.role === 'teacher') {
     const productPhoto = el('button', 'rk-ghost', productPhotoUrl ? 'AI 상품 사진 보기' : 'AI 상품 사진 만들기');
     productPhoto.type = 'button';
-    productPhoto.addEventListener('click', async () => {
-      if (productPhotoUrl) {
-        image.onerror = null;
-        image.classList.add('is-product-photo');
-        image.src = productPhotoUrl;
-        return;
-      }
+    const regeneratePhoto = el('button', 'rk-ghost', 'AI 사진 다시 만들기');
+    regeneratePhoto.type = 'button';
+    regeneratePhoto.hidden = !productPhotoUrl;
+    let generating = false;
+
+    function showProductPhoto() {
+      image.onerror = null;
+      image.classList.add('is-product-photo');
+      image.src = `${productPhotoUrl}${productPhotoVersion ? `?v=${encodeURIComponent(productPhotoVersion)}` : ''}`;
+    }
+
+    async function generatePhoto(regenerate = false) {
+      if (generating) return;
+      if (regenerate && !window.confirm('AI 사진을 다시 만들면 비용이 발생할 수 있어요. 성공하면 기존 AI 사진을 새 사진으로 바꿔요. 계속할까요?')) return;
+      generating = true;
       productPhoto.disabled = true;
-      message.textContent = 'AI 상품 사진을 만들고 있어요. 잠시 기다려 주세요.';
+      regeneratePhoto.disabled = true;
+      message.textContent = regenerate ? 'AI 사진을 다시 만들고 있어요. 기존 사진은 성공할 때까지 유지돼요.' : 'AI 상품 사진을 만들고 있어요. 잠시 기다려 주세요.';
       message.classList.remove('is-error');
       try {
-        const result = await requestApi(`/api/garments/${id}/product-photo`, {});
+        const result = await requestApi(`/api/garments/${id}/product-photo`, regenerate ? { regenerate: true } : {});
         productPhotoUrl = result.productPhotoUrl;
+        productPhotoVersion = result.generatedAt;
         garment.productPhotoUrl = productPhotoUrl;
+        garment.productPhotoGeneratedAt = productPhotoVersion;
         productPhoto.textContent = 'AI 상품 사진 보기';
-        image.onerror = null;
-        image.classList.add('is-product-photo');
-        image.src = productPhotoUrl;
-        message.textContent = 'AI 상품 사진을 저장했어요. 원본 사진은 그대로 있어요.';
+        regeneratePhoto.hidden = false;
+        showProductPhoto();
+        message.textContent = regenerate ? '새 AI 사진으로 바꿨어요. 원본 사진은 그대로 있어요.' : 'AI 상품 사진을 저장했어요. 원본 사진은 그대로 있어요.';
+        if (typeof onPhotoUpdated === 'function') onPhotoUpdated();
       } catch (error) {
         message.classList.add('is-error');
         message.textContent = error.message || 'AI 상품 사진을 만들지 못했어요.';
       } finally {
+        generating = false;
         productPhoto.disabled = false;
+        regeneratePhoto.disabled = false;
       }
+    }
+    productPhoto.addEventListener('click', () => {
+      if (productPhotoUrl) showProductPhoto();
+      else generatePhoto();
     });
-    photoControls.append(productPhoto);
+    regeneratePhoto.addEventListener('click', () => generatePhoto(true));
+    photoControls.append(productPhoto, regeneratePhoto);
   }
 
   const info = el('dl', 'garment-detail-info');
