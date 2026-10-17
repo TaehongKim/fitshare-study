@@ -10,7 +10,7 @@ const GENDER_NAMES = { male: '남성용', female: '여성용', unisex: '공용',
 function ensureStyle() {
   if (document.getElementById(CSS_ID)) return;
   const link = document.createElement('link');
-  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-7', import.meta.url).href;
+  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-8', import.meta.url).href;
   document.head.append(link);
 }
 
@@ -45,6 +45,12 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
     image.src = choices[choice];
   });
   photoControls.append(originalPhoto, closetPhoto);
+  const generationProgress = el('div', 'garment-detail-generation-progress');
+  generationProgress.hidden = true;
+  generationProgress.setAttribute('role', 'progressbar');
+  generationProgress.setAttribute('aria-label', 'AI 상품 사진 생성 진행 상황');
+  generationProgress.setAttribute('aria-valuetext', '생성 중');
+  generationProgress.append(el('span', 'garment-detail-generation-progress-bar'));
   let productPhotoUrl = garment.productPhotoUrl || null;
   let productPhotoVersion = garment.productPhotoGeneratedAt || '';
   if (getUser()?.role === 'teacher') {
@@ -67,6 +73,9 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
       generating = true;
       productPhoto.disabled = true;
       regeneratePhoto.disabled = true;
+      generationProgress.hidden = false;
+      generationProgress.setAttribute('aria-valuetext', regenerate ? 'AI 사진을 다시 만들고 있어요' : 'AI 상품 사진을 만들고 있어요');
+      photoControls.classList.add('is-generating');
       message.textContent = regenerate ? 'AI 사진을 다시 만들고 있어요. 기존 사진은 성공할 때까지 유지돼요.' : 'AI 상품 사진을 만들고 있어요. 잠시 기다려 주세요.';
       message.classList.remove('is-error');
       try {
@@ -87,6 +96,8 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
         generating = false;
         productPhoto.disabled = false;
         regeneratePhoto.disabled = false;
+        generationProgress.hidden = true;
+        photoControls.classList.remove('is-generating');
       }
     }
     productPhoto.addEventListener('click', () => {
@@ -126,7 +137,7 @@ export function openGarmentDetail(garment, onPhotoUpdated) {
   close.addEventListener('click', () => dialog.close());
   const buttons = el('div', 'garment-detail-buttons');
   buttons.append(reserve, cancel, close);
-  dialog.append(el('h2', '', garment.name), image, photoControls, info, status, message, buttons);
+  dialog.append(el('h2', '', garment.name), image, photoControls, generationProgress, info, status, message, buttons);
 
   // 지금 이 옷이 예약 가능한지 서버 기록을 보고 화면을 맞춥니다.
   let current = null;

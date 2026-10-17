@@ -92,6 +92,12 @@
 .teacher-profile-controls input { width:100%; min-width:0; padding:9px 10px; border:1px solid #cbd4e2; border-radius:8px; font:inherit; }
 .garment-detail-photo.is-product-photo { background:#fff; }
 .garment-detail-photo-controls { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.garment-detail-generation-progress { height:8px; margin:6px 0 10px; overflow:hidden; border-radius:999px; background:#eaf0fa; }
+.garment-detail-generation-progress[hidden] { display:none; }
+.garment-detail-generation-progress-bar { display:block; width:38%; height:100%; border-radius:inherit; background:linear-gradient(90deg,#4b83f5,#83aaff); transform:translateX(-110%); }
+.garment-detail-photo-controls.is-generating + .garment-detail-generation-progress .garment-detail-generation-progress-bar { animation:garment-photo-progress 1.3s ease-in-out infinite; }
+@keyframes garment-photo-progress { to { transform:translateX(280%); } }
+@media (prefers-reduced-motion:reduce) { .garment-detail-photo-controls.is-generating + .garment-detail-generation-progress .garment-detail-generation-progress-bar { animation:none; transform:translateX(0); } }
 .avatar-choices { display:flex; flex-wrap:wrap; gap:6px; }
 .avatar-pick { min-width:40px; height:40px; padding:0 8px; border:2px solid #dbe3f0; border-radius:10px; background:#fff; font-size:20px; cursor:pointer; }
 .avatar-swatch { width:34px; height:34px; border:2px solid #dbe3f0; border-radius:50%; cursor:pointer; }

@@ -22,6 +22,17 @@ class TeacherUiTests(unittest.TestCase):
         self.assertIn('data-account-action="reset-student-password"', profile)
         self.assertIn('${teacher ?', profile)
 
+    def test_product_photo_generation_shows_accessible_indeterminate_progress(self):
+        detail = (ROOT / 'modules/garmentDetail.js').read_text(encoding='utf-8')
+        style = (ROOT / 'css/ranking.css').read_text(encoding='utf-8')
+        self.assertIn('garment-detail-generation-progress', detail)
+        self.assertIn('role', detail)
+        self.assertIn('aria-valuetext', detail)
+        self.assertIn("generationProgress.setAttribute('aria-valuetext'", detail)
+        self.assertIn('is-generating', detail)
+        self.assertIn('garment-detail-generation-progress', style)
+        self.assertIn('prefers-reduced-motion', style)
+
     def test_product_photo_action_is_teacher_gated_and_original_is_available(self):
         detail = (ROOT / 'modules/garmentDetail.js').read_text(encoding='utf-8')
         self.assertIn("getUser()?.role === 'teacher'", detail)
