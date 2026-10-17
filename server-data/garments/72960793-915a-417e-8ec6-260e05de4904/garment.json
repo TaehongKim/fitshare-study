@@ -1,0 +1,15 @@
+{
+  "id": "72960793-915a-417e-8ec6-260e05de4904",
+  "name": "[가상] 체험용 상의 외투 11",
+  "category": "top",
+  "gender": "unknown",
+  "garmentTypeId": 1,
+  "garmentTypeName": "상의 외투",
+  "colorName": "노랑",
+  "lengthCm": 57.0,
+  "widthCm": 46.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/72960793-915a-417e-8ec6-260e05de4904/photo",
+  "closetPhotoUrl": "/api/garments/72960793-915a-417e-8ec6-260e05de4904/closet-photo",
+  "backgroundId": "M4"
+}

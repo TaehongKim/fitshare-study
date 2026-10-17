@@ -1,0 +1,15 @@
+{
+  "id": "b0c07e5f-7159-449e-b253-987f25ef0d3e",
+  "name": "[가상] 체험용 점퍼 19",
+  "category": "top",
+  "gender": "unknown",
+  "garmentTypeId": 4,
+  "garmentTypeName": "점퍼",
+  "colorName": "노랑",
+  "lengthCm": 78.0,
+  "widthCm": 56.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/b0c07e5f-7159-449e-b253-987f25ef0d3e/photo",
+  "closetPhotoUrl": "/api/garments/b0c07e5f-7159-449e-b253-987f25ef0d3e/closet-photo",
+  "backgroundId": "M4"
+}

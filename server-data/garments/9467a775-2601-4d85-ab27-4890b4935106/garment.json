@@ -1,0 +1,15 @@
+{
+  "id": "9467a775-2601-4d85-ab27-4890b4935106",
+  "name": "[가상] 체험용 바지 10",
+  "category": "pants",
+  "gender": "unknown",
+  "garmentTypeId": 5,
+  "garmentTypeName": "바지",
+  "colorName": "빨강",
+  "lengthCm": 106.0,
+  "widthCm": 39.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/9467a775-2601-4d85-ab27-4890b4935106/photo",
+  "closetPhotoUrl": "/api/garments/9467a775-2601-4d85-ab27-4890b4935106/closet-photo",
+  "backgroundId": "M4"
+}

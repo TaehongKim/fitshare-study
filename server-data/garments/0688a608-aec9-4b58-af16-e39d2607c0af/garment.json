@@ -1,0 +1,15 @@
+{
+  "id": "0688a608-aec9-4b58-af16-e39d2607c0af",
+  "name": "[가상] 체험용 크롭 티셔츠 02",
+  "category": "top",
+  "gender": "unisex",
+  "garmentTypeId": 2,
+  "garmentTypeName": "크롭 티셔츠",
+  "colorName": "빨강",
+  "lengthCm": 64.0,
+  "widthCm": 52.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/0688a608-aec9-4b58-af16-e39d2607c0af/photo",
+  "closetPhotoUrl": "/api/garments/0688a608-aec9-4b58-af16-e39d2607c0af/closet-photo",
+  "backgroundId": "M4"
+}

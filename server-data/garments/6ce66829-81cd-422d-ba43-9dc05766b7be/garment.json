@@ -1,0 +1,15 @@
+{
+  "id": "6ce66829-81cd-422d-ba43-9dc05766b7be",
+  "name": "[가상] 체험용 점퍼 29",
+  "category": "top",
+  "gender": "female",
+  "garmentTypeId": 4,
+  "garmentTypeName": "점퍼",
+  "colorName": "초록",
+  "lengthCm": 72.0,
+  "widthCm": 57.0,
+  "createdAt": "2026-10-09T14:47:40+00:00",
+  "photoUrl": "/api/garments/6ce66829-81cd-422d-ba43-9dc05766b7be/photo",
+  "closetPhotoUrl": "/api/garments/6ce66829-81cd-422d-ba43-9dc05766b7be/closet-photo",
+  "backgroundId": "M4"
+}

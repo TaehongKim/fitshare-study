@@ -1,0 +1,15 @@
+{
+  "id": "bc1caf75-eeae-49a0-b001-7240c5f52ce9",
+  "name": "[가상] 체험용 상의 외투 21",
+  "category": "top",
+  "gender": "female",
+  "garmentTypeId": 1,
+  "garmentTypeName": "상의 외투",
+  "colorName": "초록",
+  "lengthCm": 94.0,
+  "widthCm": 47.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/bc1caf75-eeae-49a0-b001-7240c5f52ce9/photo",
+  "closetPhotoUrl": "/api/garments/bc1caf75-eeae-49a0-b001-7240c5f52ce9/closet-photo",
+  "backgroundId": "M4"
+}

@@ -1,0 +1,15 @@
+{
+  "id": "82567e51-0dab-4b87-8aa5-7f7c1318c0d0",
+  "name": "[가상] 체험용 점퍼 14",
+  "category": "top",
+  "gender": "unisex",
+  "garmentTypeId": 4,
+  "garmentTypeName": "점퍼",
+  "colorName": "검정",
+  "lengthCm": 81.0,
+  "widthCm": 44.0,
+  "createdAt": "2026-10-09T14:47:39+00:00",
+  "photoUrl": "/api/garments/82567e51-0dab-4b87-8aa5-7f7c1318c0d0/photo",
+  "closetPhotoUrl": "/api/garments/82567e51-0dab-4b87-8aa5-7f7c1318c0d0/closet-photo",
+  "backgroundId": "M4"
+}

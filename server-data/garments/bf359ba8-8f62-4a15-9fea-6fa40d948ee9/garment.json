@@ -1,0 +1,19 @@
+{
+  "id": "bf359ba8-8f62-4a15-9fea-6fa40d948ee9",
+  "name": "데이터셋 2 크롭 티셔츠",
+  "category": "top",
+  "gender": "unknown",
+  "garmentTypeId": 2,
+  "garmentTypeName": "크롭 티셔츠",
+  "colorName": "흰색",
+  "lengthCm": 46.8,
+  "widthCm": 53.8,
+  "createdAt": "2026-10-09T13:59:58+00:00",
+  "photoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/photo",
+  "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+  "thumbnailVersion": 2,
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
+  "productPhotoFile": "product-photo.jpg",
+  "productPhotoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/product-photo",
+  "productPhotoGeneratedAt": "2026-10-17T07:05:39.085079+00:00"
+}
