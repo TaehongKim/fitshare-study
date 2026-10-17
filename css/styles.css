@@ -47,3 +47,5 @@ button { cursor:pointer; }
 #auth-form .primary-action { border:0; border-radius:10px; padding:12px; color:#fff; background:var(--blue); font-weight:800; cursor:pointer; }
 .auth-message { min-height:1.2em; margin:0; color:#368c71; font-size:12px; font-weight:700; }
 .auth-message.is-error { color:#c0392b; }
+.user-name { border:0; background:none; color:var(--ink); font-size:13px; font-weight:800; cursor:pointer; text-decoration:underline dotted; }
+.user-name[hidden] { display:none; }

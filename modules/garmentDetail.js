@@ -2,6 +2,7 @@
 // 예약 기록은 랭킹과 같은 서버 기록(rankingStore)에 저장돼서, 랭킹 탭 ②에서 이어집니다.
 import { cancelReservation, getGarmentExchange, reserveGarment } from './rankingLogic.js';
 import { loadState, loadViewerName, mutateState, pullState } from './rankingStore.js';
+import { getUser, requestApi } from '../js/auth.js?v=auth-2';
 
 const CSS_ID = 'ranking-style';
 const GENDER_NAMES = { male: '남성용', female: '여성용', unisex: '공용', unknown: '모름' };
@@ -9,7 +10,7 @@ const GENDER_NAMES = { male: '남성용', female: '여성용', unisex: '공용',
 function ensureStyle() {
   if (document.getElementById(CSS_ID)) return;
   const link = document.createElement('link');
-  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-4', import.meta.url).href;
+  link.id = CSS_ID; link.rel = 'stylesheet'; link.href = new URL('../css/ranking.css?v=ranking-7', import.meta.url).href;
   document.head.append(link);
 }
 
@@ -30,6 +31,52 @@ export function openGarmentDetail(garment) {
   let choice = 0;
   image.onerror = () => { choice += 1; if (choice < choices.length) image.src = choices[choice]; else image.onerror = null; };
   image.src = choices[0];
+
+  const photoControls = el('div', 'garment-detail-photo-controls');
+  const originalPhoto = el('button', 'rk-ghost', '원본 사진');
+  originalPhoto.type = 'button';
+  originalPhoto.addEventListener('click', () => { image.onerror = null; image.classList.remove('is-product-photo'); image.src = `/api/garments/${id}/photo`; });
+  const closetPhoto = el('button', 'rk-ghost', '옷장 사진');
+  closetPhoto.type = 'button';
+  closetPhoto.addEventListener('click', () => {
+    choice = 0;
+    image.onerror = () => { choice += 1; if (choice < choices.length) image.src = choices[choice]; else image.onerror = null; };
+    image.classList.remove('is-product-photo');
+    image.src = choices[choice];
+  });
+  photoControls.append(originalPhoto, closetPhoto);
+  let productPhotoUrl = garment.productPhotoUrl || null;
+  if (getUser()?.role === 'teacher') {
+    const productPhoto = el('button', 'rk-ghost', productPhotoUrl ? 'AI 상품 사진 보기' : 'AI 상품 사진 만들기');
+    productPhoto.type = 'button';
+    productPhoto.addEventListener('click', async () => {
+      if (productPhotoUrl) {
+        image.onerror = null;
+        image.classList.add('is-product-photo');
+        image.src = productPhotoUrl;
+        return;
+      }
+      productPhoto.disabled = true;
+      message.textContent = 'AI 상품 사진을 만들고 있어요. 잠시 기다려 주세요.';
+      message.classList.remove('is-error');
+      try {
+        const result = await requestApi(`/api/garments/${id}/product-photo`, {});
+        productPhotoUrl = result.productPhotoUrl;
+        garment.productPhotoUrl = productPhotoUrl;
+        productPhoto.textContent = 'AI 상품 사진 보기';
+        image.onerror = null;
+        image.classList.add('is-product-photo');
+        image.src = productPhotoUrl;
+        message.textContent = 'AI 상품 사진을 저장했어요. 원본 사진은 그대로 있어요.';
+      } catch (error) {
+        message.classList.add('is-error');
+        message.textContent = error.message || 'AI 상품 사진을 만들지 못했어요.';
+      } finally {
+        productPhoto.disabled = false;
+      }
+    });
+    photoControls.append(productPhoto);
+  }
 
   const info = el('dl', 'garment-detail-info');
   const rows = [
@@ -60,7 +107,7 @@ export function openGarmentDetail(garment) {
   close.addEventListener('click', () => dialog.close());
   const buttons = el('div', 'garment-detail-buttons');
   buttons.append(reserve, cancel, close);
-  dialog.append(el('h2', '', garment.name), image, info, status, message, buttons);
+  dialog.append(el('h2', '', garment.name), image, photoControls, info, status, message, buttons);
 
   // 지금 이 옷이 예약 가능한지 서버 기록을 보고 화면을 맞춥니다.
   let current = null;

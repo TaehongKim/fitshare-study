@@ -184,12 +184,13 @@ class ExperimentServerTests(unittest.TestCase):
 
     def test_env_file_loads_a_token_without_overriding_the_process_environment(self):
         env_file = Path(self.temp_dir.name) / '.env'
-        env_file.write_text('# private token\nREPLICATE_API_TOKEN="sample-token"\n', encoding='utf-8')
+        env_file.write_text('# private token\nREPLICATE_API_TOKEN="sample-token"\nREPLICATE_PRODUCT_MODEL_VERSION=sample-version\n', encoding='utf-8')
         values = {}
 
         server.load_env_file(env_file, values)
 
         self.assertEqual(values['REPLICATE_API_TOKEN'], 'sample-token')
+        self.assertEqual(values['REPLICATE_PRODUCT_MODEL_VERSION'], 'sample-version')
         server.load_env_file(env_file, {'REPLICATE_API_TOKEN': 'already-set'})
 
     def test_env_file_does_not_replace_an_existing_token(self):

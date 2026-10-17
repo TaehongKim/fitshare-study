@@ -199,14 +199,13 @@ class GarmentRegistrationTests(unittest.TestCase):
         (garment_dir / 'garment.json').write_text(json.dumps({'garmentTypeId': 1, 'backgroundId': 'M4'}), encoding='utf-8')
         with urllib.request.urlopen(self.base_url + f'/api/garments/{record_id}/thumbnail', timeout=15) as response:
             thumbnail = response.read()
-            self.assertEqual(response.headers.get_content_type(), 'image/png')
-            self.assertIn('max-age=', response.headers.get('Cache-Control', ''))
-        self.assertTrue((garment_dir / 'closet-thumbnail.png').exists())
+            self.assertEqual(response.headers.get_content_type(), 'image/jpeg')
+            self.assertEqual(response.headers.get('Cache-Control'), 'no-store')
+        self.assertFalse((garment_dir / 'closet-thumbnail.png').exists())
         import cv2
         import numpy as np
-        decoded = cv2.imdecode(np.frombuffer(thumbnail, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
-        self.assertLessEqual(max(decoded.shape[:2]), 320)
-        self.assertEqual(decoded.shape[2], 4)
+        decoded = cv2.imdecode(np.frombuffer(thumbnail, dtype=np.uint8), cv2.IMREAD_COLOR)
+        self.assertLessEqual(max(decoded.shape[:2]), 200)
 
     def test_garment_information_can_be_updated_without_changing_the_photo(self):
         original = b'\xff\xd8\xffsample original'

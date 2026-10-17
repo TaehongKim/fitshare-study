@@ -9,6 +9,7 @@ import re
 import shutil
 import threading
 import uuid
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from tools.accounts import SESSION_SECONDS, AccountStore, AuthError
+from tools.garment_thumbnails import GARMENT_MASK_PIPELINE_VERSION
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -25,7 +27,6 @@ MAX_PHOTO_BYTES = 12 * 1024 * 1024
 VALID_CATEGORIES = {'top', 'bottom', 'dress', 'pants', 'skirt', 'other'}
 VALID_GENDERS = {'male', 'female', 'unisex', 'unknown'}
 GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지'}
-GARMENT_MASK_PIPELINE_VERSION = 'round7-848-yolo-grabcut-v1'
 VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
 SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
@@ -46,7 +47,7 @@ def load_env_file(path=None, environ=None):
         key, value = stripped.split('=', 1)
         key = key.strip()
         value = value.strip()
-        if key == 'REPLICATE_API_TOKEN' and key not in target:
+        if key in {'REPLICATE_API_TOKEN', 'REPLICATE_PRODUCT_MODEL_VERSION'} and key not in target:
             if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
                 value = value[1:-1]
             if value:
@@ -59,6 +60,10 @@ load_env_file()
 
 def get_replicate_api_token():
     return os.environ.get('REPLICATE_API_TOKEN', '').strip()
+
+
+def get_replicate_product_model_version():
+    return os.environ.get('REPLICATE_PRODUCT_MODEL_VERSION', '').strip()
 
 
 def analyze_measure_dataset(output_dir):
@@ -74,9 +79,23 @@ def now_text():
 
 def write_json_safely(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + '.tmp')
-    temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
-    temporary.replace(path)
+    temporary = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
+    try:
+        temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def write_bytes_safely(path, value):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
+    try:
+        temporary.write_bytes(value)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def read_json(path):
@@ -116,7 +135,7 @@ def decode_png_data(value):
     return photo if photo.startswith(b'\x89PNG\r\n\x1a\n') else None
 
 
-def make_garment_thumbnail(png_bytes, maximum_side=320):
+def make_garment_thumbnail(png_bytes, maximum_side=200):
     """Make a small transparent PNG for closet cards; keep the stored original cutout unchanged."""
     try:
         import cv2
@@ -134,6 +153,91 @@ def make_garment_thumbnail(png_bytes, maximum_side=320):
     if not ok:
         raise RuntimeError('작은 옷장 사진을 만들지 못했어요.')
     return encoded.tobytes()
+
+
+def make_source_photo_thumbnail(jpeg_bytes, maximum_side=200):
+    try:
+        import cv2
+        import numpy as np
+    except ImportError as error:
+        raise RuntimeError('사진 축소 도구를 불러오지 못했어요.') from error
+    image = cv2.imdecode(np.frombuffer(jpeg_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError('원본 사진을 읽지 못했어요.')
+    height, width = image.shape[:2]
+    scale = min(1, maximum_side / max(height, width))
+    if scale < 1:
+        image = cv2.resize(image, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+    ok, encoded = cv2.imencode('.jpg', image, [cv2.IMWRITE_JPEG_QUALITY, 78])
+    if not ok:
+        raise RuntimeError('사진 미리보기를 만들지 못했어요.')
+    return encoded.tobytes()
+
+
+def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None):
+    garment_dir = Path(garments_dir) / garment_id
+    cutout_path = garment_dir / 'closet.png'
+    item = read_json(garment_dir / 'garment.json')
+    if not item:
+        raise FileNotFoundError('옷 사진을 찾지 못했어요.')
+    try:
+        if item.get('maskPipelineVersion') == GARMENT_MASK_PIPELINE_VERSION:
+            return cutout_path.read_bytes()
+    except OSError:
+        pass
+    from tools.garment_segmentation import get_yolo_grabcut_provider
+    from tools.vision_pipeline import measure_garment, rectify_photo
+
+    source = (garment_dir / 'photo.jpg').read_bytes()
+    flattened = rectify_photo(source, item.get('backgroundId', 'M4'), preserve_resolution=True,
+                              max_output_long_side=848)
+    if not flattened.get('ok'):
+        raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
+    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
+                               scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                               length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
+    photo = decode_png_data(measured.get('closetImageDataUrl'))
+    if photo is None:
+        raise ValueError('투명 옷장 사진을 만들지 못했어요.')
+    write_bytes_safely(cutout_path, photo)
+    with metadata_lock if metadata_lock is not None else nullcontext():
+        latest = read_json(garment_dir / 'garment.json')
+        if not latest:
+            raise FileNotFoundError('옷 사진을 찾지 못했어요.')
+        latest['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
+        write_json_safely(garment_dir / 'garment.json', latest)
+    return photo
+
+
+def get_garment_thumbnail_bytes(garments_dir, garment_id, metadata_lock=None):
+    garment_dir = Path(garments_dir) / garment_id
+    item = read_json(garment_dir / 'garment.json')
+    if not item:
+        raise FileNotFoundError('옷 사진을 찾지 못했어요.')
+    thumbnail_path = garment_dir / 'closet-thumbnail.png'
+    try:
+        if item.get('thumbnailVersion') == 2:
+            return thumbnail_path.read_bytes()
+        if item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
+            raise FileNotFoundError('옷 분리 사진을 준비하는 중이에요.')
+        cutout = (garment_dir / 'closet.png').read_bytes()
+        thumbnail = make_garment_thumbnail(cutout)
+        write_bytes_safely(thumbnail_path, thumbnail)
+        with metadata_lock if metadata_lock is not None else nullcontext():
+            latest = read_json(garment_dir / 'garment.json') or {}
+            latest['thumbnailVersion'] = 2
+            write_json_safely(garment_dir / 'garment.json', latest)
+            index_path = Path(garments_dir) / 'index.json'
+            index = read_json(index_path)
+            if isinstance(index, list):
+                for record in index:
+                    if isinstance(record, dict) and record.get('id') == garment_id:
+                        record['thumbnailVersion'] = 2
+                        break
+                write_json_safely(index_path, index)
+        return thumbnail
+    except OSError:
+        raise
 
 
 def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
@@ -186,6 +290,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.list_garments()
                 if len(parts) == 2 and parts[0] == 'garments':
                     return self.get_garment(parts[1])
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'product-photo':
+                    return self.get_garment_product_photo(parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'photo':
                     return self.get_garment_photo(parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'closet-photo':
@@ -230,6 +336,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.save_garment(payload)
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'update':
                     return self.update_garment(parts[1], payload)
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'product-photo':
+                    return self.create_garment_product_photo(parts[1])
                 if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'records':
                     return self.save_record(parts[1], payload)
                 if len(parts) == 3 and parts[0] == 'experiments' and parts[2] == 'complete':
@@ -282,7 +390,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
         def handle_auth(self, action, payload):
             try:
                 if action == 'signup':
-                    user = accounts.signup(payload.get('username'), payload.get('password'), payload.get('name'))
+                    user = accounts.signup(payload.get('username'), payload.get('password'), payload.get('name'),
+                                           teacher_code=payload.get('teacherCode'))
                     token = accounts.create_session(user['username'])
                     return self.send_json(201, {'user': user}, {'Set-Cookie': self.cookie_header(token, SESSION_SECONDS)})
                 if action == 'login':
@@ -292,6 +401,18 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 if action == 'logout':
                     accounts.destroy_session(self.session_token())
                     return self.send_json(200, {'user': None}, {'Set-Cookie': self.cookie_header('', 0)})
+                if action == 'teacher-code':
+                    user = self.current_user()
+                    if user is None:
+                        return self.send_json(401, {'error': '로그인해 주세요.'})
+                    accounts.change_teacher_code(user['username'], payload.get('newCode'))
+                    return self.send_json(200, {'ok': True})
+                if action == 'reset-student-password':
+                    user = self.current_user()
+                    if user is None:
+                        return self.send_json(401, {'error': '로그인해 주세요.'})
+                    accounts.reset_student_password(user['username'], payload.get('username'), payload.get('newPassword'))
+                    return self.send_json(200, {'ok': True})
             except AuthError as error:
                 return self.send_json(error.status, {'error': str(error)})
             return self.send_json(404, {'error': '찾는 API 주소가 없어요.'})
@@ -409,38 +530,13 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
 
         def get_garment_closet_photo(self, garment_id):
             if not valid_garment_record_id(garment_id):
-                return self.send_json(404, {'error': '옷장 사진을 찾지 못했어요.'})
-            garment_dir = garments_dir / garment_id
-            cutout_path = garment_dir / 'closet.png'
+                return self.send_json(404, {'error': '?? ??? ?? ????.'})
             try:
-                item = read_json(garment_dir / 'garment.json')
-                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
-                    raise OSError('옷장 사진을 새 실측 방식으로 다시 만들어요.')
-                photo = cutout_path.read_bytes()
-            except OSError:
-                item = read_json(garment_dir / 'garment.json')
-                if not item:
-                    return self.send_json(404, {'error': '옷장 사진을 찾지 못했어요.'})
-                try:
-                    from tools.garment_segmentation import get_yolo_grabcut_provider
-                    from tools.vision_pipeline import measure_garment, rectify_photo
-
-                    source = (garment_dir / 'photo.jpg').read_bytes()
-                    flattened = rectify_photo(source, item.get('backgroundId', 'M4'), preserve_resolution=True,
-                                              max_output_long_side=848)
-                    if not flattened.get('ok'):
-                        return self.send_json(422, {'error': flattened.get('message', '옷 이미지를 만들지 못했어요.')})
-                    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
-                                               scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                                               length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
-                    photo = decode_png_data(measured.get('closetImageDataUrl'))
-                    if photo is None:
-                        return self.send_json(500, {'error': '투명 옷장 사진을 만들지 못했어요.'})
-                    cutout_path.write_bytes(photo)
-                    item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
-                    write_json_safely(garment_dir / 'garment.json', item)
-                except (OSError, ValueError, RuntimeError, ImportError) as error:
-                    return self.send_json(422, {'error': str(error) or '투명 옷장 사진을 만들지 못했어요.'})
+                photo = ensure_garment_cutout(garments_dir, garment_id, lock)
+            except FileNotFoundError as error:
+                return self.send_json(404, {'error': str(error)})
+            except (OSError, ValueError, RuntimeError, ImportError) as error:
+                return self.send_json(422, {'error': str(error) or '?? ?? ??? ??? ????.'})
             self.send_response(200)
             self.send_header('Content-Type', 'image/png')
             self.send_header('Content-Length', str(len(photo)))
@@ -450,63 +546,118 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
 
         def get_garment_thumbnail(self, garment_id):
             if not valid_garment_record_id(garment_id):
-                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
-            garment_dir = garments_dir / garment_id
-            thumbnail_path = garment_dir / 'closet-thumbnail.png'
+                return self.send_json(404, {'error': '? ??? ?? ????.'})
             try:
-                item = read_json(garment_dir / 'garment.json')
-                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
-                    raise OSError('옷장 사진 축소본을 새 실측 방식으로 다시 만들어요.')
-                thumbnail = thumbnail_path.read_bytes()
-            except OSError:
+                thumbnail = get_garment_thumbnail_bytes(garments_dir, garment_id, lock)
+                content_type = 'image/png'
+                cache_control = 'public, max-age=604800'
+            except FileNotFoundError:
                 try:
-                    self.get_garment_closet_photo_bytes(garment_id)
-                    cutout = (garment_dir / 'closet.png').read_bytes()
-                    thumbnail = make_garment_thumbnail(cutout)
-                    thumbnail_path.write_bytes(thumbnail)
-                    item = read_json(garment_dir / 'garment.json')
-                    if item:
-                        item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
-                        write_json_safely(garment_dir / 'garment.json', item)
+                    source = (garments_dir / garment_id / 'photo.jpg').read_bytes()
+                    thumbnail = make_source_photo_thumbnail(source)
+                    content_type = 'image/jpeg'
+                    cache_control = 'no-store'
+                except FileNotFoundError:
+                    return self.send_json(404, {'error': '? ?? ??? ?? ????.'})
                 except (OSError, ValueError, RuntimeError, ImportError) as error:
-                    return self.send_json(422, {'error': str(error) or '작은 옷장 사진을 만들지 못했어요.'})
+                    return self.send_json(422, {'error': str(error) or '?? ????? ??? ????.'})
+            except (OSError, ValueError, RuntimeError, ImportError) as error:
+                return self.send_json(422, {'error': str(error) or '?? ?? ??? ??? ????.'})
             self.send_response(200)
-            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Type', content_type)
             self.send_header('Content-Length', str(len(thumbnail)))
-            self.send_header('Cache-Control', 'public, max-age=604800')
+            self.send_header('Cache-Control', cache_control)
             self.end_headers()
             self.wfile.write(thumbnail)
 
-        def get_garment_closet_photo_bytes(self, garment_id):
+        def get_garment_product_photo(self, garment_id):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인해 주세요.'})
+            if user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '교사만 AI 상품 사진을 볼 수 있어요.'})
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
             garment_dir = garments_dir / garment_id
-            cutout_path = garment_dir / 'closet.png'
+            item = read_json(garment_dir / 'garment.json')
+            filename = item.get('productPhotoFile') if isinstance(item, dict) else None
+            if filename not in {'product-photo.png', 'product-photo.jpg', 'product-photo.webp'}:
+                return self.send_json(404, {'error': '아직 AI 상품 사진이 없어요.'})
+            path = garment_dir / filename
             try:
-                item = read_json(garment_dir / 'garment.json')
-                if not item or item.get('maskPipelineVersion') != GARMENT_MASK_PIPELINE_VERSION:
-                    raise OSError('옷장 사진을 새 실측 방식으로 다시 만들어요.')
-                return cutout_path.read_bytes()
+                photo = path.read_bytes()
             except OSError:
-                item = read_json(garment_dir / 'garment.json')
-                if not item:
-                    raise FileNotFoundError('옷장 사진을 찾지 못했어요.')
-                from tools.garment_segmentation import get_yolo_grabcut_provider
-                from tools.vision_pipeline import measure_garment, rectify_photo
+                return self.send_json(404, {'error': '저장된 AI 상품 사진을 찾지 못했어요.'})
+            mime = {'png': 'image/png', 'jpg': 'image/jpeg', 'webp': 'image/webp'}[path.suffix[1:]]
+            self.send_response(200)
+            self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(len(photo)))
+            self.send_header('Cache-Control', 'private, max-age=3600')
+            self.end_headers()
+            self.wfile.write(photo)
 
-                source = (garment_dir / 'photo.jpg').read_bytes()
-                flattened = rectify_photo(source, item.get('backgroundId', 'M4'), preserve_resolution=True,
-                                          max_output_long_side=848)
-                if not flattened.get('ok'):
-                    raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
-                measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
-                                           scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                                           length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
-                photo = decode_png_data(measured.get('closetImageDataUrl'))
-                if photo is None:
-                    raise ValueError('투명 옷장 사진을 만들지 못했어요.')
-                cutout_path.write_bytes(photo)
-                item['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
-                write_json_safely(garment_dir / 'garment.json', item)
-                return photo
+        def create_garment_product_photo(self, garment_id):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인해 주세요.'})
+            if user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '교사만 AI 상품 사진을 만들 수 있어요.'})
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷 사진을 찾지 못했어요.'})
+            garment_dir = garments_dir / garment_id
+            item_path = garment_dir / 'garment.json'
+            item = read_json(item_path)
+            if not item:
+                return self.send_json(404, {'error': '등록된 옷을 찾지 못했어요.'})
+            if item.get('productPhotoFile') in {'product-photo.png', 'product-photo.jpg', 'product-photo.webp'}:
+                image_path = garment_dir / item['productPhotoFile']
+                if image_path.is_file():
+                    return self.send_json(200, {'productPhotoUrl': f'/api/garments/{garment_id}/product-photo',
+                                                'generatedAt': item.get('productPhotoGeneratedAt')})
+            token = get_replicate_api_token()
+            model_version = get_replicate_product_model_version()
+            if not token or not model_version:
+                return self.send_json(503, {'error': 'AI 상품 사진 기능을 쓰려면 서버에 Replicate 토큰과 모델 버전을 설정해야 해요.'})
+            try:
+                from tools.replicate_product_photo import ProductPhotoError, generate_product_photo
+
+                source = ensure_garment_cutout(garments_dir, garment_id, lock)
+                prompt = ('Create a clean ecommerce studio product photograph of this exact garment on a neutral white background. '
+                          'Preserve the photographed garment identity, silhouette, color, fabric texture, print, logo, seams, '
+                          'buttons, and proportions. Remove only the background. Do not add a person, mannequin, text, label, '
+                          'or other object.')
+                photo, mime = generate_product_photo(source, prompt, token, model_version)
+            except ProductPhotoError as error:
+                return self.send_json(502, {'error': str(error)})
+            except FileNotFoundError:
+                return self.send_json(404, {'error': '옷 원본 사진을 찾지 못했어요.'})
+            except (OSError, ValueError, RuntimeError, ImportError) as error:
+                return self.send_json(422, {'error': str(error) or 'AI 상품 사진을 만들지 못했어요.'})
+            extension = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'}.get(mime)
+            if extension is None:
+                return self.send_json(502, {'error': '이미지 서비스가 지원하지 않는 사진 형식을 보냈어요.'})
+            filename = f'product-photo.{extension}'
+            temporary = garment_dir / f'.{filename}.{uuid.uuid4().hex}.tmp'
+            try:
+                temporary.write_bytes(photo)
+                temporary.replace(garment_dir / filename)
+                with lock:
+                    item = read_json(item_path) or item
+                    item['productPhotoFile'] = filename
+                    item['productPhotoUrl'] = f'/api/garments/{garment_id}/product-photo'
+                    item['productPhotoGeneratedAt'] = now_text()
+                    write_json_safely(item_path, item)
+                    index = read_json(garments_dir / 'index.json') or []
+                    for index_item in index:
+                        if isinstance(index_item, dict) and index_item.get('id') == garment_id:
+                            index_item.update({key: item[key] for key in ('productPhotoFile', 'productPhotoUrl', 'productPhotoGeneratedAt')})
+                            break
+                    write_json_safely(garments_dir / 'index.json', index)
+            except OSError:
+                temporary.unlink(missing_ok=True)
+                return self.send_json(500, {'error': '생성 사진을 PC에 저장하지 못했어요.'})
+            return self.send_json(201, {'productPhotoUrl': item['productPhotoUrl'],
+                                        'generatedAt': item['productPhotoGeneratedAt']})
 
         def update_garment(self, garment_id, payload):
             if not valid_garment_record_id(garment_id):
@@ -535,8 +686,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.send_json(403, {'error': '내가 올린 옷만 고칠 수 있어요.'})
                 owner_name = user['name']
                 updated['ownerName'] = owner_name
-            if not isinstance(owner_name, str) or len(owner_name.strip()) > 10:
-                return self.send_json(400, {'error': '올린 사람 이름은 10글자까지 쓸 수 있어요.'})
+            if not isinstance(owner_name, str) or len(owner_name.strip()) > 200:
+                return self.send_json(400, {'error': '올린 사람 이름은 200글자까지 쓸 수 있어요.'})
             expected_category = 'dress' if garment_type_id == 3 else 'pants' if garment_type_id == 5 else 'top'
             if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
                     or category != expected_category or category not in VALID_CATEGORIES
@@ -582,8 +733,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             user = self.current_user()
             if user is not None:
                 owner_name = user['name']  # 로그인했다면 올린 사람은 항상 나예요.
-            if not isinstance(owner_name, str) or len(owner_name.strip()) > 10:
-                return self.send_json(400, {'error': '올린 사람 이름은 10글자까지 쓸 수 있어요.'})
+            if not isinstance(owner_name, str) or len(owner_name.strip()) > 200:
+                return self.send_json(400, {'error': '올린 사람 이름은 200글자까지 쓸 수 있어요.'})
             if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
                     or category not in VALID_CATEGORIES or gender not in VALID_GENDERS
                     or isinstance(garment_type_id, bool) or garment_type_id not in GARMENT_TYPE_NAMES
@@ -614,6 +765,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'closetPhotoUrl': f'/api/garments/{record_id}/closet-photo',
                 'backgroundId': background_id,
                 'maskPipelineVersion': GARMENT_MASK_PIPELINE_VERSION,
+                'thumbnailVersion': 2 if thumbnail is not None else 0,
             }
             temporary_dir = garments_dir / f'.tmp-{record_id}'
             final_dir = garments_dir / record_id
@@ -1006,7 +1158,9 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 write_json_safely(experiments_dir / run_id / 'metadata.json', item)
             return self.send_json(200, {'id': run_id, 'round': item['round'], 'completed': True})
 
-    return ThreadingHTTPServer((host, port), FitShareHandler)
+    httpd = ThreadingHTTPServer((host, port), FitShareHandler)
+    httpd.garment_metadata_lock = lock
+    return httpd
 
 
 def valid_measurement(value):
@@ -1018,6 +1172,18 @@ def main():
     port = int(os.environ.get('PORT', '8000'))
     storage = Path(os.environ.get('FITSHARE_DATA_DIR', str(DEFAULT_DATA_DIR)))
     httpd = create_server(host, port, storage)
+    from tools.garment_thumbnails import prepare_garment_thumbnails
+
+    def prepare_saved_thumbnails():
+        try:
+            prepare_garment_thumbnails(storage / 'garments',
+                                       lambda root, garment_id: ensure_garment_cutout(root, garment_id, httpd.garment_metadata_lock),
+                                       httpd.garment_metadata_lock)
+        except Exception:
+            # Cache preparation is best-effort and must not stop the HTTP server.
+            return
+
+    threading.Thread(target=prepare_saved_thumbnails, name='garment-thumbnail-warmup', daemon=True).start()
     print(f'FitShare is running: http://{host}:{httpd.server_address[1]}/')
     print(f'Experiment photos and results are saved in: {storage.resolve()}')
     try:
