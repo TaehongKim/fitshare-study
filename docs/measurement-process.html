@@ -369,7 +369,7 @@
           <article class="step">
             <h3>사진에서 기준판을 찾아 바로잡아요</h3>
             <figure class="step-visual"><svg viewBox="0 0 600 250" role="img" aria-label="비스듬한 사진을 반듯한 A0 기준판으로 보정하는 그림"><rect width="600" height="250" rx="12" fill="#edf5f8"/><polygon points="44,54 214,32 229,207 58,222" fill="#fff" stroke="#175f83" stroke-width="5"/><g fill="#e9a326"><circle cx="61" cy="55" r="7"/><circle cx="199" cy="38" r="7"/><circle cx="216" cy="201" r="7"/><circle cx="72" cy="215" r="7"/></g><path d="M260 127h72m-18-18 20 18-20 18" fill="none" stroke="#16745d" stroke-width="6"/><rect x="365" y="34" width="130" height="184" fill="#fff" stroke="#175f83" stroke-width="5"/><path d="M376 80h108M376 126h108M376 172h108M409 38v176M452 38v176" stroke="#d3e0e6" stroke-width="2"/><text x="430" y="238" text-anchor="middle" fill="#526575" font-size="16">600 × 848 px</text></svg></figure>
-            <p>점·격자·ChArUco 표식을 찾아 실제 기준판 모양에 맞춰요. 비스듬한 사각형을 반듯한 A0 판처럼 변환해요.</p>
+            <p>점·격자·ChArUco 표식을 찾아 실제 크기가 알려진 A0 기준판 모양에 맞춰요. 비스듬한 사각형을 반듯하게 변환하고, 결과는 600px × 848px로 정리해요.</p>
           </article>
           <article class="step">
             <h3>옷으로 보이는 곳을 골라요</h3>
@@ -477,12 +477,12 @@
             <text x="380" y="357" text-anchor="middle" fill="#176047" font-size="17" font-weight="700">= 약 33.6cm  (240px × 5cm ÷ 35.7px)</text>
             <text x="655" y="294" text-anchor="middle" fill="#526575" font-size="12">옷 길이도 세로 격자 간격으로 따로 환산해요</text>
           </svg>
-          <figcaption><strong>예시로 따라 재기:</strong> 격자 한 칸의 실제 길이와 보정 사진 속 픽셀 간격을 비교해 너비와 기장을 각각 cm로 바꿔요.</figcaption>
+          <figcaption><strong>예시로 따라 재기:</strong> 격자 한 칸의 실제 길이와 보정 사진 속 픽셀 간격을 비교해 너비와 기장을 각각 cm로 바꿔요. 세로 118.9cm가 848px이면, 옷 길이 450px은 450px × 118.9cm ÷ 848px = 약 63.1cm예요.</figcaption>
         </figure>
         <p class="callout">
           <strong>중요:</strong>
           아무 바닥 무늬나 자가 되는 것은 아니에요. 점·격자·표식의 실제 간격이나 크기를 미리 알아야 해요.
-          표식이 가려지거나 판이 사진 밖으로 잘리면 바로잡기 어렵고, 옷이 구겨져 있으면 사진만 반듯하게 고쳐도 옷 주름은 펴지지 않아요.
+          표식이 가려지거나 판이 사진 밖으로 잘리면 바로잡기 어렵고, 옷이 구겨져 있으면 사진만 반듯하게 고쳐도 옷 주름을 자동으로 펴지 못해요.
         </p>
       </section>
 
@@ -633,13 +633,13 @@
               <dt><code>np.median</code> / <code>float</code></dt><dd>폭의 가운데 값을 구하고, 소수점 계산이 가능한 숫자로 바꾸는 도구예요.</dd>
               <dt><code>valid_spans</code> / <code>width_pixels</code></dt><dd>너비선 주변에서 쓸 수 있는 폭 목록과, 그 폭의 대표 픽셀 값이에요.</dd>
             </dl>
-            <div class="ratio-example">
+        <div class="ratio-example">
               <h3>옷 종류별 비율 지점에서 너비를 재요</h3>
-              <p>기준은 옷으로 고른 영역의 위쪽부터 아래쪽까지 높이예요. 높이가 100px이면 40%는 위에서 40px 내려온 곳이에요.</p>
+              <p>기준은 옷으로 고른 영역의 위쪽부터 아래쪽까지 높이예요. 100px 높이의 40%는 40px이에요. 겨드랑이 봉제선을 찾아 정한 숫자가 아니에요.</p>
               <figure class="example-figure">
                 <svg viewBox="0 0 900 365" role="img" aria-labelledby="kind-ratio-title kind-ratio-desc">
                   <title id="kind-ratio-title">옷 종류별 너비선 비율 비교 예시</title>
-                  <desc id="kind-ratio-desc">외투, 크롭 티셔츠, 원피스, 점퍼, 바지 모양의 초록색 그림에 파란 너비선을 표시합니다. 옷마다 위에서 내려오는 비율은 각각 40%, 32.5%, 15%, 20%, 10%입니다. 이는 옷 종류별 규칙을 보여 주는 그림이지 실제 봉제선을 찾아낸 것이 아닙니다.</desc>
+                  <desc id="kind-ratio-desc">각 옷의 실제 모양을 보고 파란 선 위치를 비교해요. 외투, 크롭 티셔츠, 원피스, 점퍼, 바지 모양의 초록색 그림에 파란 너비선을 표시합니다. 옷마다 위에서 내려오는 비율은 각각 40%, 32.5%, 15%, 20%, 10%입니다. 이는 옷 종류별 규칙이며 실제 봉제선을 찾아 정한 위치가 아니에요.</desc>
                   <rect width="900" height="365" rx="12" fill="#eef4f7" />
                   <text x="24" y="31" fill="#172b3a" font-size="18" font-weight="700">옷 모양에서 종류별 너비선 위치를 살펴봐요</text>
                   <text x="24" y="55" fill="#526575" font-size="13">파란 선은 각 옷의 위에서 정해진 비율만큼 내려온 곳이에요.</text>
@@ -676,8 +676,15 @@
                   </g>
                   <text x="450" y="349" text-anchor="middle" fill="#526575" font-size="13">예를 들어 옷 높이가 100px이면 40%는 위에서 40px 내려온 곳이에요.</text>
                 </svg>
-                <figcaption><strong>파랑: 예시 너비선.</strong> 겨드랑이점을 직접 찾은 선이 아니라, 옷 종류에 따라 우리가 고민해서 정한 비율의 지점에서 잰 길이예요. 예를 들어 티셔츠는 위에서 40%, 바지는 10% 지점의 길이예요.</figcaption>
+                <figcaption><strong>파랑: 예시 너비선.</strong> 겨드랑이 봉제선을 직접 찾지 않아요. 옷 종류에 따라 정한 비율의 지점에서 너비를 재요. 예를 들어 티셔츠는 위에서 40%, 바지는 10% 지점의 길이예요. 이것은 실제 봉제선을 찾아 정한 위치가 아니에요.</figcaption>
               </figure>
+              <table class="dataset-table ratio-table"><thead><tr><th scope="col">옷 종류</th><th scope="col">너비를 잴 위치</th></tr></thead><tbody>
+                <tr><th scope="row">상의 외투</th><td>40%</td></tr>
+                <tr><th scope="row">흰 크롭티셔츠</th><td>32.5%</td></tr>
+                <tr><th scope="row">원피스</th><td>15%</td></tr>
+                <tr><th scope="row">점퍼</th><td>20%</td></tr>
+                <tr><th scope="row">바지</th><td>10%</td></tr>
+              </tbody></table>
             </div>
             <p class="code-note">
               여기서 <code>profile</code>은 옷 종류별 규칙표예요.
