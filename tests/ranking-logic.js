@@ -1,6 +1,6 @@
 import {
   addReview, addUser, cancelReservation, computeRanking, confirmReceived, ensureUser, getGarmentExchange, reserveGarment, createEmptyState, createExchange, finalizeMonths, getMonthKey, getPendingExchanges,
-  getProfile, getRatingView, getReviewable, getReviewsFor, normalizeState, submitRating
+  getProfile, getRatingView, getReviewable, getReviewsFor, normalizeState, submitRating, setAvatar, defaultAvatar
 } from '../modules/rankingLogic.js';
 
 // 브라우저에서 열면 통과/실패를 바로 볼 수 있는 작은 시험입니다.
@@ -113,7 +113,7 @@ check('오류: 이름·나눔 입력을 확인해요', () => {
   const state = withUsers('하늘', '보리');
   throws(() => addUser(state, '   '), '이름을 입력');
   throws(() => addUser(state, '하늘'), '이미 있는 이름');
-  throws(() => addUser(state, '열글자를넘는아주긴이름'), '10글자');
+  throws(() => addUser(state, '가'.repeat(201)), '200글자');
   throws(() => createExchange(state, { giverId: 'u1', receiverId: 'u1', itemName: '옷' }, OCT), '서로 다른');
   throws(() => createExchange(state, { giverId: 'u1', receiverId: 'u9', itemName: '옷' }, OCT), '찾을 수 없어요');
   throws(() => createExchange(state, { giverId: 'u1', receiverId: 'u2', itemName: '' }, OCT), '옷 이름을 입력');
@@ -194,6 +194,21 @@ check('경계: 예약을 취소하면 같은 옷을 다시 예약할 수 있고,
   state = confirmReceived(state, 'e2', 'u3', OCT).state;
   throws(() => cancelReservation(state, 'e2', 'u3'), '이미 끝났거나');
   equal(ensureUser(state, ' 민수 ').user.id, 'u2');
+});
+
+check('정상: 아바타를 꾸미고 저장하며 잘못된 아바타 값은 거부해요', () => {
+  let state = withUsers('하늘', '보리');
+  const avatar = { bg: '#ffd9d9', face: '🐶', hat: '👑', outfit: '👕' };
+  state = setAvatar(state, 'u1', avatar).state;
+  equal(state.users[0].avatar, avatar);
+  equal(state.users[1].avatar, undefined);
+  equal(normalizeState(JSON.parse(JSON.stringify(state))).users[0].avatar, avatar);
+  throws(() => setAvatar(state, 'u1', { ...avatar, face: '<img src=x>' }), '목록에서 골라');
+  throws(() => setAvatar(state, 'u1', { bg: '#ffd9d9' }), '목록에서 골라');
+  throws(() => setAvatar(state, 'u9', avatar), '찾을 수 없어요');
+  const broken = normalizeState({ users: [{ id: 'u1', name: '하늘', avatar: { ...avatar, hat: 'x' } }] });
+  equal(broken.users[0].avatar, undefined);
+  equal(defaultAvatar().hat, '');
 });
 
 const list = document.querySelector('#results');

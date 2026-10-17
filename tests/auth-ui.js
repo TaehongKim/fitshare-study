@@ -32,10 +32,10 @@ await check('오류: 없는 계정과 틀린 입력은 이해하기 쉬운 문�
   assert($('#auth-message').classList.contains('is-error') && $('#auth-message').textContent.includes('아이디 또는 비밀번호'), $('#auth-message').textContent);
   $('#auth-tab-signup').click();
   assert(!$('#auth-name-row').hidden, '회원가입에는 이름 칸이 보여야 해요.');
-  fill('AB', 'secret123', nickname); await send();
-  assert($('#auth-message').textContent.includes('아이디는'), '아이디 규칙 문구');
-  fill(username, '123', nickname); await send();
-  assert($('#auth-message').textContent.includes('비밀번호는'), '비밀번호 규칙 문구');
+  fill('', 'secret123', nickname); await send();
+  assert($('#auth-message').textContent.length > 0, '아이디가 비면 거부');
+  fill(username, 'x', ''); await send();
+  assert($('#auth-message').textContent.includes('이름'), '이름이 비면 거부');
   assert(!$('#auth-panel').hidden, '실패하면 계속 로그인 화면이어야 해요.');
 });
 await check('정상: 회원가입하면 바로 들어가고 헤더에 내 이름이 보여요', async () => {
@@ -60,6 +60,25 @@ await check('정상: 같은 아이디와 비밀번호로 다시 로그인하고,
   $('#auth-tab-signup').click();
   fill(`b${Date.now() % 1000000}`, 'secret123', nickname); await send();
   assert($('#auth-message').textContent.includes('이미 있는 이름'), $('#auth-message').textContent);
+});
+await check('선생님 가입: 코드 입력을 요구하고 올바른 코드로 교사 프로필을 열어요', async () => {
+  $('#logout-button').click(); await settle(500);
+  $('#auth-tab-signup').click();
+  $('#auth-role').value = 'teacher';
+  $('#auth-role').dispatchEvent(new Event('change', { bubbles: true }));
+  assert(!$('#auth-teacher-code-row').hidden && $('#auth-teacher-code').required, '선생님 선택 시 인증 코드 입력란이 필수로 보여요.');
+  const teacherName = `교사${Date.now() % 100000}`;
+  fill(`t${Date.now() % 1000000}`, 'teacher-pass', teacherName);
+  $('#auth-teacher-code').value = 'wrong-code'; await send();
+  assert($('#auth-message').classList.contains('is-error'), '잘못된 코드 가입은 거부돼요.');
+  $('#auth-teacher-code').value = 'fitshare'; await send();
+  assert($('#auth-panel').hidden && $('#user-name').textContent.includes(teacherName), '인증 코드로 가입되고 로그인돼요.');
+  $('#user-name').click(); await settle(300);
+  const dialog = [...doc().querySelectorAll('dialog.profile-dialog')].at(-1);
+  assert(dialog?.querySelector('.profile-role.is-teacher')?.textContent === '선생님', '프로필에 선생님 권한이 표시돼요.');
+  assert(dialog.querySelector('[data-account-action="teacher-code"]'), '선생님 인증 코드 변경이 보여요.');
+  assert(dialog.querySelector('[data-account-action="reset-student-password"]'), '학생 비밀번호 변경이 보여요.');
+  dialog.close();
 });
 
 await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });

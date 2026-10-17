@@ -1,5 +1,6 @@
 import { renderRanking } from '../modules/ranking.js';
 import { openGarmentDetail } from '../modules/garmentDetail.js';
+import { openProfileDialog } from '../modules/profile.js';
 
 // 실제 랭킹 화면과 옷 상세 창을 그려 보고 클릭·입력으로 흐름을 확인합니다.
 // server.py 로 열어야 서버 저장까지 확인돼요. (이 시험은 저장된 랭킹 기록을 지우고 시작해요.)
@@ -101,9 +102,28 @@ await check('후기: 받은 사람만 쓰고, 준 사람 페이지에 글자 그
   assert($('#rk-message').classList.contains('is-error') && $('#rk-message').textContent.includes('후기 내용을 입력'), '빈 후기 거부');
   $('.rk-review-form input').value = '<i>깨끗해요</i>'; submit($('.rk-review-form')); await settle();
   assert(!$('.rk-review-form'), '한 번 쓰면 후기 칸이 사라져요.');
-  [...root.querySelectorAll('[data-profile]')].find((b) => b.textContent === '지수').click();
+  [...root.querySelectorAll('[data-profile]')].find((b) => b.textContent.trim().endsWith('지수')).click();
   assert($('.rk-reviews').textContent.includes('<i>깨끗해요</i>') && !$('.rk-reviews i'), '후기가 글자 그대로 보여야 해요.');
   assert(text().includes('내 페이지로 돌아가기'), '내 페이지로 돌아가는 버튼');
+});
+await check('프로필: 아바타·배지·나눔한/수령한 횟수가 보이고, 아바타를 꾸미면 랭킹에도 보여요', async () => {
+  await viewAs('지수');
+  openProfileDialog(); await settle(500);
+  const dialog = [...document.querySelectorAll('dialog.profile-dialog')].at(-1);
+  assert(dialog.querySelector('.avatar'), '아바타 그림');
+  const stats = dialog.querySelector('.rk-stats').textContent;
+  assert(stats.includes('나눔한 횟수') && stats.includes('1번') && stats.includes('수령한 횟수') && stats.includes('0번'), `횟수: ${stats}`);
+  assert(dialog.textContent.includes('받은 우승 배지') && dialog.textContent.includes('아직 배지가 없어요'), '배지 칸');
+  dialog.querySelector('[data-key="face"] [data-value="🐶"]').click();
+  dialog.querySelector('[data-key="hat"] [data-value="👑"]').click();
+  assert(dialog.querySelector('#pf-preview').textContent.includes('🐶') && dialog.querySelector('#pf-preview').textContent.includes('👑'), '미리보기가 바뀌어요.');
+  dialog.querySelector('[data-save]').click(); await settle(500);
+  assert(dialog.querySelector('#pf-message').textContent.includes('저장했어요'), '저장 안내');
+  const server = await fetch('/api/ranking').then((r) => r.json());
+  assert(server.state.users.find((u) => u.name === '지수').avatar.face === '🐶', '서버에 아바타가 저장돼요.');
+  dialog.close(); await settle();
+  localStorage.setItem('fitshare.ranking.viewerName', '민수'); renderRanking(root); await settle(500);
+  assert([...root.querySelectorAll('.rk-name .avatar')].some((a) => a.textContent.includes('🐶') && a.textContent.includes('👑')), '랭킹에 아바타가 보여요.');
 });
 await check('서버 저장: 다른 기기(새 화면)에서도 같은 기록이 보여요', async () => {
   const server = await fetch('/api/ranking').then((r) => r.json());
