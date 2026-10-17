@@ -30,6 +30,7 @@ GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스',
 VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
 SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
+PRODUCT_MASK_PIPELINE_VERSION = 'yolo-sam-vit-b-v1'
 
 
 def load_env_file(path=None, environ=None):
@@ -174,18 +175,20 @@ def make_source_photo_thumbnail(jpeg_bytes, maximum_side=200):
     return encoded.tobytes()
 
 
-def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None):
+def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None, *, for_product_photo=False):
     garment_dir = Path(garments_dir) / garment_id
-    cutout_path = garment_dir / 'closet.png'
+    cutout_path = garment_dir / ('product-cutout.png' if for_product_photo else 'closet.png')
+    version_key = 'productMaskPipelineVersion' if for_product_photo else 'maskPipelineVersion'
+    version = PRODUCT_MASK_PIPELINE_VERSION if for_product_photo else GARMENT_MASK_PIPELINE_VERSION
     item = read_json(garment_dir / 'garment.json')
     if not item:
         raise FileNotFoundError('옷 사진을 찾지 못했어요.')
     try:
-        if item.get('maskPipelineVersion') == GARMENT_MASK_PIPELINE_VERSION:
+        if item.get(version_key) == version:
             return cutout_path.read_bytes()
     except OSError:
         pass
-    from tools.garment_segmentation import get_yolo_grabcut_provider
+    from tools.garment_segmentation import get_yolo_grabcut_provider, make_product_cutout
     from tools.vision_pipeline import measure_garment, rectify_photo
 
     source = (garment_dir / 'photo.jpg').read_bytes()
@@ -193,10 +196,13 @@ def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None):
                               max_output_long_side=848)
     if not flattened.get('ok'):
         raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
-    measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
-                               scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                               length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
-    photo = decode_png_data(measured.get('closetImageDataUrl'))
+    if for_product_photo:
+        photo = make_product_cutout(flattened['image'], garment_id=item['garmentTypeId'])
+    else:
+        measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
+                                   scale_cm_per_pixel=flattened['scaleCmPerPixel'],
+                                   length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
+        photo = decode_png_data(measured.get('closetImageDataUrl'))
     if photo is None:
         raise ValueError('투명 옷장 사진을 만들지 못했어요.')
     write_bytes_safely(cutout_path, photo)
@@ -204,7 +210,7 @@ def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None):
         latest = read_json(garment_dir / 'garment.json')
         if not latest:
             raise FileNotFoundError('옷 사진을 찾지 못했어요.')
-        latest['maskPipelineVersion'] = GARMENT_MASK_PIPELINE_VERSION
+        latest[version_key] = version
         write_json_safely(garment_dir / 'garment.json', latest)
     return photo
 
@@ -639,10 +645,11 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             try:
                 from tools.replicate_product_photo import ProductPhotoError, generate_product_photo
 
-                source = ensure_garment_cutout(garments_dir, garment_id, lock)
-                prompt = ('Create a clean ecommerce studio product photograph of this exact garment on a neutral white background. '
+                source = ensure_garment_cutout(garments_dir, garment_id, lock, for_product_photo=True)
+                prompt = ('Create a clean ecommerce studio product photograph of this exact garment on a warm ivory background. '
                           'Preserve the photographed garment identity, silhouette, color, fabric texture, print, logo, seams, '
-                          'buttons, and proportions. Remove only the background. Do not add a person, mannequin, text, label, '
+                          'buttons, sleeve stripes, flat laid-out pose, and proportions. Change only the background and lighting. '
+                          'Do not fold sleeves or change the pose. Do not add a person, mannequin, hanger, text, label, '
                           'or other object.')
                 photo, mime = generate_product_photo(source, prompt, token, model_version)
             except ProductPhotoError as error:

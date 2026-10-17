@@ -1,4 +1,4 @@
-"""YOLO → GrabCut masks for the local measurement service (OpenCV DNN only)."""
+"""YOLO → GrabCut for measurement; YOLO → SAM for product photo cutouts."""
 
 import hashlib
 import threading
@@ -22,6 +22,9 @@ _load_lock = threading.Lock()
 _inference_lock = threading.Lock()
 _grabcut_lock = threading.Lock()
 _detector = None
+_sam_predictor = None
+_sam_load_lock = threading.Lock()
+_sam_inference_lock = threading.Lock()
 
 
 def _valid_model(path):
@@ -179,3 +182,41 @@ def yolo_grabcut_provider(garment_id=None, category=None, detector=None, iterati
 def get_yolo_grabcut_provider(garment_id=None, category=None):
     return yolo_grabcut_provider(garment_id, category)
 
+
+def _load_sam_predictor():
+    global _sam_predictor
+    with _sam_load_lock:
+        if _sam_predictor is None:
+            from experiments.garment_ai.sam_experiment import create_predictor
+
+            checkpoint = MODEL_PATH.parent / 'sam_vit_b_01ec64.pth'
+            if not checkpoint.is_file():
+                raise RuntimeError('SAM 모델 파일을 server-data/model-cache에 준비해 주세요.')
+            _sam_predictor = create_predictor(checkpoint)
+    return _sam_predictor
+
+
+def make_product_cutout(image, garment_id=None, category=None, *, detector=None, predictor=None):
+    detector = detector if detector is not None else _load_detector()
+    detection = detector.detect(image, garment_id, category)
+    yolo_mask = np.asarray(detection['mask']) > 0
+    if yolo_mask.shape != image.shape[:2] or not yolo_mask.any():
+        raise ValueError('YOLO가 옷 위치를 찾지 못했어요.')
+    rows, columns = np.nonzero(yolo_mask)
+    # 두 바짓가랑이처럼 나뉜 영역도 모두 포함하는 상자를 SAM에 알려 줘요.
+    box = np.array([columns.min(), rows.min(), columns.max(), rows.max()], dtype=np.float32)
+    predictor = predictor if predictor is not None else _load_sam_predictor()
+    with _sam_inference_lock:
+        predictor.set_image(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        masks, _, _ = predictor.predict(box=box, multimask_output=False)
+    mask = np.asarray(masks[0]) > 0
+    if mask.shape != image.shape[:2] or not mask.any():
+        raise ValueError('SAM이 옷 영역을 찾지 못했어요. 원본 사진을 확인해 주세요.')
+    alpha = mask.astype(np.uint8) * 255
+    left, top, width, height = cv2.boundingRect(alpha)
+    cutout = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    cutout[:, :, 3] = alpha
+    ok, encoded = cv2.imencode('.png', cutout[top:top + height, left:left + width])
+    if not ok:
+        raise RuntimeError('SAM 옷 분리 사진을 저장하지 못했어요.')
+    return encoded.tobytes()

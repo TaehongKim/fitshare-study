@@ -218,8 +218,10 @@ class RankingApiTests(unittest.TestCase):
         source = b'original photo stays unchanged'
         cutout = b'\x89PNG\r\n\x1a\ntransparent cutout'
         (folder / 'photo.jpg').write_bytes(source)
-        (folder / 'closet.png').write_bytes(cutout)
+        (folder / 'closet.png').write_bytes(b'legacy GrabCut cutout')
+        (folder / 'product-cutout.png').write_bytes(cutout)
         item = {'id': garment_id, 'name': 'Sample', 'maskPipelineVersion': server.GARMENT_MASK_PIPELINE_VERSION,
+                'productMaskPipelineVersion': server.PRODUCT_MASK_PIPELINE_VERSION,
                 'photoUrl': f'/api/garments/{garment_id}/photo'}
         (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
         (root / 'index.json').write_text(json.dumps([item]), encoding='utf-8')
@@ -259,6 +261,7 @@ class RankingApiTests(unittest.TestCase):
             student_opener.open(self.base_url + f'/api/garments/{garment_id}/product-photo')
         self.assertEqual(denied.exception.code, 403)
         folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        self.assertEqual(generate.call_args.args[0], (folder / 'product-cutout.png').read_bytes())
         self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
         self.assertTrue((folder / 'product-photo.png').exists())
         saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
@@ -425,4 +428,3 @@ class RankingApiTests(unittest.TestCase):
 if __name__ == '__main__':
 
     unittest.main()
-

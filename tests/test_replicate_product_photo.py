@@ -35,7 +35,7 @@ class ReplicateProductPhotoTests(unittest.TestCase):
             calls.append(request.full_url)
             if request.full_url.endswith('/files'):
                 return FakeResponse(json.dumps({'id': 'file-1', 'urls': {'get': 'https://api.replicate.com/v1/files/file-1'}}).encode())
-            if '/models/' in request.full_url:
+            if request.full_url.endswith('/predictions'):
                 return FakeResponse(json.dumps(prediction).encode())
             if request.full_url == 'https://replicate.delivery/result.png':
                 if result is None:
@@ -52,6 +52,41 @@ class ReplicateProductPhotoTests(unittest.TestCase):
         self.assertEqual(image, (b'\x89PNG\r\n\x1a\nvalid-png', 'image/png'))
         self.assertTrue(any(url.endswith('/files/file-1') for url in calls))
 
+    def test_prediction_pins_qwen_version_and_uses_round8_image_settings(self):
+        requests = []
+
+        def opener(request, timeout=90):
+            requests.append(request)
+            if request.full_url.endswith('/files'):
+                return FakeResponse(json.dumps({
+                    'id': 'file-1',
+                    'urls': {'get': 'https://api.replicate.com/v1/files/file-1'}
+                }).encode())
+            if request.full_url.endswith('/predictions'):
+                return FakeResponse(json.dumps({
+                    'status': 'succeeded', 'output': ['https://replicate.delivery/result.png']
+                }).encode())
+            if request.full_url == 'https://replicate.delivery/result.png':
+                return FakeResponse(b'\x89PNG\r\n\x1a\nimage', 'image/png')
+            return FakeResponse(b'', status=204)
+
+        generate_product_photo(b'\x89PNG\r\n\x1a\nsource', 'keep garment', 'test-token',
+                               'qwen-version', opener=opener)
+        prediction = next(request for request in requests if request.full_url.endswith('/predictions'))
+        self.assertEqual(prediction.full_url, 'https://api.replicate.com/v1/predictions')
+        self.assertEqual(json.loads(prediction.data), {
+            'version': 'qwen-version',
+            'input': {
+                'image': ['https://api.replicate.com/v1/files/file-1'],
+                'prompt': 'keep garment',
+                'aspect_ratio': 'match_input_image',
+                'output_format': 'jpg'
+            }
+        })
+        self.assertEqual(prediction.get_header('Authorization'), 'Bearer test-token')
+        self.assertEqual(prediction.get_header('User-agent'), 'FitShare/1.0')
+        self.assertIsNone(requests[-2].get_header('Authorization'))
+
     def test_prediction_failure_returns_readable_error_and_deletes_upload(self):
         calls = []
 
@@ -59,7 +94,7 @@ class ReplicateProductPhotoTests(unittest.TestCase):
             calls.append(request.full_url)
             if request.full_url.endswith('/files'):
                 return FakeResponse(json.dumps({'id': 'file-1', 'urls': {'get': 'https://api.replicate.com/v1/files/file-1'}}).encode())
-            if '/models/' in request.full_url:
+            if request.full_url.endswith('/predictions'):
                 return FakeResponse(json.dumps({'status': 'failed'}).encode())
             return FakeResponse(b'', status=204)
 
@@ -94,7 +129,7 @@ class ReplicateProductPhotoTests(unittest.TestCase):
             calls.append(request.full_url)
             if request.full_url.endswith('/files'):
                 return FakeResponse(json.dumps({'id': 'file-1', 'urls': {'get': 'https://api.replicate.com/v1/files/file-1'}}).encode())
-            if '/models/' in request.full_url:
+            if request.full_url.endswith('/predictions'):
                 return FakeResponse(json.dumps({'status': 'processing', 'urls': {'get': 'https://api.replicate.com/v1/predictions/abc'}}).encode())
             return FakeResponse(b'', status=204)
 

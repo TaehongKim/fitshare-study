@@ -26,7 +26,8 @@ class ProductPhotoError(RuntimeError):
 
 def _call(url, token, data=None, headers=None, method=None, opener=urlopen, timeout=90):
     request = Request(url, data=data, headers={
-        'Authorization': f'Bearer {token}', 'Accept': 'application/json', **(headers or {})
+        'Authorization': f'Bearer {token}', 'Accept': 'application/json',
+        'User-Agent': 'FitShare/1.0', **(headers or {})
     }, method=method)
     try:
         with opener(request, timeout=timeout) as response:
@@ -79,7 +80,7 @@ def _image_result(prediction, opener):
             parsed.hostname == 'replicate.delivery' or parsed.hostname.endswith('.replicate.delivery')):
         raise ProductPhotoError('생성된 사진 주소가 안전하지 않아요.')
     try:
-        request = Request(output, headers={'Accept': 'image/*'})
+        request = Request(output, headers={'Accept': 'image/*', 'User-Agent': 'FitShare/1.0'})
         image_opener = build_opener(_NoRedirect).open if opener is urlopen else opener
         with image_opener(request, timeout=90) as response:
             final_url = (response.geturl() or output) if hasattr(response, 'geturl') else output
@@ -106,8 +107,11 @@ def generate_product_photo(source_bytes, prompt, token, model_version, opener=ur
     file_id = None
     try:
         file_id, file_url = _upload(source_bytes, token, opener)
-        result = _json(f'{API_ROOT}/models/{MODEL_SLUG}/predictions', token,
-                       {'version': model_version, 'input': {'image': [file_url], 'prompt': prompt}},
+        result = _json(f'{API_ROOT}/predictions', token,
+                       {'version': model_version, 'input': {
+                           'image': [file_url], 'prompt': prompt,
+                           'aspect_ratio': 'match_input_image', 'output_format': 'jpg'
+                       }},
                        {'Prefer': 'wait=60', 'Cancel-After': '300s'}, 'POST', opener, timeout=75)
         deadline = time.monotonic() + 300
         while result.get('status') in {'starting', 'processing', 'queued'}:
