@@ -194,11 +194,13 @@ class AccountStore:
             target_record['salt'] = salt.hex()
             target_record['hash'] = _hash_password(new_password, salt)
             accounts[target] = target_record
-            _write(self.accounts_path, accounts)
             sessions = _read(self.sessions_path, {})
             active = {key: item for key, item in sessions.items() if item.get('username') != target}
             if len(active) != len(sessions):
                 _write(self.sessions_path, active)
+            # If persisting the password fails, the old password still works,
+            # but every existing session has already been revoked.
+            _write(self.accounts_path, accounts)
 
     def destroy_session(self, token):
         if not isinstance(token, str) or not token:

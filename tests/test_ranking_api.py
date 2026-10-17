@@ -272,6 +272,31 @@ class RankingApiTests(unittest.TestCase):
         self.assertEqual(status, 503)
         self.assertIn('서버에', result['error'])
 
+    def test_concurrent_product_photo_requests_generate_once(self):
+        garment_id, _ = self.add_saved_garment()
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        generated = b'\x89PNG\r\n\x1a\nproduct photo'
+        statuses = []
+
+        def slow_generate(*_args):
+            import time
+            time.sleep(0.25)
+            return generated, 'image/png'
+
+        def request_photo():
+            statuses.append(self.call(f'/api/garments/{garment_id}/product-photo', {})[0])
+
+        with patch('tools.replicate_product_photo.generate_product_photo', side_effect=slow_generate) as generate:
+            with patch.dict(os.environ, {'REPLICATE_API_TOKEN': 'test-token', 'REPLICATE_PRODUCT_MODEL_VERSION': 'test-version'}):
+                requests = [threading.Thread(target=request_photo) for _ in range(2)]
+                for request in requests:
+                    request.start()
+                for request in requests:
+                    request.join(timeout=5)
+            self.assertEqual(generate.call_count, 1)
+        self.assertEqual(sorted(statuses), [200, 201])
+
     def test_failed_product_generation_leaves_source_and_record_untouched(self):
         garment_id, source = self.add_saved_garment()
         self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',

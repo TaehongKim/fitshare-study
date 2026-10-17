@@ -7,9 +7,10 @@ from tools.replicate_product_photo import ProductPhotoError, generate_product_ph
 
 
 class FakeResponse:
-    def __init__(self, body, content_type='application/json', status=200):
+    def __init__(self, body, content_type='application/json', status=200, final_url=None):
         self.body = body
         self.status = status
+        self.final_url = final_url
         self.headers = Message()
         self.headers['Content-Type'] = content_type
 
@@ -21,6 +22,9 @@ class FakeResponse:
 
     def read(self, *_):
         return self.body
+
+    def geturl(self):
+        return self.final_url
 
 
 class ReplicateProductPhotoTests(unittest.TestCase):
@@ -71,6 +75,12 @@ class ReplicateProductPhotoTests(unittest.TestCase):
         with self.assertRaisesRegex(ProductPhotoError, '사진 파일'):
             self.invoke({'status': 'succeeded', 'output': 'https://replicate.delivery/result.png'},
                         FakeResponse(b'not an image', 'text/plain'))
+
+    def test_redirected_result_to_untrusted_host_is_rejected(self):
+        with self.assertRaises(ProductPhotoError):
+            self.invoke({'status': 'succeeded', 'output': 'https://replicate.delivery/result.png'},
+                        FakeResponse(b'\x89PNG\r\n\x1a\nvalid', 'image/png',
+                                     final_url='http://127.0.0.1/admin'))
 
     def test_missing_token_or_model_version_is_rejected_before_upload(self):
         for token, version in (('', 'version'), ('token', '')):

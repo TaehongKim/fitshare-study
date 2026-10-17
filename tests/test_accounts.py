@@ -2,6 +2,7 @@ import json
 import hashlib
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from tools.accounts import AccountStore, AuthError
@@ -80,6 +81,23 @@ class AccountRoleTests(unittest.TestCase):
         for password in (' ', 'x' * 201):
             with self.assertRaises(AuthError):
                 self.store.reset_student_password('teacher', 'student', password)
+        self.assertEqual(self.store.login('student', 'pw')['role'], 'student')
+
+    def test_password_reset_revokes_sessions_before_saving_new_password(self):
+        self.store.signup('teacher', 'pw', 'Teacher', teacher_code='fitshare')
+        self.store.signup('student', 'pw', 'Student')
+        token = self.store.create_session('student')
+        original_write = __import__('tools.accounts', fromlist=['_write'])._write
+
+        def fail_account_write(path, value):
+            if path == self.store.accounts_path:
+                raise OSError('simulated account write failure')
+            return original_write(path, value)
+
+        with patch('tools.accounts._write', side_effect=fail_account_write):
+            with self.assertRaises(OSError):
+                self.store.reset_student_password('teacher', 'student', 'new-password')
+        self.assertIsNone(self.store.user_for_token(token))
         self.assertEqual(self.store.login('student', 'pw')['role'], 'student')
 
 

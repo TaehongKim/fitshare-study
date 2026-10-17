@@ -6,13 +6,18 @@ import time
 import uuid
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 
 API_ROOT = 'https://api.replicate.com/v1'
 MODEL_SLUG = 'qwen/qwen-image-edit-plus'
 MAX_IMAGE_BYTES = 12 * 1024 * 1024
 SAFE_ID = re.compile(r'^[A-Za-z0-9_.-]{1,160}$')
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class ProductPhotoError(RuntimeError):
@@ -74,7 +79,14 @@ def _image_result(prediction, opener):
             parsed.hostname == 'replicate.delivery' or parsed.hostname.endswith('.replicate.delivery')):
         raise ProductPhotoError('생성된 사진 주소가 안전하지 않아요.')
     try:
-        with opener(Request(output, headers={'Accept': 'image/*'}), timeout=90) as response:
+        request = Request(output, headers={'Accept': 'image/*'})
+        image_opener = build_opener(_NoRedirect).open if opener is urlopen else opener
+        with image_opener(request, timeout=90) as response:
+            final_url = (response.geturl() or output) if hasattr(response, 'geturl') else output
+            final = urlsplit(final_url)
+            if final.scheme != 'https' or not final.hostname or not (
+                    final.hostname == 'replicate.delivery' or final.hostname.endswith('.replicate.delivery')):
+                raise ProductPhotoError('?앹꽦???ъ쭊 二쇱냼媛 ?덉쟾?섏? ?딆븘??')
             content_type = response.headers.get_content_type()
             body = response.read(MAX_IMAGE_BYTES + 1)
     except (HTTPError, URLError, TimeoutError, OSError):

@@ -245,6 +245,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
     storage = Path(data_dir).resolve()
     storage.mkdir(parents=True, exist_ok=True)
     lock = threading.Lock()
+    product_generation_locks = {}
+    product_generation_locks_guard = threading.Lock()
     experiments_dir = storage / 'experiments'
     garments_dir = storage / 'garments'
     accounts = AccountStore(storage)
@@ -597,6 +599,12 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             self.wfile.write(photo)
 
         def create_garment_product_photo(self, garment_id):
+            with product_generation_locks_guard:
+                generation_lock = product_generation_locks.setdefault(garment_id, threading.Lock())
+            with generation_lock:
+                return self._create_garment_product_photo_locked(garment_id)
+
+        def _create_garment_product_photo_locked(self, garment_id):
             user = self.current_user()
             if user is None:
                 return self.send_json(401, {'error': '로그인해 주세요.'})
