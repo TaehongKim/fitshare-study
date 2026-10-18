@@ -14,6 +14,8 @@ class HomeParser(HTMLParser):
         self.controls = set()
         self.hidden = []
         self.image_alts = []
+        self.links = []
+        self.active_link = None
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -27,6 +29,17 @@ class HomeParser(HTMLParser):
             self.hidden.append(attrs.get('id'))
         if tag == 'img':
             self.image_alts.append(attrs.get('alt', ''))
+        if tag == 'a':
+            self.links.append({'href': attrs.get('href'), 'label': attrs.get('aria-label'), 'text': ''})
+            self.active_link = len(self.links) - 1
+
+    def handle_data(self, data):
+        if self.active_link is not None:
+            self.links[self.active_link]['text'] += data
+
+    def handle_endtag(self, tag):
+        if tag == 'a':
+            self.active_link = None
 
 
 class ExperimentStoryHomeTests(unittest.TestCase):
@@ -60,6 +73,25 @@ class ExperimentStoryHomeTests(unittest.TestCase):
         self.assertIn('848px', html)
         self.assertIn('20장', html)
         self.assertIn('한 가지씩', html)
+
+    def test_home_has_three_learning_path_buttons_with_working_destinations(self):
+        html = PAGE.read_text(encoding='utf-8')
+        parser = HomeParser()
+        parser.feed(html)
+        links = {link['label']: link['href'] for link in parser.links if link['label']}
+
+        expected_paths = {
+            '옷 크기 재기 연구노트': '#탐구일지',
+            '미리 입어 보기 (가상 입어보기)': '가상입어보기-개선보고서.html',
+            '잘 어울리는 옷 추천': '추천기능-학습과발표.html',
+        }
+        for label, destination in expected_paths.items():
+            with self.subTest(label=label):
+                self.assertEqual(links.get(label), destination)
+                if destination.startswith('#'):
+                    self.assertIn(destination[1:], parser.ids)
+                else:
+                    self.assertTrue((PAGE.parent / destination).is_file())
 
 
 if __name__ == '__main__':
