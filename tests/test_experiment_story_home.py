@@ -3,7 +3,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 
-PAGE = Path(__file__).resolve().parents[1] / 'docs' / 'index.html'
+DOCS = Path(__file__).resolve().parents[1] / 'docs'
+LANDING_PAGE = DOCS / 'index.html'
+PAGE = DOCS / 'clothing-size-research.html'
 
 
 class HomeParser(HTMLParser):
@@ -75,13 +77,13 @@ class ExperimentStoryHomeTests(unittest.TestCase):
         self.assertIn('한 가지씩', html)
 
     def test_home_has_three_learning_path_buttons_with_working_destinations(self):
-        html = PAGE.read_text(encoding='utf-8')
+        html = LANDING_PAGE.read_text(encoding='utf-8')
         parser = HomeParser()
         parser.feed(html)
         links = {link['label']: link['href'] for link in parser.links if link['label']}
 
         expected_paths = {
-            '옷 크기 재기 연구노트': '#탐구일지',
+            '옷 크기 재기 연구노트': 'clothing-size-research.html',
             '미리 입어 보기 (가상 입어보기)': '가상입어보기-개선보고서.html',
             '잘 어울리는 옷 추천': '추천기능-학습과발표.html',
         }
@@ -91,7 +93,15 @@ class ExperimentStoryHomeTests(unittest.TestCase):
                 if destination.startswith('#'):
                     self.assertIn(destination[1:], parser.ids)
                 else:
-                    self.assertTrue((PAGE.parent / destination).is_file())
+                    self.assertTrue((LANDING_PAGE.parent / destination).is_file())
+
+    def test_landing_page_is_a_standalone_topic_selector(self):
+        html = LANDING_PAGE.read_text(encoding='utf-8')
+
+        self.assertIn('궁금한 주제를 골라 봐요', html)
+        self.assertIn('어디부터 볼까요?', html)
+        self.assertNotIn('질문 하나, 실험 하나씩', html)
+        self.assertNotIn('id="탐구일지"', html)
 
 
 if __name__ == '__main__':
