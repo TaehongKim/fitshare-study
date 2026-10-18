@@ -18,6 +18,8 @@ from urllib.parse import unquote, urlsplit
 
 from tools.accounts import SESSION_SECONDS, AccountStore, AuthError
 from tools.garment_thumbnails import GARMENT_MASK_PIPELINE_VERSION
+from tools.garment_metadata import clean_metadata
+from tools.clothing_wishes import clean_filters, new_wish, public_wish, valid_store
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -190,6 +192,8 @@ def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None, *, for_p
     item = read_json(garment_dir / 'garment.json')
     if not item:
         raise FileNotFoundError('옷 사진을 찾지 못했어요.')
+    if not for_product_photo and item.get('closetPhotoSource') == 'provided-garment-only':
+        return cutout_path.read_bytes()
     try:
         if item.get(version_key) == version:
             return cutout_path.read_bytes()
@@ -322,6 +326,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.get_ranking()
                 if parts == ['garments']:
                     return self.list_garments()
+                if parts == ['clothing-wishes']:
+                    return self.handle_clothing_wishes('GET')
                 if len(parts) == 2 and parts[0] == 'garments':
                     return self.get_garment(parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'product-photo':
@@ -330,6 +336,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.get_garment_photo(parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'closet-photo':
                     return self.get_garment_closet_photo(parts[1])
+                if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'tryon-photo':
+                    return self.get_garment_tryon_photo(parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'thumbnail':
                     return self.get_garment_thumbnail(parts[1])
                 if len(parts) == 2 and parts[0] == 'experiments':
@@ -368,6 +376,10 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.analyze_garment(payload)
                 if parts == ['garments']:
                     return self.save_garment(payload)
+                if parts == ['clothing-wishes']:
+                    return self.handle_clothing_wishes('POST', payload=payload)
+                if len(parts) == 3 and parts[0] == 'clothing-wishes' and parts[2] == 'read':
+                    return self.handle_clothing_wishes('READ', parts[1])
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'update':
                     return self.update_garment(parts[1], payload)
                 if len(parts) == 3 and parts[0] == 'garments' and parts[2] == 'product-photo':
@@ -385,11 +397,54 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             if parts is None:
                 return self.send_json(404, {'error': '삭제할 API 주소가 없어요.'})
             try:
+                if len(parts) == 2 and parts[0] == 'clothing-wishes':
+                    return self.handle_clothing_wishes('DELETE', parts[1])
                 if len(parts) == 2 and parts[0] == 'garments':
                     return self.delete_garment(parts[1])
                 return self.send_json(404, {'error': '삭제할 API 주소가 없어요.'})
             except OSError:
                 return self.send_json(500, {'error': '옷 사진과 정보를 삭제하지 못했어요. 저장 공간 권한을 확인해 주세요.'})
+
+        def handle_clothing_wishes(self, action, wish_id=None, payload=None):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '로그인하면 원하는 옷 알림을 저장하고 확인할 수 있어요.'})
+            path = storage / 'clothing-wishes.json'
+            with lock:
+                wishes = read_json(path)
+                if wishes is None and path.exists():
+                    return self.send_json(500, {'error': '저장한 알림 기록을 읽지 못했어요. 기록을 확인해 주세요.'})
+                wishes = [] if wishes is None else wishes
+                records = read_json(garments_dir / 'index.json')
+                if records is None and (garments_dir / 'index.json').exists():
+                    return self.send_json(500, {'error': '등록된 옷 목록을 읽지 못했어요. 잠시 후 다시 시도해 주세요.'})
+                records = [] if records is None else records
+                if not valid_store(wishes) or not isinstance(records, list) or any(not isinstance(item, dict) or not isinstance(item.get('id'), str) for item in records):
+                    return self.send_json(500, {'error': '알림 기록을 읽지 못했어요. 잠시 후 다시 시도해 주세요.'})
+                owned = [wish for wish in wishes if wish['username'] == user['username']]
+                if action == 'GET':
+                    return self.send_json(200, {'wishes': [public_wish(wish, records) for wish in owned]})
+                if action == 'POST':
+                    try:
+                        filters = clean_filters(payload.get('filters'))
+                    except ValueError as error:
+                        return self.send_json(400, {'error': str(error)})
+                    if any(wish['filters'] == filters for wish in owned):
+                        return self.send_json(409, {'error': '이미 같은 조건으로 알림을 받고 있어요.'})
+                    if len(owned) >= 20:
+                        return self.send_json(400, {'error': '알림 조건은 최대 20개까지 저장할 수 있어요. 필요 없는 조건을 삭제해 주세요.'})
+                    wish = new_wish(user['username'], filters, records)
+                    wishes.append(wish)
+                else:
+                    wish = next((wish for wish in owned if wish['id'] == wish_id), None)
+                    if wish is None:
+                        return self.send_json(404, {'error': '저장한 알림 조건을 찾지 못했어요.'})
+                    if action == 'DELETE':
+                        wishes.remove(wish)
+                    elif action == 'READ':
+                        wish['readIds'] = list(set(wish['readIds']) | {str(item['id']) for item in public_wish(wish, records)['matches']})
+                write_json_safely(path, wishes)
+                return self.send_json(201 if action == 'POST' else 200, {'wishes': [public_wish(wish, records) for wish in wishes if wish['username'] == user['username']]})
 
         def api_parts(self):
             path = urlsplit(self.path).path
@@ -587,6 +642,27 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             self.send_header('Content-Type', 'image/png')
             self.send_header('Content-Length', str(len(photo)))
             self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(photo)
+
+        def get_garment_tryon_photo(self, garment_id):
+            if not valid_garment_record_id(garment_id):
+                return self.send_json(404, {'error': '옷을 찾지 못했어요.'})
+            item = read_json(garments_dir / garment_id / 'garment.json')
+            if not item:
+                return self.send_json(404, {'error': '옷이 삭제되었거나 정보를 찾을 수 없어요.'})
+            if item.get('category') not in ('top', 'pants'):
+                return self.send_json(422, {'error': '상의와 하의만 입어볼 수 있어요.'})
+            try:
+                from tools.tryon_photo import make_tryon_photo, original_tryon_source
+                source = original_tryon_source(garments_dir / garment_id, item)
+                photo = make_tryon_photo(source, item.get('category'), item.get('bottomLength', ''))
+            except (OSError, ValueError, RuntimeError, ImportError) as error:
+                return self.send_json(422, {'error': str(error) or '입어보기용 사진을 준비하지 못했어요.'})
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/png')
+            self.send_header('Content-Length', str(len(photo)))
+            self.send_header('Cache-Control', 'no-store')
             self.end_headers()
             self.wfile.write(photo)
 
@@ -808,13 +884,22 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             updated['garmentTypeName'] = GARMENT_TYPE_NAMES[garment_type_id]
             updated['photoUrl'] = f'/api/garments/{garment_id}/photo'
             updated['closetPhotoUrl'] = f'/api/garments/{garment_id}/closet-photo'
+            try:
+                clean_metadata(payload, item)
+            except ValueError as error:
+                return self.send_json(400, {'error': str(error)})
             with lock:
                 latest = read_json(item_path)
                 if not isinstance(latest, dict):
                     return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+                try:
+                    metadata_update = clean_metadata(payload, latest)
+                except ValueError:
+                    return self.send_json(409, {'error': '다른 곳에서 옷 정보가 변경됐어요. 목록을 새로고침한 뒤 다시 수정해 주세요.'})
                 for key in ('name', 'category', 'gender', 'garmentTypeId', 'colorName', 'lengthCm',
                             'widthCm', 'garmentTypeName', 'photoUrl', 'closetPhotoUrl'):
                     latest[key] = updated[key]
+                latest.update(metadata_update)
                 updated = latest
                 write_json_safely(item_path, updated)
                 garment_index = read_json(garments_dir / 'index.json') or []
@@ -889,6 +974,13 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             closet_image = decode_png_data(payload.get('closetImageDataUrl'))
             background_id = payload.get('backgroundId', 'M4')
             owner_name = payload.get('ownerName', '')
+            measurement_method = payload.get('measurementMethod', 'provided')
+            if not isinstance(measurement_method, str) or measurement_method not in {'manual','photo-analysis','provided'}:
+                return self.send_json(400, {'error': '치수 입력 방식을 확인해 주세요.'})
+            try:
+                recommendation_metadata = clean_metadata(payload)
+            except ValueError as error:
+                return self.send_json(400, {'error': str(error)})
             user = self.current_user()
             if user is not None:
                 owner_name = user['name']  # 로그인했다면 올린 사람은 항상 나예요.
@@ -914,6 +1006,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             record_id = str(uuid.uuid4())
             created_at = now_text()
             item = {
+                **recommendation_metadata,
+                'measurementMethod': measurement_method,
                 'id': record_id, 'name': name.strip(), 'category': category, 'gender': gender,
                 'garmentTypeId': garment_type_id,
                 'garmentTypeName': GARMENT_TYPE_NAMES[garment_type_id],

@@ -151,11 +151,13 @@ try {
     assert(deleteRequests.length === 0 && !remove.disabled, 'Canceling must not send a delete request');
     confirmed = true;
     remove.click();
-    await waitFor(() => deleteRequests.length === 1, 'Confirmed deletion was not sent');
+    await waitFor(() => deleteRequests.length === 1 && updates === 1, 'Confirmed deletion did not finish and refresh the closet');
     assert(deleteRequests[0] === 'DELETE' && updates === 1, 'Success must delete and refresh the closet');
-    await waitFor(() => !document.querySelector('dialog.garment-detail'), 'Successful deletion must close the detail dialog');
+    await waitFor(() => !document.querySelector('dialog.garment-detail[open]'), 'Successful deletion must close the detail dialog');
   });
   await check('Students edit only their own cards and teachers edit all cards', async () => {
+    role = 'student';
+    await fetchMe();
     const root = document.createElement('section');
     const list = document.createElement('div');
     const status = document.createElement('p');
@@ -193,6 +195,7 @@ try {
       const calls = [];
       const saved = { ...garment, id: 'saved-product', ownerName: 'Student', ownerUsername: 'student' };
       let stored = false;
+      let submittedMetadata;
       const waitFor = async (condition, message) => {
         for (let attempt = 0; attempt < 200; attempt += 1) {
           if (condition()) return;
@@ -207,7 +210,7 @@ try {
           return json({ lengthCm: 45, widthCm: 32, colorName: 'White', widthLabel: 'Width', garmentName: 'Shirt',
             analysisPhotoDataUrl: 'data:image/png;base64,iVBORw0KGgo=', message: 'Measurements ready' });
         }
-        if (url === '/api/garments' && options.method === 'POST') { calls.push('save'); stored = true; return json(saved, 201); }
+        if (url === '/api/garments' && options.method === 'POST') { calls.push('save'); submittedMetadata=JSON.parse(options.body); stored = true; return json(saved, 201); }
         if (url === '/api/garments') return json(stored ? [saved] : []);
         if (url === '/api/garments/saved-product/product-photo') {
           calls.push('generate');
@@ -228,10 +231,14 @@ try {
         await waitFor(() => !form.hidden, 'Measurements did not populate the form');
         form.elements.name.value = 'Test shirt';
         form.elements.gender.value = 'unisex';
+        assert(!form.elements.size && !form.elements.stretch && !form.elements.style, 'Only seasons should remain in recommendation metadata');
+        form.querySelector('[name="seasons"][value="봄"]').checked=true;
+        form.querySelector('[name="seasons"][value="가을"]').checked=true;
         form.dispatchEvent(new win.Event('submit', { cancelable: true }));
         await waitFor(() => form.hidden && !form.querySelector('[type=submit]').disabled, 'Registration did not finish');
         assert(calls.join(',') === 'measure,save,generate', `Expected measure,save,generate but got ${calls}`);
         assert(stored && doc.querySelector('.school-closet-card'), 'Saved garment must remain in closet');
+        assert(!('size' in submittedMetadata)&&submittedMetadata.seasons.length===2&&!('stretch' in submittedMetadata), 'Registration must send chosen recommendation metadata');
         assert(doc.querySelector('#analysis-status').classList.contains('is-error') === fails,
           'Generation success or failure must be shown accurately');
         if (fails) assert(doc.querySelector('#analysis-status').textContent.includes('AI test failure'), 'AI error must be explained');

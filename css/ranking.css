@@ -106,3 +106,62 @@
 .avatar-swatch { width:34px; height:34px; border:2px solid #dbe3f0; border-radius:50%; cursor:pointer; }
 .avatar-pick.is-picked, .avatar-swatch.is-picked { border-color:#3b6fd8; box-shadow:0 0 0 2px #3b6fd855; }
 .rk-name .avatar { margin-right:4px; }
+
+/* 순위 비교는 랭킹에, 개인 나눔 관리는 내페이지에 둡니다. */
+.ranking-comparison .ranking-intro { align-items:flex-start; }
+.ranking-comparison .ranking-intro > div:last-child { min-width:0; }
+.rk-ranking-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:18px; padding:12px 14px; border-radius:12px; background:#f1f6ff; }
+.rk-ranking-tools p { margin:0; color:var(--muted); font-size:13px; line-height:1.65; }
+.rk-ranking-tools .rk-ghost, .rk-board-heading .rk-ghost { margin:0; min-height:42px; cursor:pointer; }
+.rk-overview { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0 22px; }
+.rk-overview p { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin:0; padding:16px; border:1px solid var(--line); border-radius:12px; color:var(--muted); font-size:13px; }
+.rk-overview strong { color:var(--ink); font-size:22px; }
+.rk-board-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.rk-board-heading h4 { margin:0; font:21px 'Jua'; }
+.rk-board-note { margin:9px 0 12px; color:var(--muted); font-size:12px; line-height:1.65; }
+.ranking-comparison .rk-rank { padding:15px 14px; grid-template-columns:38px minmax(0,1fr) auto; gap:7px 12px; }
+.ranking-comparison .rk-name { display:flex; align-items:center; gap:8px; min-width:0; width:100%; min-height:42px; cursor:pointer; text-decoration:none; }
+.ranking-comparison .rk-name:hover .rk-display-name { text-decoration:underline; }
+.rk-display-name { min-width:0; overflow-wrap:anywhere; text-align:left; }
+.rk-self { flex:none; padding:2px 7px; border-radius:6px; color:#2352b3; background:#e1ebff; font-size:11px; }
+.ranking-comparison .rk-rank.is-self { border:2px solid #6893eb; background:#f1f6ff; }
+.ranking-comparison .rk-pts { white-space:nowrap; }
+.ranking-comparison .rk-pts small { margin-left:3px; font:12px 'Noto Sans KR'; }
+.rk-rules { margin:18px 0; padding:13px 15px; border:1px solid var(--line); border-radius:12px; font-size:13px; }
+.rk-rules summary { cursor:pointer; font-weight:800; }
+.rk-rules p { color:var(--muted); line-height:1.75; }
+.rk-community { margin-top:20px; }
+.rk-community .rk-recent li { overflow-wrap:anywhere; }
+.my-page-dialog { width:min(94vw,760px); box-sizing:border-box; padding:22px; }
+.mypage-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.my-page-dialog h2, .public-profile-dialog h2 { overflow-wrap:anywhere; }
+.mypage-section { margin:14px 0; min-width:0; }
+.mypage-section h3, .mypage-section h4 { margin:0 0 12px; font-size:17px; }
+.mypage-section .rk-pending-item { gap:12px; }
+.mypage-section .rk-pending-item > div:first-child { min-width:0; overflow-wrap:anywhere; }
+.my-page-dialog .rk-profile-name, .public-profile-dialog .rk-profile-name { overflow-wrap:anywhere; }
+.my-page-dialog .profile-head > div { min-width:0; }
+.my-page-dialog .rk-recent, .my-page-dialog .rk-reviews, .public-profile-dialog .rk-reviews { overflow-wrap:anywhere; }
+.my-page-dialog .rk-row, .my-page-dialog .garment-detail-buttons { flex-wrap:wrap; }
+.my-page-dialog button, .public-profile-dialog button { min-height:40px; cursor:pointer; }
+.my-page-dialog .rk-stats { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.my-page-dialog .rk-stats div { flex-direction:column; gap:5px; }
+.my-page-dialog details[data-avatar-editor] { margin:16px 0; padding:14px; border:1px solid var(--line); border-radius:12px; }
+.my-page-dialog details[data-avatar-editor] > summary { font-weight:800; cursor:pointer; }
+.my-page-dialog .rk-message { margin-top:8px; }
+.my-page-dialog [hidden], .public-profile-dialog [hidden] { display:none; }
+.ranking-comparison :focus-visible, .my-page-dialog :focus-visible, .public-profile-dialog :focus-visible { outline:3px solid #e0a32e; outline-offset:3px; }
+@media(max-width:520px) {
+  .rk-ranking-tools { align-items:stretch; flex-direction:column; }
+  .rk-overview { gap:8px; }
+  .rk-overview p { flex-direction:column; align-items:flex-start; padding:12px; }
+  .ranking-comparison .rk-rank { grid-template-columns:28px minmax(0,1fr) auto; padding:11px 9px; gap:6px 7px; }
+  .ranking-comparison .rk-name { gap:5px; font-size:13px; }
+  .ranking-comparison .rk-pts { font-size:19px; }
+  .ranking-comparison .rk-place { font-size:21px; }
+  .my-page-dialog { padding:16px; }
+  .my-page-dialog .rk-stats { grid-template-columns:1fr; }
+  .my-page-dialog .rk-stats div { flex-direction:row; }
+  .mypage-section .rk-pending-item { align-items:stretch; flex-direction:column; }
+  .mypage-section .rk-row { flex-wrap:wrap; }
+}

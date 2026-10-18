@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>추천 세부 조건과 세트 검사</title><link rel="stylesheet" href="/css/styles.css">
+<div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { getRecommendationResults, getOutfitMatches, validateRecommendationFilters, renderRecommendation } from '../modules/recommendation.js';
+const checks=[];
+function check(value,label) { if (!value) throw new Error(label); checks.push(label); }
+const top={id:'top',name:'파랑 긴팔',category:'top',size:'150',gender:'unisex',season:'봄',style:'편한 스타일',colorName:'파랑',condition:'좋음',lengthCm:50,widthCm:40};
+const bottom={...top,id:'bottom',name:'검정 바지',category:'pants',colorName:'검정',lengthCm:85,widthCm:30};
+const blue={...bottom,id:'blue',name:'파랑 바지',colorName:'파랑'};
+const near={...bottom,id:'near',name:'다른 사이즈 바지',size:'160'};
+const records=[top,bottom,blue,near,{...bottom,id:'winter',season:'겨울'}, {...bottom,id:'female',gender:'female'}, {...bottom,id:'unknown-size',size:undefined}, {...bottom,id:'unknown-season',season:undefined}];
+const filters={gender:'남학생',size:'150',season:'봄',category:'상의',style:'편한 스타일',color:'밝은 색',sizeTolerance:'0',condition:'좋음',colorName:'파랑',lengthMin:'45',lengthMax:'55',widthMin:'39',widthMax:'42',pairSize:'같은 사이즈',harmony:'기본색·대비'};
+const originalFetch=window.fetch;
+const root=document.querySelector('#root');
+const response=(data)=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
+async function waitFor(predicate) { for(let i=0;i<200;i++){ if(predicate())return; await new Promise(r=>setTimeout(r,10)); } throw new Error('UI response timeout'); }
+function change(key,value) { const input=root.querySelector(`[data-filter="${key}"], [data-pair-setting="${key}"]`); input.value=value; input.dispatchEvent(new Event('change')); }
+try {
+  check(getRecommendationResults(records,filters).map(x=>x.item.id).join()==='top','세부 치수·색상·상태의 교집합');
+  check(getRecommendationResults([{...top,lengthCm:45,widthCm:39}],filters).length===1,'치수 하한 포함');
+  check(getRecommendationResults([{...top,lengthCm:55,widthCm:42}],filters).length===1,'치수 상한 포함');
+  check(getRecommendationResults([{...top,lengthCm:56}],filters).length===0,'치수 범위 초과 제외');
+  check(getRecommendationResults([{...top,lengthCm:null}],filters).length===0,'치수 미등록을 범위 조건에서 제외');
+  check(!!validateRecommendationFilters({...filters,lengthMin:'60',lengthMax:'50'}),'최소·최대 역전 오류');
+  check(!!validateRecommendationFilters({...filters,widthMin:'NaN'}),'숫자 아닌 치수 오류');
+  check(getRecommendationResults(records,{...filters,invalidMeasurementInput:true}).length===0,'완성되지 않은 숫자 입력을 조건 해제로 처리하지 않음');
+  check(!!validateRecommendationFilters({...filters,lengthMin:'-1'}),'음수 치수 오류');
+  check(!!validateRecommendationFilters({...filters,sizeTolerance:'20'}),'허용하지 않은 사이즈 범위 오류');
+  check(getRecommendationResults([{...top,size:'160'}],{...filters,sizeTolerance:'10'}).length===1,'명시적으로 허용한 사이즈 ±10');
+  check(getRecommendationResults([{...top,size:'170'}],{...filters,sizeTolerance:'10'}).length===0,'사이즈 허용 범위 초과 제외');
+  check(getRecommendationResults([{...top,condition:'보통'}],filters).length===0,'선택한 옷 상태 적용');
+  let pairs=getOutfitMatches(records,top,filters);
+  check(pairs.length===2 && pairs.every(x=>x.item.category==='하의'),'상의에서 하의만 매칭');
+  check(pairs.every(x=>x.item.size==='150' && x.item.season==='봄'),'세트 사이즈와 계절 보장');
+  check(pairs.every(x=>!['female','winter','unknown-size','unknown-season','top'].includes(x.item.id)),'세트 성별·계절·미등록·자기 자신 제외');
+  check(pairs.some(x=>x.item.id==='bottom'),'상의용 색상·치수 범위가 하의 후보를 막지 않음');
+  check(getOutfitMatches(records,bottom,{...filters,category:'하의',colorName:'검정'}).every(x=>x.top.id==='top' && x.bottom.id==='bottom'),'하의에서 상의 매칭, 표시 순서는 상의·하의');
+  check(getOutfitMatches(records,top,{...filters,pairSize:'160'}).map(x=>x.item.id).join()==='near','상·하의 서로 다른 사이즈 선택');
+  check(getOutfitMatches(records,top,{...filters,sizeTolerance:'10'}).length===3,'세트도 명시한 사이즈 허용 범위 적용');
+  check(getOutfitMatches(records,top,{...filters,harmony:'톤 맞추기'})[0].item.id==='blue','비슷한 색 우선순위 적용');
+  check(getOutfitMatches(records,top,filters)[0].item.id==='bottom','기본색·대비 우선순위 적용');
+  check(getOutfitMatches([top],top,filters).length===0,'짝이 없을 때 조건을 완화하지 않음');
+  check(getOutfitMatches(records,{...top,size:undefined},{...filters,size:'전체'}).length===0,'기준 사이즈 미등록이면 추측 매칭하지 않음');
+  check(getOutfitMatches(records,{...top,season:undefined},{...filters,season:'전체'}).length===0,'기준 계절 미등록이면 추측 매칭하지 않음');
+  const many=[top,...Array.from({length:6},(_,i)=>({...bottom,id:'pants-'+i}))];
+  check(getOutfitMatches(many,top,filters).length===3,'세트 최대 3개');
+  window.fetch=async()=>response(records);
+  await renderRecommendation(root,{activeTab:'recommendation'});
+  for(const [key,value] of Object.entries(filters)) {
+    const input=root.querySelector(`[data-filter="${key}"], [data-pair-setting="${key}"]`);
+    if(input)input.value=value;
+  }
+  change('size','150');
+  root.querySelector('[data-select-outfit="top"]').click();
+  await waitFor(()=>root.querySelectorAll('.outfit-card').length===2);
+  check(root.querySelectorAll('.outfit-pair figure').length===4,'선택 후 사진 두 장씩 세트 결과 표시');
+  check(root.querySelector('[data-select-outfit="top"]').getAttribute('aria-pressed')==='true','선택한 TOP 3 상태 표시');
+  change('pairSize','160');
+  await waitFor(()=>root.querySelectorAll('.outfit-card').length===1);
+  check(root.querySelector('[data-outfit-results]').textContent.includes('다른 사이즈 바지'),'세트 사이즈 변경 즉시 갱신');
+  change('category','하의');
+  check(root.querySelectorAll('.outfit-card').length===0,'주 조건 변경 시 이전 세트 초기화');
+  change('color','전체');
+  change('pairSize','같은 사이즈');
+  root.querySelector('[data-select-outfit="bottom"]').click();
+  await waitFor(()=>root.querySelectorAll('.outfit-card').length===1);
+  check(root.querySelector('.outfit-pair figcaption').textContent.includes('상의: 파랑 긴팔'),'하의 선택 시 상의와 합쳐 표시');
+  window.fetch=async()=>response([]);
+  root.querySelector('[data-select-outfit="bottom"]').click();
+  await waitFor(()=>root.querySelector('[data-outfit-results]').textContent.includes('삭제됐어요'));
+  check(!root.querySelector('.outfit-card'),'삭제된 선택 옷의 오래된 세트 제거');
+  window.fetch=async()=>response(records.map(item=>item.id==='bottom'?{...item,season:'겨울'}:item));
+  root.querySelector('[data-select-outfit="bottom"]').click();
+  await waitFor(()=>root.querySelector('[data-outfit-results]').textContent.includes('정보가 변경되어'));
+  check(!root.querySelector('.outfit-card'),'변경된 옷이 기존 선택 조건을 벗어나면 오래된 세트를 제시하지 않음');
+  window.fetch=async()=>{throw new Error('연결 실패');};
+  root.querySelector('[data-select-outfit="bottom"]').click();
+  await waitFor(()=>root.querySelector('[data-outfit-results]').textContent.includes('불러오지 못했어요'));
+  check(!root.querySelector('.outfit-card'),'세트 연결 실패 안내');
+  let finish;
+  window.fetch=()=>new Promise(resolve=>{finish=resolve;});
+  root.querySelector('[data-select-outfit="bottom"]').click();
+  change('category','상의');
+  finish(response(records));
+  await new Promise(resolve=>setTimeout(resolve,50));
+  check(!root.querySelector('.outfit-card'),'늦게 온 이전 응답이 새 조건을 덮어쓰지 않음');
+  window.fetch=async()=>response(records);
+  await renderRecommendation(root,{activeTab:'recommendation'});
+  for(const [key,value] of Object.entries(filters)) {
+    const input=root.querySelector(`[data-filter="${key}"], [data-pair-setting="${key}"]`);
+    if(input)input.value=value;
+  }
+  change('size','150');
+  root.querySelector('[data-select-outfit="top"]').click();
+  await waitFor(()=>root.querySelectorAll('.outfit-card').length===2);
+  document.querySelector('#result').textContent='PASS '+checks.length+' checks';
+} catch(error) { document.querySelector('#result').textContent='FAIL '+error.stack; }
+finally { window.fetch=originalFetch; }
+</script>

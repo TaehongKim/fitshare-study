@@ -109,7 +109,8 @@ def _read_image(source):
     elif isinstance(source, (bytes, bytearray, memoryview)):
         image = cv2.imdecode(np.frombuffer(source, dtype=np.uint8), cv2.IMREAD_COLOR)
     else:
-        image = cv2.imread(str(source), cv2.IMREAD_COLOR)
+        # OpenCV's Windows file APIs do not reliably handle Unicode paths.
+        image = cv2.imdecode(np.frombuffer(Path(source).read_bytes(), dtype=np.uint8), cv2.IMREAD_COLOR)
     if image is None or len(image.shape) != 3 or image.shape[2] != 3:
         raise ValueError('사진을 열지 못했어요. JPG나 PNG 사진을 다시 골라 주세요.')
     return image

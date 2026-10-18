@@ -1,0 +1,66 @@
+<!doctype html><meta charset="utf-8"><title>옷 전체 모양 보존 검사</title>
+<style>body{font:16px sans-serif;background:#e8edf3;color:#17304c}figure{display:inline-block;margin:12px}canvas{display:block;background:linear-gradient(45deg,#e0e5eb 25%,#fff 25%,#fff 75%,#e0e5eb 75%);background-size:20px 20px;max-width:100%;border:1px solid #999}pre{white-space:pre-wrap}</style>
+<h1>옷의 전체 모양을 그대로 겹쳐 보기</h1><p>소매와 바짓단을 나누거나 팔·다리 모양으로 휘지 않습니다.</p><div id="evidence"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import {prepareTexture,drawTop,drawBottom} from '../js/virtualTryOn/fit.js';
+const checks=[],check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+const canvas=(w=640,h=640)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+const colors={green:[33,148,91],red:[224,45,30],blue:[32,81,224],magenta:[232,41,197],cyan:[25,215,224],orange:[238,138,36],purple:[132,56,203],yellow:[238,214,36]};
+const fill=(p,color,x,y,w,h)=>{p.fillStyle='rgb('+colors[color].join(',')+')';p.fillRect(x,y,w,h);};
+const points=Array.from({length:33},()=>({x:.5,y:.5,z:0,visibility:0}));
+for(const [id,x,y]of [[11,.60,.17],[12,.40,.17],[13,.72,.38],[14,.28,.38],[15,.85,.30],[16,.15,.30],[23,.59,.40],[24,.41,.40],[25,.59,.67],[26,.41,.67],[27,.59,.91],[28,.41,.91]])points[id]={x,y,z:0,visibility:1};
+function topSource(){const c=canvas(320,320),p=c.getContext('2d');fill(p,'red',15,70,100,55);fill(p,'red',15,70,60,210);fill(p,'blue',205,70,100,55);fill(p,'blue',245,70,60,210);fill(p,'green',110,40,100,260);fill(p,'magenta',20,260,25,20);fill(p,'cyan',260,260,25,20);p.globalCompositeOperation='destination-out';p.beginPath();p.arc(160,40,20,0,Math.PI*2);p.fill();return c;}
+function bottomSource(){const c=canvas(320,400),p=c.getContext('2d');fill(p,'yellow',80,20,160,60);fill(p,'orange',80,80,70,280);fill(p,'purple',170,80,70,280);fill(p,'red',80,340,70,20);fill(p,'cyan',170,340,70,20);return c;}
+function show(c,title){const f=document.createElement('figure'),text=document.createElement('figcaption');text.textContent=title;f.append(c,text);document.querySelector('#evidence').append(f);}
+function stats(c,color){const p=c.getContext('2d').getImageData(0,0,c.width,c.height).data,target=colors[color];let minX=c.width,minY=c.height,maxX=-1,maxY=-1,count=0;for(let i=0;i<p.length;i+=4)if(p[i+3]>200&&target.every((v,k)=>Math.abs(v-p[i+k])<16)){const n=i/4,x=n%c.width,y=Math.floor(n/c.width);minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);count++;}return {count,w:maxX-minX+1,h:maxY-minY+1};}
+function render(texture,lm=points,settings={fit:1,length:1},width=640,height=640){const c=canvas(width,height);const info=(texture.category==='pants'?drawBottom:drawTop)(c.getContext('2d'),texture,lm,c.width,c.height,settings);return {c,info};}
+const samePixels=(a,b)=>a.toDataURL()===b.toDataURL();
+try{
+ const source=topSource(),sourceBefore=source.toDataURL(),record={category:'top',name:'전체 모양 검사 긴팔',sleeveLength:'긴팔'},texture=prepareTexture(record,source),normal=render(texture);
+ show(source,'원본: 양 소매와 끝단마다 고유한 색');show(normal.c,'상의 전체를 한 장으로 겹친 결과');
+ check(Boolean(normal.info),'양 어깨로 상의 전체 표시');
+ for(const name of ['green','red','blue','magenta','cyan'])check(stats(normal.c,name).count>60,name+' 몸통·소매·끝단 실제 픽셀 보존');
+ const body=stats(normal.c,'green'),leftCuff=stats(normal.c,'magenta');
+ check(Math.abs(body.w/body.h-100/260)<.035,'몸통 가로세로 비율 보존');
+ check(Math.abs(leftCuff.w/leftCuff.h-25/20)<.18,'소매 끝단도 동일 배율로 크기 조절');
+ const moved=points.map((p,i)=>[13,14,15,16,17,18,19,20].includes(i)?{...p,x:.5,y:.1,visibility:1}:p);
+ check(samePixels(normal.c,render(texture,moved).c),'팔을 움직여도 옷의 모양과 소매가 변하지 않음');
+ const hidden=points.map((p,i)=>[13,14,15,16,17,18,19,20].includes(i)?{x:NaN,y:NaN,visibility:0}:p);
+ const noArms=render(texture,hidden);show(noArms.c,'팔을 찾지 못해도 같은 전체 옷 표시');
+ check(Boolean(noArms.info)&&samePixels(normal.c,noArms.c),'팔꿈치·손목 미인식에도 전체 옷 그대로 표시');
+ const noHips=hidden.map((p,i)=>[23,24].includes(i)?undefined:p);
+ check(Boolean(render(texture,noHips).info),'상의 표시에 골반·손가락 정보가 필요하지 않음');
+ const badShoulder=points.map((p,i)=>i===11?{...p,visibility:0}:p);
+ check(!render(texture,badShoulder).info,'어깨 미인식이면 잘못된 위치에 겹치지 않음');
+ const invalidShoulder=points.map((p,i)=>i===12?{...p,x:NaN}:p);
+ check(!render(texture,invalidShoulder).info,'어깨 좌표 오류에서 안전하게 표시 중단');
+ const bigger=render(texture,points,{fit:1.2,length:1.3}),bigBody=stats(bigger.c,'green');
+ check(Boolean(bigger.info)&&Math.abs(bigBody.w/bigBody.h-100/260)<.035,'조절 후에도 옷을 가로나 세로로 찌그러뜨리지 않음');
+ for(const direction of [-1,1])for(const x of [-.2,.2])for(const y of [-.2,.2]){
+   const tilted=points.map((p,i)=>i===11?{...p,y:.23-direction*.11}:i===12?{...p,y:.23+direction*.11}:p);
+   const boundary=render(texture,tilted,{fit:2,length:1.3,x,y},320,240),b=boundary.info?.bounds;
+   const label='320×240·기울기'+direction+'·위치'+x+','+y;
+   check(Boolean(b)&&b.x>=-.01&&b.y>=-.01&&b.x+b.w<=320.01&&b.y+b.h<=240.01&&boundary.info.fittedToFrame,label+' 전체 실루엣 화면 안에 맞춤');
+   check(['green','red','blue','magenta','cyan'].every(color=>stats(boundary.c,color).count>10),label+' 양 소매 끝단까지 보존');
+   const body=stats(boundary.c,'green'),cos=Math.abs(Math.cos(boundary.info.angle)),sin=Math.abs(Math.sin(boundary.info.angle)),scale=boundary.info.scale;
+   check(Math.abs(body.w-(100*cos+260*sin)*scale)<3.5&&Math.abs(body.h-(100*sin+260*cos)*scale)<3.5,label+' 회전·축소 후에도 동일한 가로세로 배율');
+   if(x===-.2&&y===-.2)show(boundary.c,label+' 확대해도 옷 전체 보존');
+ }
+ check(source.toDataURL()===sourceBefore&&record.name==='전체 모양 검사 긴팔','원본 사진과 옷 정보 변경 없음');
+ const bottoms=bottomSource(),pants=prepareTexture({category:'pants',name:'긴바지',bottomLength:'긴바지'},bottoms),bottomResult=render(pants);show(bottoms,'하의 원본');show(bottomResult.c,'허리부터 양 바짓단까지 전체 보존');
+ check(Boolean(bottomResult.info),'골반 기준 하의 전체 표시');
+ for(const name of ['yellow','orange','purple','red','cyan'])check(stats(bottomResult.c,name).count>60,name+' 허리·양다리·바짓단 실제 픽셀 보존');
+ const leg=stats(bottomResult.c,'orange');check(Math.abs(leg.w/leg.h-70/260)<.04,'바지 다리 가로세로 비율 보존');
+ const badLegs=points.map((p,i)=>[25,26,27,28].includes(i)?{x:NaN,y:NaN,visibility:0}:p);
+ check(samePixels(bottomResult.c,render(pants,badLegs).c),'무릎·발목 추적 없이 같은 바지 전체 표시');
+ check(!drawTop(canvas().getContext('2d'),texture,[],640,640,{fit:1,length:1}),'잘못된 전체 관절 입력에서 앱이 깨지지 않음');
+ let emptySafe=false;try{const empty=prepareTexture(record,canvas(30,30)),result=render(empty);emptySafe=!result.c.getContext('2d').getImageData(0,0,640,640).data.some((n,i)=>i%4===3&&n>0);}catch{emptySafe=true;}
+ check(emptySafe,'빈 투명 사진을 잘못된 옷으로 그리지 않음');
+ if(new URLSearchParams(location.search).has('inventory')){
+   const inventory=await (await fetch('/api/garments')).json(),records=inventory.filter(item=>['top','pants'].includes(item.category)&&item.isDemo);
+   const samples=await Promise.all(records.map(record=>new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve({record,image});image.onerror=()=>reject(Error(record.name+' 이미지 읽기'));image.src='/api/garments/'+record.id+'/tryon-photo';})));
+   for(const {record,image}of samples){const result=render(prepareTexture(record,image),hidden);check(Boolean(result.info),record.name+' 팔·다리 추적 없이 전체 사진 표시');show(result.c,record.name);}
+ }
+ document.querySelector('#result').textContent='PASS '+checks.length+' checks\n'+checks.join('\n');
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.stack;}
+</script>

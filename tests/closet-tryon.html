@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>옷장 가상 입어보기 연결 검사</title>
+<link rel="stylesheet" href="/css/styles.css">
+<main><h1>옷장 가상 입어보기 연결 검사</h1><div id="fixture"></div><pre id="result">RUNNING</pre></main>
+<script type="module">
+import { fetchMe } from '../js/auth.js?v=auth-2';
+import { createGarmentCloset } from '../js/measurement/garmentCloset.js?v=closet-tools-6';
+import { openGarmentDetail } from '../modules/garmentDetail.js';
+import { closeVirtualTryOn } from '../js/virtualTryOn/index.js';
+
+const checks = [];
+const check = (value, name) => { if (!value) throw Error(name); checks.push(name); };
+const wait = async (condition, name) => {
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    if (condition()) return;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  throw Error(name || '화면 대기 시간 초과');
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 30));
+const json = (data, status = 200) => new Response(JSON.stringify(data), {
+  status, headers: { 'Content-Type': 'application/json' }
+});
+const originalFetch = window.fetch;
+const media = navigator.mediaDevices;
+const originalCamera = media?.getUserMedia;
+const storageKeys = ['fitshare.ranking.v1', 'fitshare.ranking.viewer', 'fitshare.ranking.viewerName', 'fitshare.ranking.rev'];
+const oldStorage = storageKeys.map(key => localStorage.getItem(key));
+const requests = [];
+const unexpected = [];
+let cameraCalls = 0, opened = 0, deletedId = '', brokenPhotoId = '', delayedId = '', finishDelayed;
+const records = [
+  { id: 'closet-top', name: '옷장 줄무늬 상의', category: 'top', garmentTypeId: 2 },
+  { id: 'closet-pants/한글', name: '옷장 파랑 바지', category: 'pants', garmentTypeId: 5 },
+  { id: 'closet-dress', name: '옷장 원피스', category: 'dress', garmentTypeId: 3 },
+  ...Array.from({length: 9}, (_, index) => ({id: 'closet-extra-' + index, name: '추가 상의 ' + index, category: 'top', garmentTypeId: 2}))
+].map(item => ({...item, gender: 'unisex', size: '140', season: '봄', colorName: '파랑', lengthCm: 45,
+  widthCm: 32, ownerName: '옷장 테스트', ownerUsername: 'closet-tester'}));
+const image = document.createElement('canvas');
+image.width = 180; image.height = 240;
+const ctx = image.getContext('2d');
+ctx.fillStyle = '#2288cc'; ctx.fillRect(45, 20, 90, 200); ctx.fillRect(10, 30, 160, 50);
+const png = await new Promise(resolve => image.toBlob(resolve));
+let fixture, list, pagination, closet;
+
+function makeCloset() {
+  fixture = document.createElement('section');
+  list = document.createElement('div');
+  const status = document.createElement('p');
+  pagination = document.createElement('nav');
+  fixture.append(status, list, pagination);
+  document.querySelector('#fixture').append(fixture);
+  closet = createGarmentCloset({list, status, pagination, onOpen: () => { opened += 1; }});
+}
+const tryOn = () => document.querySelector('dialog.virtual-tryon');
+const cardButton = id => [...list.querySelectorAll('[data-closet-tryon]')].find(button => button.dataset.closetTryon === id);
+const detail = () => document.querySelector('dialog.garment-detail');
+async function ready(name) {
+  await wait(() => tryOn() && !tryOn().querySelector('[data-start]').disabled, name || '옷 사진 준비 실패');
+  return tryOn();
+}
+async function closeTryOn() {
+  tryOn()?.querySelector('[data-close]').click();
+  await wait(() => !tryOn(), '입어보기 닫기 실패');
+}
+async function closeDetail() {
+  detail()?.close();
+  await wait(() => !detail(), '상세 창 닫기 실패');
+}
+
+try {
+  if (media) media.getUserMedia = async () => { cameraCalls += 1; throw Error('이 검사는 카메라를 켜지 않습니다.'); };
+  window.fetch = async (input, options = {}) => {
+    const url = String(input), method = options.method || 'GET';
+    requests.push({url, method, signal: options.signal});
+    if (method !== 'GET') { unexpected.push(method + ' ' + url); throw Error('허용되지 않은 저장 요청: ' + url); }
+    if (url === '/api/auth/me') return json({user: {username: 'closet-tester', name: '옷장 테스트', role: 'student'}});
+    if (url === '/api/ranking') return json({rev: 0, state: null});
+    if (url === '/api/garments') return json(records);
+    for (const record of records) {
+      const endpoint = '/api/garments/' + encodeURIComponent(record.id);
+      if (url === endpoint) {
+        if (record.id === deletedId) return json({error: '삭제된 옷'}, 404);
+        if (record.id === delayedId) return new Promise(resolve => { finishDelayed = () => resolve(json(record)); });
+        return json(record);
+      }
+      if (url === endpoint + '/tryon-photo') return record.id === brokenPhotoId
+        ? json({error: '옷 사진을 준비하지 못했어요. 다시 선택해 주세요.'}, 500)
+        : new Response(png, {headers: {'Content-Type': 'image/png'}});
+    }
+    unexpected.push(method + ' ' + url);
+    throw Error('예상하지 않은 요청: ' + url);
+  };
+  await fetchMe();
+  makeCloset();
+  await closet.reload();
+  check(list.children.length === 10, '기존 옷장 페이지당 10벌 표시 유지');
+  check(cardButton(records[0].id)?.classList.contains('closet-tryon-action'), '상의 카드에 입어보기 버튼 표시');
+  check(Boolean(cardButton(records[1].id)), '하의 카드에 입어보기 버튼 표시');
+  check(!cardButton(records[2].id), '지원하지 않는 원피스에는 입어보기 버튼 제외');
+  check([...list.querySelectorAll('[data-closet-tryon]')].every(button => button.type === 'button'), '입어보기 버튼은 폼 제출을 발생시키지 않음');
+  check(requests.every(request => !request.url.endsWith('/tryon-photo')) && cameraCalls === 0, '옷장 표시만으로 사진 처리·카메라를 시작하지 않음');
+
+  cardButton(records[0].id).click();
+  let dialog = await ready();
+  check(opened === 0, '입어보기 버튼 클릭이 기존 옷 상세 클릭으로 번지지 않음');
+  check(dialog.querySelector('[data-names]').textContent === records[0].name && dialog.querySelector('[data-layer]').options.length === 1,
+    '상의 카드에서 선택한 옷 한 벌만 전달');
+  check(requests.some(request => request.url === '/api/garments/' + encodeURIComponent(records[0].id)) &&
+    requests.some(request => request.url === '/api/garments/' + encodeURIComponent(records[0].id) + '/tryon-photo'),
+    '실제 선택 ID로 최신 정보와 표시용 PNG를 조회');
+  const label = document.createElement('span'); label.textContent = '옷장 유지'; list.children[0].append(label);
+  await settle();
+  check(dialog.isConnected && !list.querySelector('[data-recommendation-list]'), '추천 화면 전용 표식이 없어도 옷장 입어보기 유지');
+  check(cameraCalls === 0 && !performance.getEntriesByType('resource').some(entry => /mediapipe|\.task(?:\?|$)|\.tflite(?:\?|$)/i.test(entry.name)),
+    '카메라 켜기 전 카메라·외부 인식 모델 실행 없음');
+  const topRequest = requests.findLast(request => request.url === '/api/garments/' + encodeURIComponent(records[0].id));
+  await closet.reload();
+  await wait(() => !tryOn(), '목록 갱신 후 입어보기 정리 실패');
+  check(topRequest.signal?.aborted && !dialog.isConnected, '옷 목록 새로고침 시 요청 취소와 입어보기 정리');
+
+  cardButton(records[1].id).click();
+  dialog = await ready();
+  check(dialog.querySelector('[data-names]').textContent === records[1].name &&
+    requests.some(request => request.url === '/api/garments/closet-pants%2F%ED%95%9C%EA%B8%80/tryon-photo'),
+    '슬래시·한글이 포함된 하의 ID를 안전하게 인코딩하여 전달');
+  await closeTryOn();
+  check(!tryOn() && cameraCalls === 0, '명시적 닫기로 정리하며 카메라 권한을 요청하지 않음');
+
+  cardButton(records[0].id).click();
+  await ready();
+  fixture.hidden = true;
+  await wait(() => !tryOn(), '옷장 화면 숨김 후 정리 실패');
+  check(!tryOn(), '옷장 화면을 숨겨도 입어보기 정리');
+  fixture.hidden = false;
+
+  list.children[0].querySelector('strong').click();
+  list.children[0].dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));
+  check(opened === 2, '카드 본문 클릭과 키보드 상세 열기 유지');
+  openGarmentDetail(records[0]);
+  check(Boolean(detail().querySelector('.garment-detail-tryon')), '상의 상세 창에도 입어보기 버튼 표시');
+  detail().querySelector('.garment-detail-tryon').click();
+  dialog = await ready();
+  check(detail()?.open && dialog.open && dialog.querySelector('[data-names]').textContent === records[0].name,
+    '상세 창 위에서 같은 상의 입어보기 실행');
+  await closeDetail();
+  await wait(() => !tryOn(), '상세 창 종료 후 입어보기 정리 실패');
+  check(!dialog.isConnected, '상세 창이 닫히면 연결된 입어보기 정리');
+  openGarmentDetail(records[1]);
+  check(Boolean(detail().querySelector('.garment-detail-tryon')), '하의 상세 창에도 입어보기 버튼 표시');
+  await closeDetail();
+  openGarmentDetail(records[2]);
+  check(!detail().querySelector('.garment-detail-tryon'), '원피스 상세 창에서 지원하지 않는 입어보기 제외');
+  await closeDetail();
+
+  cardButton(records[0].id).click();
+  await ready();
+  [...pagination.querySelectorAll('button')].find(button => button.textContent === '다음').click();
+  await wait(() => !tryOn(), '옷장 페이지 이동 후 정리 실패');
+  check(list.children.length === 2 && !tryOn(), '다음 페이지로 이동하면 이전 카드 입어보기 정리');
+  list.querySelector('[data-closet-tryon]').click();
+  await ready();
+  fixture.remove();
+  await wait(() => !tryOn(), '옷장 탭 이탈 후 정리 실패');
+  check(!tryOn(), '옷장 화면이 문서에서 제거되면 입어보기 정리');
+
+  makeCloset(); await closet.reload();
+  delayedId = records[0].id;
+  cardButton(delayedId).click();
+  await wait(() => Boolean(finishDelayed), '늦은 조회 요청 시작 실패');
+  const pendingDialog = tryOn();
+  const pending = requests.findLast(request => request.url === '/api/garments/' + encodeURIComponent(delayedId));
+  fixture.remove();
+  await wait(() => !tryOn(), '응답 대기 중 옷장 이탈 정리 실패');
+  finishDelayed(); await settle(); delayedId = '';
+  check(pending.signal?.aborted && !pendingDialog.isConnected && !tryOn(), '닫힌 뒤 도착한 조회 결과가 입어보기 창을 다시 열지 않음');
+
+  makeCloset(); await closet.reload();
+  deletedId = records[0].id;
+  cardButton(deletedId).click();
+  await wait(() => tryOn()?.querySelector('[data-status]').textContent.includes('삭제'), '삭제된 옷 안내 실패');
+  check(tryOn().querySelector('[data-start]').disabled, '목록에 남은 삭제 옷은 안내하고 카메라 시작 차단');
+  await closeTryOn(); deletedId = '';
+  brokenPhotoId = records[1].id;
+  cardButton(brokenPhotoId).click();
+  await wait(() => tryOn()?.querySelector('[data-status]').textContent.includes('사진을 준비하지 못'), '사진 오류 안내 실패');
+  check(tryOn().querySelector('[data-start]').disabled, '옷 사진 오류에서도 앱을 유지하고 카메라 시작 차단');
+  await closeTryOn(); brokenPhotoId = '';
+  check(unexpected.length === 0 && requests.every(request => request.method === 'GET'), '실재 등록·예약·유료 AI 요청 없이 모의 읽기 요청만 사용');
+  check(cameraCalls === 0, '전체 연결 검사는 실제 카메라를 실행하지 않음');
+  document.querySelector('#result').textContent = 'PASS ' + checks.length + ' checks\n' + checks.map((name, index) => (index + 1) + '. ' + name).join('\n');
+} catch (error) {
+  document.querySelector('#result').textContent = 'FAIL after ' + checks.length + ' checks\n' + error.stack;
+} finally {
+  closeVirtualTryOn();
+  document.querySelectorAll('dialog.garment-detail').forEach(dialog => { dialog.close(); dialog.remove(); });
+  fixture?.remove();
+  window.fetch = originalFetch;
+  if (media) media.getUserMedia = originalCamera;
+  storageKeys.forEach((key, index) => oldStorage[index] === null ? localStorage.removeItem(key) : localStorage.setItem(key, oldStorage[index]));
+}
+</script>
+</html>

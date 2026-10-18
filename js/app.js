@@ -1,9 +1,9 @@
 ﻿import { state, markTabVisited } from './state.js';
 import { renderMeasurement } from '../modules/measurement.js?v=garment-registration-1';
 import { renderRecommendation } from '../modules/recommendation.js';
-import { renderRanking } from '../modules/ranking.js?v=ranking-8';
+import { renderRanking } from '../modules/ranking.js?v=ranking-9';
 import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-2';
-import { openProfileDialog } from '../modules/profile.js?v=profile-2';
+import { openProfileDialog } from '../modules/profile.js?v=profile-3';
 import { createSchoolEntryResult } from './schoolEntry.js';
 import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-6';
 import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-6';
@@ -21,11 +21,15 @@ const schoolClosetView = createGarmentCloset({
   onOpen: openGarmentDetail
 });
 const renderers = { measurement: renderMeasurement, recommendation: renderRecommendation, ranking: renderRanking };
+let disposeModule=null;
 
 function selectTab(tabName) {
+  if(typeof disposeModule==='function')disposeModule();
+  disposeModule=null;
   markTabVisited(tabName);
   tabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tab === tabName));
-  renderers[tabName](root, state);
+  const cleanup=renderers[tabName](root, state);
+  if(typeof cleanup==='function')disposeModule=cleanup;
   document.querySelector('.progress-pill').textContent = `오늘의 탐험 ${state.visitedTabs.size}/3`;
 }
 
@@ -80,10 +84,15 @@ function showApp() {
   authPanel.hidden = Boolean(user);
   appMain.hidden = !user;
   userBox.hidden = !user;
-  document.querySelector('#user-name').textContent = user ? `🙂 ${user.name} 님 · 프로필` : '';
+  document.querySelector('#user-name').textContent = user ? `🙂 ${user.name} 님 · 내페이지` : '';
   document.querySelector('#user-name').hidden = !user;
   if (user) selectTab(state.activeTab);
-  else document.querySelector('#auth-username').focus();
+  else {
+    if(typeof disposeModule==='function')disposeModule();
+    disposeModule=null;
+    root.replaceChildren();root.removeAttribute('data-module');
+    document.querySelector('#auth-username').focus();
+  }
 }
 
 document.querySelector('#auth-tab-login').addEventListener('click', () => setAuthMode(false));

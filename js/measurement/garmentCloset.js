@@ -1,5 +1,7 @@
 // 메인 화면과 등록 화면이 같은 옷 카드, 페이지 나누기, 정보 수정 기능을 씁니다.
 import { getUser } from '../auth.js?v=auth-2';
+import { createGarmentMetadataFields } from '../garmentMetadata.js';
+import { openVirtualTryOn } from '../virtualTryOn/index.js';
 
 const PAGE_SIZE = 10;
 const GARMENT_TYPES = [
@@ -96,10 +98,25 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
     title.textContent = garment.name;
     const kind = document.createElement('p');
     kind.textContent = garment.garmentTypeName || garment.category || '옷';
+    const missing = [!garment.size, !(garment.seasons?.length||garment.season), !garment.style, !garment.condition].filter(Boolean).length;
+    if(missing)kind.textContent+=` · 추천 정보 ${missing}개 미등록`;
     const size = document.createElement('p');
     size.textContent = `길이 ${garment.lengthCm}cm · 너비 ${garment.widthCm}cm`;
     const actions = document.createElement('div');
     actions.className = 'closet-card-actions';
+    if (['top', 'pants'].includes(garment.category)) {
+      const tryOn = document.createElement('button');
+      tryOn.type = 'button';
+      tryOn.className = 'closet-tryon-action';
+      tryOn.dataset.closetTryon = garment.id;
+      tryOn.textContent = '가상으로 입어보기';
+      tryOn.setAttribute('aria-label', `${garment.name} 가상으로 입어보기`);
+      tryOn.addEventListener('click', () => openVirtualTryOn([garment], {
+        owner: card,
+        isActive: () => card.isConnected
+      }));
+      actions.append(tryOn);
+    }
     actions.append(togglePhoto);
     const user = getUser();
     const mine = user && (garment.ownerUsername ? garment.ownerUsername === user.username : garment.ownerName === user.name);
@@ -159,6 +176,13 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
     const color = addInput(fields, '색깔', 'colorName', 'text', garment.colorName, 30);
     const length = addInput(fields, '길이(cm)', 'lengthCm', 'number', garment.lengthCm, null);
     const width = addInput(fields, '너비(cm)', 'widthCm', 'number', garment.widthCm, null);
+    const metadataBox = document.createElement('section');
+    const metadataFields = createGarmentMetadataFields(metadataBox, garment);
+    fields.append(metadataBox);
+    const suggest = () => metadataFields.suggest({name:name.value,garmentTypeId:Number(type.value),category:Number(type.value)===5?'pants':Number(type.value)===3?'dress':'top'});
+    name.addEventListener('input', suggest);
+    type.addEventListener('change', suggest);
+    suggest();
     for (const input of [length, width]) {
       input.min = '1';
       input.max = '300';
@@ -187,6 +211,7 @@ export function createGarmentCloset({ list, status, pagination, onOpen }) {
       message.textContent = '수정한 정보를 저장하고 있어요.';
       const garmentTypeId = Number(type.value);
       const payload = {
+        ...metadataFields.read(),
         name: name.value.trim(), garmentTypeId,
         category: garmentTypeId === 3 ? 'dress' : garmentTypeId === 5 ? 'pants' : 'top',
         gender: gender.value, colorName: color.value.trim(),

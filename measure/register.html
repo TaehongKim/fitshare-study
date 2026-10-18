@@ -55,6 +55,7 @@
           <p class="registration-help">얼굴과 이름표는 사진에 나오지 않게 해요. 옷을 매트 가운데에 놓고 카메라는 위에서 찍어요.</p>
           <img id="garment-preview" class="registration-preview" alt="선택한 옷 사진 미리보기" hidden>
           <button id="analyze-garment" class="primary-action" type="button" disabled>사진 살펴보기</button>
+          <button id="manual-registration" class="registration-file-button" type="button" hidden disabled>자동 분석이 어려우면 직접 입력하기</button>
           <p id="analysis-status" class="registration-status" role="status"></p>
         </section>
 
@@ -64,6 +65,7 @@
           <img id="analysis-preview" class="registration-preview analysis-preview" alt="컴퓨터가 찾은 옷 테두리와 측정선">
           <label>옷 이름<input name="name" maxlength="60" placeholder="예: 파란 점퍼" required></label>
           <p id="chosen-garment-type" class="registration-type-summary"></p>
+          <section aria-labelledby="recommendation-metadata-title"><h3 id="recommendation-metadata-title">입기 좋은 계절을 골라 주세요</h3><div id="registration-metadata"></div></section>
           <div class="registration-measurements">
             <label><span id="width-label">가슴 너비(cm)</span><input name="widthCm" type="number" min="1" max="300" step="0.1" required></label>
             <label>기장(cm)<input name="lengthCm" type="number" min="1" max="300" step="0.1" required></label>

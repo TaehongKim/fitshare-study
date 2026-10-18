@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>실제 상품 추천 화면 확인</title>
+<div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { renderRecommendation } from '../modules/recommendation.js';
+import { openGarmentDetail } from '../modules/garmentDetail.js';
+const root = document.querySelector('#root');
+const result = document.querySelector('#result');
+const checks = [];
+function check(condition, message) {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+}
+try {
+  await renderRecommendation(root, { activeTab: 'recommendation' });
+  check(root.querySelectorAll('.recommendation-card').length > 0 && root.querySelectorAll('.recommendation-card').length <= 3, '정상: 조건 일치 상품 최대 3벌 표시');
+  check(root.querySelectorAll('.recommendation-card img').length === root.querySelectorAll('.recommendation-card').length, '정상: 각 상품 사진 표시');
+  const size = root.querySelector('[data-filter="size"]');
+  for (const boundary of ['120', '160']) {
+    size.value = boundary;
+    size.dispatchEvent(new Event('change'));
+    check(root.querySelectorAll('.recommendation-card').length <= 3, `경계: 사이즈 ${boundary} 결과 최대 3벌 표시`);
+  }
+  const gender = root.querySelector('[data-filter="gender"]');
+  size.value = '130';
+  size.dispatchEvent(new Event('change'));
+  gender.value = '여학생';
+  gender.dispatchEvent(new Event('change'));
+  check(root.querySelectorAll('.recommendation-card').length > 0, '공용 상품의 성별 제한 없음');
+  check(root.textContent.includes('체험용 가상 등록'), '가상 치수임을 명확히 표시');
+  const originalFetch = window.fetch;
+  const liveRecords = await originalFetch('/api/garments').then((response) => response.json());
+  const demo = liveRecords.find((item) => item.isDemo);
+  openGarmentDetail(demo);
+  const detail = document.querySelector('dialog.garment-detail');
+  check(detail.textContent.includes(`길이 ${demo.lengthCm}cm · 너비 ${demo.widthCm}cm`) && detail.textContent.includes(demo.ownerName), '기존 등록과 같은 치수·등록자 형식');
+  check(!detail.textContent.includes('판매 사이즈') && !detail.textContent.includes('공식 판매처') && !detail.textContent.includes('예약할 수 없어요'), '카탈로그 전용 안내와 예약 제한 제거');
+  const reserve = [...detail.querySelectorAll('button')].find((button) => button.textContent === '예약하기');
+  check(reserve && !reserve.disabled && !reserve.hidden, '기존 등록과 같은 예약 버튼 사용');
+  detail.close();
+  detail.remove();
+  const removedId = root.querySelector('[data-save-id]').dataset.saveId;
+  window.fetch = async (url, options) => url === '/api/garments'
+    ? new Response(JSON.stringify(liveRecords.filter((item) => item.id !== removedId)), { headers: { 'Content-Type': 'application/json' } })
+    : originalFetch(url, options);
+  await renderRecommendation(root, { activeTab: 'recommendation' });
+  check(![...root.querySelectorAll('[data-save-id]')].some((button) => button.dataset.saveId === removedId), '삭제된 옷은 추천 목록에 다시 나타나지 않음');
+  window.fetch = async () => { throw new Error('offline'); };
+  await renderRecommendation(root, { activeTab: 'recommendation' });
+  check(root.textContent.includes('불러오지 못했어요'), '오류: 서버 연결 실패 안내');
+  window.fetch = originalFetch;
+  result.textContent = 'PASS ' + checks.length + '\n' + checks.join('\n');
+} catch (error) {
+  result.textContent = 'FAIL ' + error.stack;
+}
+</script>

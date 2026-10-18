@@ -15,5 +15,19 @@
   "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/bc3c665e-77a5-40a9-922a-4ef7083dc482/product-photo",
-  "productPhotoGeneratedAt": "2026-10-17T07:05:12.184390+00:00"
+  "productPhotoGeneratedAt": "2026-10-17T07:05:12.184390+00:00",
+  "size": "",
+  "style": "",
+  "condition": "",
+  "garmentKind": "점퍼",
+  "sleeveLength": "",
+  "bottomLength": "해당 없음",
+  "thickness": "",
+  "stretch": "",
+  "pattern": "",
+  "seasons": [],
+  "metadataSources": {
+    "garmentKind": "type-rule",
+    "bottomLength": "type-rule"
+  }
 }

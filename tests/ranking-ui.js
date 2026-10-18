@@ -1,166 +1,365 @@
-import { renderRanking } from '../modules/ranking.js';
-import { openGarmentDetail } from '../modules/garmentDetail.js';
-import { openProfileDialog } from '../modules/profile.js';
-
-// 실제 랭킹 화면과 옷 상세 창을 그려 보고 클릭·입력으로 흐름을 확인합니다.
-// server.py 로 열어야 서버 저장까지 확인돼요. (이 시험은 저장된 랭킹 기록을 지우고 시작해요.)
+// 모든 계정·랭킹·사진 응답은 이 탭의 메모리에만 있어요.
+// 실제 /api 요청을 전달하지 않으며, 실제 localStorage와 다른 탭도 건드리지 않아요.
 const checks = [];
+const requests = [];
+const unexpected = [];
+const memory = new Map();
+const storageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+const originalBroadcast = window.BroadcastChannel;
+const originalFetch = window.fetch;
+const originalInterval = window.setInterval;
+const originalClearInterval = window.clearInterval;
+const imageSource = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
+const intervals = new Set();
+const channels = new Set();
+const isolatedStorage = {
+  getItem(key) { return memory.get(String(key)) ?? null; },
+  setItem(key, value) { memory.set(String(key), String(value)); },
+  removeItem(key) { memory.delete(String(key)); },
+  clear() { memory.clear(); },
+  key(index) { return [...memory.keys()][index] ?? null; },
+  get length() { return memory.size; }
+};
+Object.defineProperty(window, 'localStorage', { configurable: true, value: isolatedStorage });
+window.BroadcastChannel = class {
+  constructor(name) { this.name = name; channels.add(this); }
+  postMessage(data) { for (const peer of channels) if (peer !== this && peer.name === this.name) queueMicrotask(() => { if (channels.has(peer)) peer.onmessage?.({ data }); }); }
+  close() { channels.delete(this); }
+};
+window.setInterval = (callback, delay, ...args) => {
+  const id = originalInterval(callback, delay, ...args); intervals.add(id); return id;
+};
+window.clearInterval = id => { intervals.delete(id); originalClearInterval(id); };
+const samplePhoto = document.createElement('canvas'); samplePhoto.width = 4; samplePhoto.height = 4;
+samplePhoto.getContext('2d').fillRect(0, 0, 4, 4);
+const inlinePhoto = samplePhoto.toDataURL('image/png');
+Object.defineProperty(HTMLImageElement.prototype, 'src', {
+  configurable: true, get: imageSource.get,
+  set(value) { imageSource.set.call(this, String(value).includes('/api/') ? inlinePhoto : value); }
+});
+let serverState = { version: 1, users: [], exchanges: [], badges: [], finalizedMonths: [] };
+let revision = 0;
+let signedIn = null;
+let savedCallbacks = 0;
+let accountFailure = false;
+let fetchMe, renderRanking, openGarmentDetail, openProfileDialog, openMemberProfileDialog;
+const clone = value => JSON.parse(JSON.stringify(value));
+const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+window.fetch = async (input, options = {}) => {
+  const url = typeof input === 'string' ? input : input.url;
+  const path = new URL(url, location.href).pathname;
+  const method = options.method || 'GET';
+  const body = options.body ? JSON.parse(options.body) : undefined;
+  requests.push({ path, method, body });
+  if (path === '/api/auth/me' && method === 'GET') return json({ user: signedIn });
+  if (path === '/api/ranking' && method === 'GET') return json({ rev: revision, state: clone(serverState) });
+  if (path === '/api/ranking' && method === 'POST') {
+    if (!signedIn) return json({ error: '로그인한 뒤에 저장해 주세요.' }, 401);
+    if (body.baseRev !== revision) return json({ rev: revision, state: clone(serverState) }, 409);
+    serverState = clone(body.state); revision += 1; return json({ rev: revision });
+  }
+  if (['/api/auth/teacher-code', '/api/auth/reset-student-password'].includes(path) && method === 'POST') {
+    if (signedIn?.role !== 'teacher') return json({ error: '선생님만 사용할 수 있어요.' }, 403);
+    return accountFailure ? json({ error: '모의 설정 오류예요. 다시 시도해 주세요.' }, 500) : json({ ok: true });
+  }
+  unexpected.push({ path, method });
+  throw Error('격리된 검사에서 허용하지 않은 요청: ' + method + ' ' + path);
+};
+
+const root = document.createElement('div');
+root.id = 'ranking-test-fixture';
+document.body.append(root);
+const $ = selector => root.querySelector(selector);
+const settle = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
+const assert = (condition, message) => { if (!condition) throw Error(message); };
+async function waitFor(condition, message) {
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    if (condition()) return;
+    await settle(10);
+  }
+  throw Error(message || '화면 대기 시간 초과');
+}
 async function check(name, action) {
   try { await action(); checks.push({ name, passed: true }); }
   catch (error) { checks.push({ name, passed: false, error: error.message }); }
+  document.querySelector('#result').textContent = 'RUNNING ' + checks.length + ' checks';
 }
-function assert(condition, message) { if (!condition) throw new Error(message); }
-const settle = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// 로그인해야 나눔 기록을 저장할 수 있어요. 시험용 계정을 하나 만들어 로그인해 둡니다.
-const username = `t${Date.now() % 100000000}`;
-await fetch('/api/auth/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ username, password: 'test-pass-1', name: `시험${Date.now() % 100000}` }) }).catch(() => {});
-
-// 서버 기록을 비웁니다.
-const head = await fetch('/api/ranking').then((r) => r.json()).catch(() => ({ rev: 0 }));
-await fetch('/api/ranking', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ baseRev: head.rev ?? 0, state: { version: 1, users: [], exchanges: [], badges: [], finalizedMonths: [] } }) }).catch(() => {});
-for (const key of ['fitshare.ranking.v1', 'fitshare.ranking.viewer', 'fitshare.ranking.viewerName', 'fitshare.ranking.rev']) localStorage.removeItem(key);
-
-const root = document.createElement('div');
-document.body.append(root);
-const $ = (selector) => root.querySelector(selector);
-const text = () => root.textContent;
-// 점수 고르는 목록(1점~10점 옵션)은 빼고, 화면에 '보이는 결과'만 검사할 때 씁니다.
-const visibleText = () => { const copy = root.cloneNode(true); copy.querySelectorAll('select').forEach((el) => el.remove()); return copy.textContent; };
-const submit = (form) => form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-async function viewAs(name) { localStorage.setItem('fitshare.ranking.viewerName', name); renderRanking(root); await settle(); }
-async function sendScore(score) { const form = $('.rk-rate'); form.querySelector('select').value = String(score); submit(form); await settle(); }
-// 옷장에서 옷을 눌러 예약하는 것과 같아요.
+const submit = form => form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+const myDialog = () => document.querySelector('.my-page-dialog');
+const publicDialog = () => document.querySelector('.member-profile-dialog');
+const visibleText = node => { const copy = node.cloneNode(true); copy.querySelectorAll('select').forEach(select => select.remove()); return copy.textContent; };
+const rankGets = () => requests.filter(item => item.path === '/api/ranking' && item.method === 'GET').length;
+async function signIn(name, role = 'student') {
+  signedIn = name ? { username: 'isolated-' + (name === '지수' ? 'giver' : name === '민수' ? 'receiver' : 'other'), name, role } : null;
+  await fetchMe();
+}
+async function closeDialog(dialog) {
+  if (!dialog) return;
+  dialog.close();
+  await waitFor(() => !dialog.open, '창이 닫히지 않았어요.');
+  dialog.remove();
+  await settle();
+}
+async function closeAllDialogs() {
+  for (const dialog of [...document.querySelectorAll('dialog')]) await closeDialog(dialog);
+}
+async function openMine(name, role = 'student') {
+  await closeAllDialogs();
+  await signIn(name, role);
+  const dialog = openProfileDialog(() => { savedCallbacks += 1; });
+  await waitFor(() => dialog.querySelector('#rk-account') || !name, '내 페이지가 그려지지 않았어요.');
+  await settle();
+  return dialog;
+}
+async function showRanking(name, role = 'student') {
+  await signIn(name, role);
+  if (!root.isConnected) document.body.append(root);
+  renderRanking(root);
+  await waitFor(() => Boolean($('#rk-board')), '순위 화면이 그려지지 않았어요.');
+  await settle();
+}
 async function reserveAs(name, garment) {
-  localStorage.setItem('fitshare.ranking.viewerName', name); // 로그인한 이름
+  await closeAllDialogs();
+  await signIn(name);
   openGarmentDetail(garment);
   const dialog = [...document.querySelectorAll('dialog.garment-detail')].at(-1);
   await settle();
-  dialog.querySelector('.primary-action').click();
-  await settle(500);
-  const result = { status: dialog.querySelector('.garment-detail-status').textContent, message: dialog.querySelector('.garment-detail-message').textContent, disabled: dialog.querySelector('.primary-action').disabled, error: dialog.querySelector('.garment-detail-message').classList.contains('is-error') };
-  dialog.close();
+  const button = dialog.querySelector('.primary-action');
+  if (!button.disabled) {
+    button.click();
+    await waitFor(() => dialog.querySelector('.garment-detail-message').textContent.trim(), '예약 결과 안내가 없어요.');
+  }
+  const result = {
+    status: dialog.querySelector('.garment-detail-status').textContent,
+    message: dialog.querySelector('.garment-detail-message').textContent,
+    disabled: button.disabled,
+    error: dialog.querySelector('.garment-detail-message').classList.contains('is-error')
+  };
+  await closeDialog(dialog);
   return result;
 }
-const jacket = { id: 'g1', name: '파란 점퍼', garmentTypeName: '점퍼', gender: 'unisex', colorName: '파랑', lengthCm: 60, widthCm: 50, ownerName: '지수' };
+async function sendScore(dialog, score) {
+  const form = dialog.querySelector('.rk-rate');
+  assert(form, '점수 보내기 칸이 없어요.');
+  form.querySelector('select').value = String(score);
+  const before = revision;
+  submit(form);
+  await waitFor(() => revision > before || dialog.querySelector('#rk-message')?.classList.contains('is-error'), '점수 처리 결과가 없어요.');
+  await settle();
+}
+const jacket = { id: 'isolated-ranking-jacket', name: '파란 점퍼', garmentTypeId: 4, category: 'top', garmentTypeName: '점퍼',
+  gender: 'unisex', colorName: '파랑', lengthCm: 60, widthCm: 50, ownerName: '지수', ownerUsername: 'isolated-giver' };
 
-await check('처음에는 안내가 보이고 오류 없이 그려져요', async () => {
-  renderRanking(root); await settle();
-  assert(text().includes('첫 화면에서 로그인'), '로그인 안내가 없어요.');
-  assert(text().includes('이번 달에 공개된 점수가 아직 없어요'), '빈 순위 안내가 없어요.');
-  assert(!text().includes('하늘') && !text().includes('체험용'), '가짜 친구나 체험 버튼이 있으면 안 돼요.');
-});
-await check('로그인한 이름으로 내 페이지가 맨 위에 자동으로 떠요', async () => {
-  await viewAs('민수');
-  assert($('#rk-account').textContent.includes('민수 님으로 로그인'), '내 계정 안내');
-  assert($('#rk-profile-title').textContent.includes('내 페이지'), '내 페이지 제목');
-  assert($('#rk-profile').textContent.includes('민수'), '내 이름이 친구 목록에 자동으로 들어가요.');
-  assert(root.querySelector('.rk-mypage') === root.querySelector('.ranking-panel').children[2], '내 페이지가 맨 위에 있어야 해요.');
-});
-await check('옷 상세 창: 정보가 보이고 예약하면 예약 중으로 바뀌어요', async () => {
-  const result = await reserveAs('민수', jacket);
-  assert(result.status.includes('민수') && result.status.includes('예약 중'), `예약 상태: ${result.status}`);
-  assert(result.disabled, '예약하면 버튼이 꺼져야 해요.');
-  openGarmentDetail(jacket); await settle();
-  const dialog = [...document.querySelectorAll('dialog.garment-detail')].at(-1);
-  assert(dialog.textContent.includes('파란 점퍼') && dialog.textContent.includes('지수') && dialog.textContent.includes('60cm'), '상세 정보');
-  assert(dialog.querySelector('.primary-action').disabled, '이미 예약된 옷은 다시 예약할 수 없어요.');
-  dialog.close();
-});
-await check('오류: 내가 올린 옷과 올린 사람이 없는 옷은 예약할 수 없어요', async () => {
-  const own = await reserveAs('지수', { ...jacket, id: 'g2' });
-  assert(own.error && own.message.includes('내가 올린 옷'), `내 옷: ${own.message}`);
-  const nobody = await reserveAs('민수', { ...jacket, id: 'g3', ownerName: '' });
-  assert(nobody.status.includes('예약할 수 없어요') && nobody.disabled, '올린 사람 없음');
-});
-await check('예약한 나눔은 ②에 보이고, 받았다고 확인하기 전에는 점수를 줄 수 없어요', async () => {
-  renderRanking(root); await settle();
-  assert($('#rk-reservations').textContent.includes('파란 점퍼') && $('#rk-reservations [data-confirm]'), '② 예약 목록과 받았어요 버튼');
-  assert(!$('.rk-rate'), '받기 전에는 점수 칸이 없어야 해요.');
-});
-await check('정상: 받았어요 → 서로 점수 → 둘 다 보낸 뒤에야 공개돼요', async () => {
-  $('#rk-reservations [data-confirm]').click(); await settle();
-  assert($('.rk-rate'), '확인하면 점수 칸이 생겨야 해요.');
-  await sendScore(8);
-  assert(text().includes('내 점수 8점을 보냈어요'), '보낸 뒤 안내');
-  await viewAs('지수'); // 준 사람
-  assert(!visibleText().includes('8점') && !visibleText().includes('+8'), '공개 전 상대 점수 8점이 보이면 안 돼요.');
-  assert($('.rk-rate'), '준 사람도 받은 사람에게 점수를 줄 수 있어요.');
-  await sendScore(6);
-  assert(text().includes('민수 +6점') && text().includes('지수 +8점'), '공개된 점수 목록');
-  const rows = [...root.querySelectorAll('.rk-rank')];
-  assert(rows.length === 2 && rows[0].textContent.includes('지수') && rows[0].textContent.includes('8점'), '1위는 지수 8점');
-  assert($('#rk-profile').textContent.includes('내가 민수에게 준 점수 6점') && $('#rk-profile').textContent.includes('민수가 나에게 준 점수 8점'), '내 나눔 내역에 양쪽 점수');
-});
-await check('후기: 받은 사람만 쓰고, 준 사람 페이지에 글자 그대로 보여요', async () => {
-  assert(!$('.rk-review-form'), '준 사람에게는 후기 칸이 없어야 해요.');
-  await viewAs('민수');
-  const form = $('.rk-review-form'); assert(form, '받은 사람에게 후기 칸이 보여야 해요.');
-  form.querySelector('input').value = '   '; submit(form); await settle();
-  assert($('#rk-message').classList.contains('is-error') && $('#rk-message').textContent.includes('후기 내용을 입력'), '빈 후기 거부');
-  $('.rk-review-form input').value = '<i>깨끗해요</i>'; submit($('.rk-review-form')); await settle();
-  assert(!$('.rk-review-form'), '한 번 쓰면 후기 칸이 사라져요.');
-  [...root.querySelectorAll('[data-profile]')].find((b) => b.textContent.trim().endsWith('지수')).click();
-  assert($('.rk-reviews').textContent.includes('<i>깨끗해요</i>') && !$('.rk-reviews i'), '후기가 글자 그대로 보여야 해요.');
-  assert(text().includes('내 페이지로 돌아가기'), '내 페이지로 돌아가는 버튼');
-});
-await check('프로필: 아바타·배지·나눔한/수령한 횟수가 보이고, 아바타를 꾸미면 랭킹에도 보여요', async () => {
-  await viewAs('지수');
-  openProfileDialog(); await settle(500);
-  const dialog = [...document.querySelectorAll('dialog.profile-dialog')].at(-1);
-  assert(dialog.querySelector('.avatar'), '아바타 그림');
-  const stats = dialog.querySelector('.rk-stats').textContent;
-  assert(stats.includes('나눔한 횟수') && stats.includes('1번') && stats.includes('수령한 횟수') && stats.includes('0번'), `횟수: ${stats}`);
-  assert(dialog.textContent.includes('받은 우승 배지') && dialog.textContent.includes('아직 배지가 없어요'), '배지 칸');
-  dialog.querySelector('[data-key="face"] [data-value="🐶"]').click();
-  dialog.querySelector('[data-key="hat"] [data-value="👑"]').click();
-  assert(dialog.querySelector('#pf-preview').textContent.includes('🐶') && dialog.querySelector('#pf-preview').textContent.includes('👑'), '미리보기가 바뀌어요.');
-  dialog.querySelector('[data-save]').click(); await settle(500);
-  assert(dialog.querySelector('#pf-message').textContent.includes('저장했어요'), '저장 안내');
-  const server = await fetch('/api/ranking').then((r) => r.json());
-  assert(server.state.users.find((u) => u.name === '지수').avatar.face === '🐶', '서버에 아바타가 저장돼요.');
-  dialog.close(); await settle();
-  localStorage.setItem('fitshare.ranking.viewerName', '민수'); renderRanking(root); await settle(500);
-  assert([...root.querySelectorAll('.rk-name .avatar')].some((a) => a.textContent.includes('🐶') && a.textContent.includes('👑')), '랭킹에 아바타가 보여요.');
-});
-await check('서버 저장: 다른 기기(새 화면)에서도 같은 기록이 보여요', async () => {
-  const server = await fetch('/api/ranking').then((r) => r.json());
-  assert(server.rev > 0 && server.state.exchanges.length === 1, '서버에 기록이 있어야 해요.');
-  for (const key of ['fitshare.ranking.v1', 'fitshare.ranking.rev']) localStorage.removeItem(key); // 다른 기기처럼 비어 있는 브라우저
-  renderRanking(root); await settle(500);
-  assert(root.querySelectorAll('.rk-rank').length === 2, '서버 기록으로 순위가 그려져야 해요.');
-});
-await check('취소: 예약을 취소하면 같은 옷을 다시 예약할 수 있어요', async () => {
-  await reserveAs('하준', { ...jacket, id: 'g4', name: '검정 바지' });
-  await viewAs('하준');
-  $('#rk-reservations [data-cancel]').click(); await settle();
-  assert($('#rk-reservations').textContent.includes('예약한 나눔이 없어요'), '취소 뒤 목록이 비어야 해요.');
-  const again = await reserveAs('민수', { ...jacket, id: 'g4', name: '검정 바지' });
-  assert(again.status.includes('민수'), '다시 예약할 수 있어야 해요.');
-});
-await check('안전: 이름에 HTML을 넣어도 글자로만 보이고, 망가진 저장값에서도 그려져요', async () => {
-  await viewAs('<b>x</b>');
-  assert(!root.querySelector('#rk-profile b'), '태그가 해석되면 안 돼요.');
-  localStorage.setItem('fitshare.ranking.v1', '{깨진 json');
-  const box = document.createElement('div'); document.body.append(box);
-  localStorage.removeItem('fitshare.ranking.viewerName');
-  renderRanking(box); await settle();
-  assert(box.textContent.length > 0, '화면이 그려져야 해요.');
-});
-
-await check('로그아웃하면 나눔 기록을 저장할 수 없어요', async () => {
-  await fetch('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-  const state = { version: 1, users: [], exchanges: [], badges: [], finalizedMonths: [] };
-  const response = await fetch('/api/ranking', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ baseRev: 0, state }) });
-  assert(response.status === 401, `로그인 없이 저장하면 401 이어야 해요: ${response.status}`);
-  await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password: 'test-pass-1' }) });
-});
-
-const reset = await fetch('/api/ranking').then((r) => r.json()).catch(() => null);
-if (reset) await fetch('/api/ranking', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ baseRev: reset.rev, state: { version: 1, users: [], exchanges: [], badges: [], finalizedMonths: [] } }) }).catch(() => {});
-for (const key of ['fitshare.ranking.v1', 'fitshare.ranking.viewer', 'fitshare.ranking.viewerName', 'fitshare.ranking.rev']) localStorage.removeItem(key);
-document.querySelector('#results').innerHTML = checks.map((item) => `<li style="color:${item.passed ? 'green' : 'red'}">${item.passed ? '통과' : '실패'}: ${item.name}${item.error ? ` — ${item.error}` : ''}</li>`).join('');
-document.title = `${checks.filter((c) => c.passed).length}/${checks.length} 통과`;
+try {
+  [{ fetchMe }, { renderRanking }, { openGarmentDetail }, { openProfileDialog, openMemberProfileDialog }] = await Promise.all([
+    import('../js/auth.js?v=auth-2'), import('../modules/ranking.js'), import('../modules/garmentDetail.js'), import('../modules/profile.js?v=profile-3')
+  ]);
+  await check('빈 참여 랭킹은 공개 비교만 보여 주고 계정·서버 기록을 만들지 않아요', async () => {
+    await showRanking(null);
+    assert($('#rk-board').textContent.includes('점수가 아직 없어요'), '빈 순위 안내가 없어요.');
+    assert(!root.querySelector('#rk-account,#rk-profile,#rk-reservations,#rk-pending,#rk-reviewable,.rk-rate,.rk-review-form,[data-key],[data-account-action]'), '개인 기능이 순위 탭에 남아 있어요.');
+    assert(revision === 0 && serverState.users.length === 0, '순위 읽기만으로 기록을 만들면 안 돼요.');
+    assert(!root.textContent.includes('체험용'), '가짜 참여자가 보이면 안 돼요.');
+  });
+  await check('로그인한 순위 화면에서 내 페이지를 열 수 있어요', async () => {
+    await showRanking('민수');
+    assert($('#rk-open-mypage'), '내 페이지로 가는 버튼이 없어요.');
+    $('#rk-open-mypage').click();
+    await waitFor(() => myDialog()?.querySelector('#rk-account'), '내 페이지가 열리지 않았어요.');
+    assert(myDialog().textContent.includes('민수') && myDialog().querySelector('#rk-reservations'), '계정과 예약이 내 페이지에 있어야 해요.');
+    assert(!myDialog().querySelector('[data-account-action]'), '학생에게 선생님 설정이 보여요.');
+    await closeAllDialogs();
+  });
+  await check('옷 상세에서 예약하면 예약 중으로 바뀌고 중복 예약을 막아요', async () => {
+    const result = await reserveAs('민수', jacket);
+    assert(result.status.includes('민수') && result.status.includes('예약 중') && result.disabled, '예약 상태가 바뀌지 않았어요.');
+    assert(serverState.exchanges.length === 1 && serverState.exchanges[0].status === 'reserved', '메모리에 예약 한 개가 저장돼야 해요.');
+    const again = await reserveAs('민수', jacket);
+    assert(again.disabled && serverState.exchanges.length === 1, '같은 옷의 중복 예약을 막지 못했어요.');
+  });
+  await check('내 옷·올린 사람 없는 옷의 잘못된 예약은 거부해요', async () => {
+    const own = await reserveAs('지수', { ...jacket, id: 'isolated-own' });
+    assert(own.error && own.message.includes('내가 올린 옷'), '내 옷 예약 오류 안내가 없어요.');
+    const nobody = await reserveAs('민수', { ...jacket, id: 'isolated-nobody', ownerName: '' });
+    assert(nobody.disabled && nobody.status.includes('예약할 수 없어요'), '올린 사람 없는 옷을 예약할 수 있어요.');
+    assert(serverState.exchanges.length === 1, '잘못된 예약이 추가됐어요.');
+  });
+  await check('받은 친구만 내 페이지에서 수령을 확인하고 받기 전에는 평가할 수 없어요', async () => {
+    let dialog = await openMine('지수');
+    assert(dialog.querySelector('#rk-reservations').textContent.includes(jacket.name), '준 친구 예약 목록이 없어요.');
+    assert(!dialog.querySelector('[data-confirm]') && !dialog.querySelector('.rk-rate'), '준 친구가 받았다고 확인하거나 미리 평가할 수 있어요.');
+    dialog = await openMine('민수');
+    assert(dialog.querySelector('[data-confirm]') && !dialog.querySelector('.rk-rate'), '받은 친구의 확인 버튼이 없거나 받기 전에 평가가 보여요.');
+    dialog.querySelector('[data-confirm]').click();
+    await waitFor(() => Boolean(dialog.querySelector('.rk-rate')), '수령 확인 뒤 평가 칸이 없어요.');
+    assert(serverState.exchanges[0].status === 'completed', '수령 상태가 저장되지 않았어요.');
+  });
+  await check('범위를 벗어난 점수는 오류로 안내하고 유효한 점수는 비공개로 보내요', async () => {
+    const dialog = myDialog();
+    const select = dialog.querySelector('.rk-rate select');
+    const invalid = document.createElement('option'); invalid.value = '11'; invalid.textContent = '잘못된 11점'; select.append(invalid);
+    const before = revision;
+    await sendScore(dialog, 11);
+    assert(revision === before && dialog.querySelector('#rk-message').classList.contains('is-error'), '범위를 벗어난 점수를 저장했어요.');
+    await sendScore(dialog, 8);
+    assert(dialog.textContent.includes('내 점수 8점을 보냈어요'), '내가 보낸 점수 안내가 없어요.');
+    assert(serverState.exchanges[0].revealedAt === null, '상대가 보내기 전에 점수가 공개됐어요.');
+  });
+  await check('상대 점수는 숨기고 둘 다 보낸 뒤에만 순위·내 나눔 내역에 공개해요', async () => {
+    const dialog = await openMine('지수');
+    assert(!visibleText(dialog).includes('8점') && !visibleText(dialog).includes('+8'), '비공개 상대 점수가 보여요.');
+    await sendScore(dialog, 6);
+    assert(Boolean(serverState.exchanges[0].revealedAt), '둘 다 점수를 보낸 뒤 공개되지 않았어요.');
+    assert(dialog.querySelector('#rk-ledger').textContent.includes('6점') && dialog.querySelector('#rk-ledger').textContent.includes('8점'), '내역에 양쪽 공개 점수가 없어요.');
+    assert(!dialog.querySelector('.rk-review-form'), '준 친구에게 후기 쓰기가 보여요.');
+    await showRanking('지수');
+    await waitFor(() => root.querySelectorAll('.rk-rank').length === 2, '공개 순위가 갱신되지 않았어요.');
+    const rows = [...root.querySelectorAll('.rk-rank')];
+    assert(rows[0].textContent.includes('지수') && rows[0].textContent.includes('8점') && rows[1].textContent.includes('6점'), '순위와 받은 점수가 다르게 표시돼요.');
+    assert(rows.some(row => row.classList.contains('is-self') || row.querySelector('.is-self')), '로그인한 내 순위가 구분되지 않아요.');
+    assert($('#rk-recent').textContent.includes('지수 +8점') && $('#rk-recent').textContent.includes('민수 +6점'), '공개된 점수 목록이 없어요.');
+    assert(!root.querySelector('#rk-ledger,#rk-reservations,.rk-rate,.rk-review-form'), '개인 거래 칸이 랭킹에 남아 있어요.');
+  });
+  await check('내 페이지 새로 확인 중에도 입력하던 후기와 아바타 초안을 지켜요', async () => {
+    const dialog = await openMine('민수');
+    const editor = dialog.querySelector('[data-avatar-editor]'); editor.open = true;
+    dialog.querySelector('[data-key="face"] [data-value="🐶"]').click();
+    const review = dialog.querySelector('.rk-review-form input');
+    review.value = '아직 보내지 않은 후기';
+    const avatar = dialog.querySelector('#pf-preview').textContent;
+    root.remove();
+    const before = rankGets();
+    await waitFor(() => rankGets() > before, '내 페이지 주기 확인이 실행되지 않았어요.');
+    await settle();
+    assert(review.isConnected && review.value === '아직 보내지 않은 후기', '주기 확인이 입력하던 후기를 지웠어요.');
+    assert(dialog.querySelector('#pf-preview').textContent === avatar && avatar.includes('🐶'), '주기 확인이 아바타 초안을 덮어썼어요.');
+    document.body.append(root);
+  });
+  await check('받은 친구만 후기를 한 번 쓰고 글에 들어간 HTML은 실행하지 않아요', async () => {
+    const dialog = myDialog();
+    let form = dialog.querySelector('.rk-review-form');
+    form.querySelector('input').value = '   '; submit(form);
+    await waitFor(() => dialog.querySelector('#rk-message').classList.contains('is-error'), '빈 후기 오류가 없어요.');
+    assert(dialog.querySelector('#rk-message').textContent.includes('후기 내용'), '빈 후기 안내가 이해하기 어려워요.');
+    form = dialog.querySelector('.rk-review-form'); form.querySelector('input').value = '<i>깨끗해요</i>'; submit(form);
+    await waitFor(() => !dialog.querySelector('.rk-review-form'), '후기 제출 뒤 입력 칸이 남아 있어요.');
+    assert(serverState.exchanges[0].review.text === '<i>깨끗해요</i>', '후기가 저장되지 않았어요.');
+    const id = serverState.users.find(user => user.name === '지수').id;
+    await closeAllDialogs(); openMemberProfileDialog(id);
+    await waitFor(() => publicDialog()?.querySelector('.rk-reviews'), '친구의 받은 후기가 없어요.');
+    assert(publicDialog().querySelector('.rk-reviews').textContent.includes('<i>깨끗해요</i>') && !publicDialog().querySelector('.rk-reviews i'), '후기의 HTML 태그가 실행됐어요.');
+  });
+  await check('친구 공개 프로필에는 요약·받은 후기만 있고 개인 거래·편집·설정은 없어요', async () => {
+    const dialog = publicDialog();
+    assert(dialog.querySelector('[data-member-profile]') && dialog.querySelector('.rk-stats'), '공개 프로필 요약이 없어요.');
+    assert(!dialog.querySelector('#rk-ledger,#rk-reservations,#rk-pending,#rk-reviewable,[data-avatar-editor],[data-save],[data-account-action],input,select'), '친구 프로필에서 개인 기능이 보여요.');
+    assert(dialog.textContent.includes('지수') && dialog.textContent.includes('깨끗해요'), '친구 공개 정보가 없어요.');
+    await closeAllDialogs(); await showRanking('민수');
+    const friend = [...root.querySelectorAll('[data-profile]')].find(button => button.textContent.includes('지수'));
+    assert(friend, '순위에서 친구 프로필을 여는 버튼이 없어요.');
+    friend.click(); await waitFor(() => Boolean(publicDialog()), '순위의 친구 이름을 눌러도 프로필이 안 열려요.');
+    assert(!myDialog(), '친구 이름을 누르면 내 페이지 대신 공개 프로필이 열려야 해요.');
+  });
+  await check('내 페이지의 아바타를 저장하면 공개 순위에도 반영돼요', async () => {
+    const dialog = await openMine('지수', 'teacher');
+    assert(dialog.querySelector('.rk-stats').textContent.includes('나눔한 횟수') && dialog.querySelector('.rk-stats').textContent.includes('1번'), '나눔 횟수 요약이 없어요.');
+    assert(dialog.textContent.includes('배지'), '배지 정보가 없어요.');
+    dialog.querySelector('[data-avatar-editor]').open = true;
+    dialog.querySelector('[data-key="face"] [data-value="🐶"]').click();
+    dialog.querySelector('[data-key="hat"] [data-value="👑"]').click();
+    assert(dialog.querySelector('#pf-preview').textContent.includes('🐶') && dialog.querySelector('#pf-preview').textContent.includes('👑'), '아바타 미리보기가 안 바뀌어요.');
+    const before = savedCallbacks;
+    dialog.querySelector('[data-save]').click();
+    await waitFor(() => savedCallbacks > before, '아바타 저장 콜백이 실행되지 않았어요.');
+    assert(dialog.querySelector('#pf-message').textContent.includes('저장했어요') && savedCallbacks === before + 1, '저장 안내 또는 콜백 횟수가 잘못됐어요.');
+    assert(serverState.users.find(user => user.name === '지수').avatar.face === '🐶', '아바타가 메모리 저장소에 저장되지 않았어요.');
+    await showRanking('지수', 'teacher');
+    await waitFor(() => [...root.querySelectorAll('.rk-name .avatar')].some(avatar => avatar.textContent.includes('🐶') && avatar.textContent.includes('👑')), '저장한 아바타가 순위에 반영되지 않았어요.');
+  });
+  await check('내 페이지 주기 확인이 선생님 설정의 작성 중인 값을 지우지 않아요', async () => {
+    const dialog = myDialog();
+    const field = dialog.querySelector('[data-account-action="teacher-code"] input');
+    assert(field, '선생님 설정이 내 페이지에 없어요.');
+    field.value = 'isolated-unsaved-example';
+    root.remove();
+    const before = rankGets();
+    await waitFor(() => rankGets() > before, '선생님 내 페이지 주기 확인이 실행되지 않았어요.');
+    await settle();
+    assert(field.isConnected && field.value === 'isolated-unsaved-example', '설정 작성 중인 값이 주기 확인으로 지워졌어요.');
+    document.body.append(root);
+  });
+  await check('선생님 설정은 내 페이지에서 성공·실패를 안내하고 학생에게는 숨겨요', async () => {
+    let dialog = myDialog();
+    let form = dialog.querySelector('[data-account-action="teacher-code"]');
+    submit(form);
+    await waitFor(() => dialog.querySelector('#pf-account-message').textContent.includes('바꿨어요'), '인증 코드 저장 안내가 없어요.');
+    assert(requests.some(item => item.path === '/api/auth/teacher-code' && item.body.newCode === 'isolated-unsaved-example'), '설정 요청 값이 잘못됐어요.');
+    accountFailure = true;
+    form = dialog.querySelector('[data-account-action="reset-student-password"]');
+    form.elements.username.value = 'isolated-student'; form.elements.newPassword.value = 'isolated-example-password'; submit(form);
+    await waitFor(() => dialog.querySelector('#pf-account-message').classList.contains('is-error'), '설정 실패 안내가 없어요.');
+    assert(!form.querySelector('[type="submit"]').disabled, '오류 뒤 다시 시도할 수 없어요.');
+    accountFailure = false;
+    submit(form); await waitFor(() => dialog.querySelector('#pf-account-message').textContent.includes('바꿨어요'), '설정 재시도가 안 됐어요.');
+    dialog = await openMine('민수');
+    assert(!dialog.querySelector('[data-account-action]'), '학생에게 선생님 설정이 남아 있어요.');
+    assert(!root.querySelector('[data-account-action]'), '설정이 랭킹 탭에 남아 있어요.');
+  });
+  await check('예약 취소도 내 페이지에서 하고 같은 옷을 다시 예약할 수 있어요', async () => {
+    const pants = { ...jacket, id: 'isolated-ranking-pants', name: '검정 바지', category: 'pants', garmentTypeId: 5 };
+    await reserveAs('하준', pants);
+    const dialog = await openMine('하준');
+    dialog.querySelector('#rk-reservations [data-cancel]').click();
+    await waitFor(() => !dialog.querySelector('#rk-reservations [data-cancel]'), '취소한 예약이 목록에 남아 있어요.');
+    const again = await reserveAs('민수', pants);
+    assert(again.status.includes('민수') && !again.error, '취소 뒤 다시 예약할 수 없어요.');
+  });
+  await check('캐시를 비운 새 화면에서도 메모리 서버의 공개 순위를 읽어요', async () => {
+    localStorage.removeItem('fitshare.ranking.v1'); localStorage.removeItem('fitshare.ranking.rev');
+    await closeAllDialogs(); await showRanking('민수');
+    await waitFor(() => root.querySelectorAll('.rk-rank').length === 2, '빈 캐시에서 공개 순위를 읽지 못했어요.');
+    assert(revision > 0 && serverState.exchanges.some(item => item.review), '모의 저장소의 기록이 사라졌어요.');
+  });
+  await check('로그아웃·손상된 캐시·HTML 같은 이름에도 화면이 깨지지 않아요', async () => {
+    let dialog = await openMine('<b>x</b>');
+    assert(dialog.querySelector('.rk-profile-name').textContent === '<b>x</b>' && !dialog.querySelector('.rk-profile-name b'), '이름의 HTML이 실행됐어요.');
+    await closeAllDialogs(); await signIn(null);
+    localStorage.setItem('fitshare.ranking.v1', '{broken-json');
+    renderRanking(root); await settle();
+    assert(root.textContent.trim(), '손상된 캐시에서 랭킹이 그려지지 않았어요.');
+    dialog = openProfileDialog(); await settle();
+    assert(dialog.textContent.includes('로그인') && !dialog.querySelector('.rk-rate,.rk-review-form,[data-save],[data-account-action]'), '로그아웃했는데 개인 입력 기능이 보여요.');
+  });
+  await check('모든 계정·랭킹·사진 동작은 격리되어 실제 API로 나가지 않아요', async () => {
+    assert(unexpected.length === 0, '예상하지 못한 API 요청: ' + JSON.stringify(unexpected));
+    assert(window.localStorage === isolatedStorage, '실제 localStorage를 사용했어요.');
+    assert(requests.every(item => ['/api/auth/me','/api/ranking','/api/auth/teacher-code','/api/auth/reset-student-password'].includes(item.path)), '실제 계정이나 재고 API를 불렀어요.');
+    assert(!requests.some(item => /signup|login|logout|garments/.test(item.path)), '실제 계정 생성·로그인·재고 요청을 시도했어요.');
+  });
+} catch (error) {
+  checks.push({ name: '격리된 검사 준비', passed: false, error: error.stack || error.message });
+} finally {
+  await closeAllDialogs(); root.remove();
+  for (const id of intervals) originalClearInterval(id);
+  channels.clear();
+  window.setInterval = originalInterval; window.clearInterval = originalClearInterval;
+  window.BroadcastChannel = originalBroadcast;
+  Object.defineProperty(window, 'localStorage', storageDescriptor);
+  Object.defineProperty(HTMLImageElement.prototype, 'src', imageSource);
+  // 검사 뒤 도착하는 비동기 작업도 실제 API로 보내지 않아요.
+  window.fetch = (input, options) => {
+    const path = new URL(typeof input === 'string' ? input : input.url, location.href).pathname;
+    if (path.startsWith('/api/')) return Promise.reject(Error('격리된 UI 검사가 끝났어요.'));
+    return originalFetch(input, options);
+  };
+}
+const list = document.querySelector('#results');
+for (const item of checks) {
+  const line = document.createElement('li'); line.style.color = item.passed ? 'green' : 'red';
+  line.textContent = (item.passed ? '통과: ' : '실패: ') + item.name + (item.error ? ' — ' + item.error : ''); list.append(line);
+}
+const passed = checks.filter(item => item.passed).length;
+const summary = { passed, failed: checks.length - passed, checks, requests: requests.length, memoryRevision: revision, unexpected };
+window.rankingUIResult = summary;
+document.querySelector('#result').textContent = (summary.failed ? 'FAIL ' : 'PASS ') + passed + '/' + checks.length + ' checks; isolated API requests=' + requests.length;
+document.title = passed + '/' + checks.length + ' 통과';

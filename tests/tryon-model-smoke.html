@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>입어보기 실제 모델 검사</title>
+<pre id="result">RUNNING</pre><canvas id="image" width="256" height="256"></canvas>
+<script type="module">
+import {loadVision} from '../js/virtualTryOn/vision.js';
+let vision;
+try{
+ vision=await loadVision();
+ const canvas=document.querySelector('canvas');canvas.getContext('2d').fillRect(0,0,256,256);
+ const result=vision.pose.detectForVideo(canvas,performance.now());
+ if(vision.segmenter)throw Error('Whole-image preview must not load a person segmentation model');
+ document.querySelector('#result').textContent='PASS actual PoseLandmarker inference; whole-image mode; blank poses='+result.landmarks.length;
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.stack;}
+finally{vision?.pose.close();vision?.segmenter?.close();}
+</script>

@@ -67,7 +67,8 @@ def _load_detector():
         if _detector is None:
             model_path = _ensure_model()
             try:
-                net = cv2.dnn.readNetFromONNX(str(model_path))
+                # Python handles Korean Windows paths; pass the model buffer to OpenCV.
+                net = cv2.dnn.readNetFromONNX(np.frombuffer(model_path.read_bytes(), dtype=np.uint8))
                 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
                 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
                 _detector = YoloDetector(net)

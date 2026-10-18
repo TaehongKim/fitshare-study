@@ -1,0 +1,96 @@
+<!doctype html><meta charset="utf-8"><title>등록 추천 정보와 착용감 검사</title>
+<div id="metadata"></div><div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import {suggestGarmentMetadata,createGarmentMetadataFields} from '../js/garmentMetadata.js';
+import {getRecommendationResults,getOutfitMatches,validateRecommendationFilters,renderRecommendation} from '../modules/recommendation.js';
+const checks=[];function check(value,label){if(!value)throw new Error(label);checks.push(label);}
+const all={gender:'전체',size:'전체',season:'전체',category:'전체',style:'전체',color:'전체'};
+const top={id:'a',name:'기준과 먼 옷',category:'top',gender:'unisex',size:'140',seasons:['봄','가을'],style:'편한 스타일',condition:'좋음',colorName:'파랑',lengthCm:50,widthCm:35};
+const near={...top,id:'z',name:'기준과 가까운 옷',widthCm:40};
+const dark={...near,id:'dark',name:'검정 활동복',colorName:'검정',style:'활동적인 스타일'};
+const originalFetch=window.fetch;
+try{
+  const suggestion=suggestGarmentMetadata({name:'봄 가을 긴팔 스트라이프 티셔츠 사이즈 140',garmentTypeId:1,category:'top'});
+  check(suggestion.values.size==='140','명시된 호칭만 사이즈로 제안');
+  check(suggestion.values.sleeveLength==='긴팔'&&suggestion.values.pattern==='줄무늬','소매와 무늬의 명시적 단어 반영');
+  check(suggestion.values.seasons.length===2,'여러 계절 이름에서 제안');
+  check(suggestGarmentMetadata({name:'새봄이 점퍼',category:'top'}).values.seasons===undefined,'사람 이름 일부를 계절로 추측하지 않음');
+  check(suggestGarmentMetadata({name:'데이터셋 150',category:'top'}).values.size===undefined,'숫자만 보고 사이즈로 추측하지 않음');
+  check(['condition','thickness','stretch'].every(key=>suggestion.values[key]===undefined),'상태·두께·신축성을 자동 확정하지 않음');
+  const box=document.querySelector('#metadata'), fields=createGarmentMetadataFields(box);
+  fields.suggest({name:'봄 긴팔 티셔츠 사이즈 140',garmentTypeId:1,category:'top'});
+  check(fields.read().seasons.join()==='봄'&&fields.read().metadataSources.seasons==='name-rule','이름에서 계절만 제안');
+  check(!box.querySelector('select')&&box.querySelectorAll('input').length===4,'계절 외 입력 항목 제거');
+  check(!('size' in fields.read())&&!('style' in fields.read()),'제거한 필드는 저장 요청에서 제외');
+  fields.suggest({name:'여름 반팔 티셔츠',garmentTypeId:1,category:'top'});
+  check(fields.read().seasons.join()==='여름','이름 변경 시 자동 계절 갱신');
+  const winter=box.querySelector('[name="seasons"][value="겨울"]');winter.checked=true;winter.dispatchEvent(new Event('change'));
+  fields.suggest({name:'봄 긴팔 티셔츠',garmentTypeId:1,category:'top'});
+  check(fields.read().seasons.includes('겨울'),'직접 고른 계절 보존');
+  fields.suggest({name:'데님 하프 팬츠',garmentTypeId:5,category:'pants'});
+  check(fields.read().seasons.includes('겨울'),'종류 변경 시 직접 고른 계절 유지');
+  fields.reset();check(fields.read().seasons.length===0,'새 옷에서 이전 계절 초기화');
+  check(getRecommendationResults([top],{...all,season:'가을'}).length===1,'다중 계절의 두 번째 계절도 필터링');
+  check(getRecommendationResults([null,{},top],{...all,season:'가을'}).length===1,'비어 있는 등록 행은 무시하고 정상 옷 추천');
+  check(getRecommendationResults([top,dark],{...all,style:'편한 스타일',color:'밝은 색'}).length===1,'필수 조건은 엄격히 유지');
+  const soft=getRecommendationResults([top,dark],{...all,style:'편한 스타일',color:'밝은 색',styleMode:'선호',colorMode:'선호'});
+  check(soft.length===2&&soft[0].item.id==='a','선호 조건은 제외 대신 순위 반영');
+  check(getRecommendationResults([{...dark,size:'150'}],{...all,size:'140',styleMode:'선호',colorMode:'선호'}).length===0,'선호 설정도 필수 사이즈를 완화하지 않음');
+  check(getRecommendationResults([top,near],{...all,category:'상의',referenceWidth:'40'})[0].item.id==='z','ID 대신 기준 실측에 가까운 옷 우선');
+  check(getRecommendationResults([near,{...near,id:'wide',widthCm:44}],{...all,category:'상의',referenceWidth:'40',fitPreference:'여유있게'})[0].item.id==='wide','선택한 여유 너비 목표 반영');
+  check(!!validateRecommendationFilters({...all,referenceWidth:'40'}),'상의·하의 기준 치수 혼용 방지');
+  check(!!validateRecommendationFilters({...all,category:'상의',referenceWidth:'299',fitPreference:'여유있게'}),'여유 포함 치수 상한 검증');
+  check(getRecommendationResults([{...top,widthCm:null}],{...all,category:'상의',referenceWidth:'40'}).length===0,'참조 치수 비교 시 미등록 값 제외');
+  check(getRecommendationResults([top],{...all,thickness:'두꺼움'}).length===0,'두께 미등록은 지정 두께에 일치하지 않음');
+  const pants={...near,id:'pants',category:'pants',widthCm:29,pattern:'무지',thickness:'보통'};
+  const anchor={...near,pattern:'줄무늬',thickness:'보통'};
+  const pairs=getOutfitMatches([anchor,pants],anchor,{...all,season:'가을'});
+  check(pairs.length===1&&pairs[0].reasons.some(reason=>reason.includes('가을')),'세트가 다중 계절 교집합을 사용');
+  check(pairs[0].reasons.some(reason=>reason.includes('두께'))&&pairs[0].reasons.some(reason=>reason.includes('무늬')),'세트 두께와 무늬의 근거 표시');
+  window.fetch=async()=>new Response(JSON.stringify([top,near,dark]),{headers:{'Content-Type':'application/json'}});
+  const root=document.querySelector('#root');await renderRecommendation(root,{activeTab:'recommendation'});
+  for(const [key,value]of Object.entries({size:'140',category:'상의',season:'가을',style:'편한 스타일',color:'밝은 색'}))root.querySelector(`[data-filter="${key}"]`).value=value;
+  root.querySelector('[data-filter="size"]').dispatchEvent(new Event('change'));
+  check(root.querySelectorAll('.recommendation-card').length===2,'기본 조건과 다중 계절 필터 동작');
+  check(!root.querySelector('.recommendation-advanced')&&!root.querySelector('[data-filter=referenceWidth]')&&!root.querySelector('[data-filter=sizeTolerance]'),'복잡한 두 설정 항목 제거');
+  const page=await originalFetch('/measure/register.html').then(response=>response.text());
+  const frame=document.createElement('iframe');frame.srcdoc=page.replace('<head>','<head><base href="/measure/">').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');
+  const loaded=new Promise(resolve=>frame.addEventListener('load',resolve,{once:true}));document.body.append(frame);await loaded;
+  try{
+    const win=frame.contentWindow,doc=frame.contentDocument;
+    let stored=null,finishAnalysis,analyses=0;
+    const json=(data)=>new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}});
+    const waitFor=async(predicate)=>{for(let i=0;i<200;i++){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,10));}throw new Error('등록 화면 대기 시간 초과');};
+    win.fetch=async(url,options={})=>{
+      if(url==='/api/auth/me')return json({user:{username:'manual-tester',name:'Manual tester',role:'student'}});
+      if(url==='/api/garments/analyze'){analyses++;return new Promise(resolve=>{finishAnalysis=resolve;});}
+      if(url==='/api/garments'&&options.method==='POST'){stored={...JSON.parse(options.body),id:'manual-test'};return json(stored);}
+      if(url==='/api/garments')return json(stored?[stored]:[]);
+      if(url==='/api/garments/manual-test/product-photo')return json({productPhotoUrl:'/api/garments/manual-test/product-photo'});
+      throw new Error('예상하지 않은 요청');
+    };
+    await win.eval("import('/js/measurement/register.js?v=manual-metadata-test')");
+    doc.querySelector('#garment-type').value='5';
+    const transfer=new win.DataTransfer();transfer.items.add(new win.File([new Uint8Array([255,216,255])],'pants.jpg',{type:'image/jpeg'}));
+    doc.querySelector('#gallery-photo').files=transfer.files;doc.querySelector('#gallery-photo').dispatchEvent(new win.Event('change'));
+    await waitFor(()=>!doc.querySelector('#manual-registration').disabled);
+    doc.querySelector('#manual-registration').click();
+    const form=doc.querySelector('#garment-form');
+    check(!form.hidden&&analyses===0&&form.elements.lengthCm.value==='','자동 분석 없이 치수를 직접 입력할 수 있음');
+    doc.querySelector('#analyze-garment').click();
+    await waitFor(()=>typeof finishAnalysis==='function');
+    doc.querySelector('#background-id').value='M1';doc.querySelector('#background-id').dispatchEvent(new win.Event('change'));
+    check(!doc.querySelector('#analyze-garment').disabled,'분석 중 배경을 바꿔도 다시 분석할 수 있음');
+    doc.querySelector('#manual-registration').click();
+    form.elements.name.value='여름 반바지 사이즈140';form.elements.name.dispatchEvent(new win.Event('input'));
+    form.elements.lengthCm.value='40';form.elements.widthCm.value='29';form.elements.colorName.value='파랑';form.elements.gender.value='unisex';
+    finishAnalysis(json({lengthCm:99,widthCm:99,colorName:'Wrong',garmentName:'Wrong'}));
+    await new Promise(resolve=>setTimeout(resolve,30));
+    check(form.elements.lengthCm.value==='40'&&form.elements.widthCm.value==='29','늦은 자동 분석 결과가 직접 입력한 값을 덮어쓰지 않음');
+    form.dispatchEvent(new win.Event('submit',{cancelable:true}));
+    await waitFor(()=>form.hidden&&!!stored);
+    check(stored.measurementMethod==='manual'&&!('size' in stored)&&!('bottomLength' in stored)&&stored.seasons.includes('여름'),'직접 등록에서 실측과 계절만 저장');
+  }finally{frame.remove();}
+  document.querySelector('#result').textContent='PASS '+checks.length+' checks';
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.stack;}finally{window.fetch=originalFetch;}
+</script>

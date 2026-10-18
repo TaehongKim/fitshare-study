@@ -2,10 +2,12 @@
 import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-6';
 import { fetchMe } from '../auth.js?v=auth-2';
 import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
+import { createGarmentMetadataFields } from '../garmentMetadata.js';
 
 const photoInputs = [document.querySelector('#camera-photo'), document.querySelector('#gallery-photo')];
 const photoPreview = document.querySelector('#garment-preview');
 const analyzeButton = document.querySelector('#analyze-garment');
+const manualButton = document.querySelector('#manual-registration');
 const analysisStatus = document.querySelector('#analysis-status');
 const form = document.querySelector('#garment-form');
 const saveStatus = document.querySelector('#save-status');
@@ -20,6 +22,13 @@ const garmentTypeInput = document.querySelector('#garment-type');
 const backgroundInput = document.querySelector('#background-id');
 let photoDataUrl = '';
 let closetImageDataUrl = '';
+let generatedName = '';
+let analysisVersion = 0;
+let manualMode = false;
+const metadataFields = createGarmentMetadataFields(document.querySelector('#registration-metadata'));
+const suggestMetadata = () => metadataFields.suggest({name:form.elements.name.value,garmentTypeId:Number(garmentTypeInput.value),category:categoryForId(Number(garmentTypeInput.value))});
+form.elements.name.addEventListener('input', suggestMetadata);
+for(const key of ['lengthCm','widthCm'])form.elements[key].addEventListener('input',()=>{manualMode=true;});
 const camera = createRegistrationCamera({
   openButton: document.querySelector('#open-camera'),
   panel: document.querySelector('#camera-panel'),
@@ -36,12 +45,19 @@ document.querySelector('#native-camera-action').hidden = globalThis.isSecureCont
 async function handlePhotoSelection(input) {
   const file = input.files?.[0];
   if (!file) return;
+  analysisVersion++;
+  manualMode=false;
   camera.close();
   if (photoPreview.src.startsWith('blob:')) URL.revokeObjectURL(photoPreview.src);
   form.hidden = true;
+  form.reset();
+  metadataFields.reset();
+  generatedName = '';
   photoDataUrl = '';
   closetImageDataUrl = '';
   analyzeButton.disabled = true;
+  manualButton.disabled = true;
+  manualButton.hidden = true;
   analysisStatus.textContent = '';
   photoPreview.hidden = true;
   if (!file.type.startsWith('image/')) {
@@ -53,6 +69,8 @@ async function handlePhotoSelection(input) {
     photoPreview.src = URL.createObjectURL(file);
     photoPreview.hidden = false;
     analyzeButton.disabled = !garmentTypeInput.value;
+    manualButton.hidden = false;
+    manualButton.disabled = !garmentTypeInput.value;
     showStatus(analysisStatus, '사진을 골랐어요. 다음 버튼을 눌러 옷을 찾아봐요.');
   } catch (error) {
     showStatus(analysisStatus, error.message, true);
@@ -64,15 +82,46 @@ photoInputs.forEach((input) => input.addEventListener('change', () => handlePhot
 analyzeButton.addEventListener('click', runAnalysis);
 
 backgroundInput.addEventListener('change', () => {
+  analysisVersion++;
+  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value;
+  if(manualMode)return;
   if (!form.hidden && photoDataUrl) runAnalysis();
+  else if(photoDataUrl)showStatus(analysisStatus,'분석 조건이 바뀌었어요. 사진 살펴보기를 다시 눌러 주세요.');
 });
 
 garmentTypeInput.addEventListener('change', () => {
+  analysisVersion++;
   analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value;
+  manualButton.disabled = analyzeButton.disabled;
+  if(manualMode){suggestMetadata();manualButton.click();return;}
   if (!form.hidden && photoDataUrl) runAnalysis();
+  else if(photoDataUrl)showStatus(analysisStatus,'옷 종류가 바뀌었어요. 사진 살펴보기를 다시 눌러 주세요.');
+});
+
+manualButton.addEventListener('click', () => {
+  if(!photoDataUrl||!garmentTypeInput.value)return;
+  analysisVersion++;
+  manualMode=true;
+  analyzeButton.disabled=false;
+  if(form.hidden){
+    form.elements.lengthCm.value='';form.elements.widthCm.value='';form.elements.colorName.value='';
+    closetImageDataUrl='';
+    if(!form.elements.name.value)form.elements.name.value=garmentTypeInput.selectedOptions[0].textContent.replace(/^\d+\.\s*/, '');
+    suggestMetadata();
+  }
+  const pants=Number(garmentTypeInput.value)===5;
+  document.querySelector('#width-label').textContent=pants?'허리 단면 너비(cm)':'가슴 단면 너비(cm)';
+  document.querySelector('#analysis-preview').hidden=true;
+  document.querySelector('#chosen-garment-type').textContent=`선택한 종류: ${garmentTypeInput.selectedOptions[0].textContent}`;
+  document.querySelector('#review-note').textContent='자동 실측을 사용하지 않았어요. 실제 옷을 자로 재어 길이·단면 너비를 입력하고 색깔과 추천 정보를 확인해 주세요.';
+  form.hidden=false;
+  showStatus(analysisStatus,'직접 입력 모드예요. 확실하지 않은 추천 정보는 미등록으로 둘 수 있어요.');
+  form.scrollIntoView({behavior:'smooth',block:'start'});
 });
 
 async function runAnalysis() {
+  const version=++analysisVersion;
+  manualMode=false;
   analyzeButton.disabled = true;
   form.hidden = true;
   showStatus(analysisStatus, '고른 배경의 표시와 옷 모양을 찾고 있어요. 잠시 기다려 주세요.');
@@ -80,14 +129,15 @@ async function runAnalysis() {
     const result = await requestJson('/api/garments/analyze', {
       method: 'POST', body: JSON.stringify({ backgroundId: backgroundInput.value, garmentId: Number(garmentTypeInput.value), photoDataUrl })
     });
+    if(version!==analysisVersion)return;
     fillForm(result);
     form.hidden = false;
     showStatus(analysisStatus, result.message);
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (error) {
-    showStatus(analysisStatus, error.message, true);
+    if(version===analysisVersion)showStatus(analysisStatus, error.message, true);
   } finally {
-    analyzeButton.disabled = false;
+    if(version===analysisVersion)analyzeButton.disabled = !photoDataUrl||!garmentTypeInput.value;
   }
 }
 
@@ -97,6 +147,8 @@ form.addEventListener('submit', async (event) => {
   const values = new FormData(form);
   const garmentTypeId = Number(garmentTypeInput.value);
   const payload = {
+    ...metadataFields.read(),
+    measurementMethod: manualMode ? 'manual' : 'photo-analysis',
     name: values.get('name'), category: categoryForId(garmentTypeId), garmentTypeId, gender: values.get('gender'),
     lengthCm: Number(values.get('lengthCm')), widthCm: Number(values.get('widthCm')),
     colorName: values.get('colorName'), photoDataUrl, closetImageDataUrl, backgroundId: backgroundInput.value
@@ -109,6 +161,8 @@ form.addEventListener('submit', async (event) => {
     showStatus(analysisStatus, `${saved.name}을(를) 저장했어요. AI 상품 사진을 자동으로 만들고 있어요.`);
     await loadGarments();
     form.reset();
+    metadataFields.reset();
+    generatedName = '';
     form.hidden = true;
     photoInputs.forEach((input) => { input.value = ''; });
     photoDataUrl = '';
@@ -117,6 +171,8 @@ form.addEventListener('submit', async (event) => {
     garmentTypeInput.value = '';
     photoPreview.hidden = true;
     analyzeButton.disabled = true;
+    manualButton.disabled = true;
+    manualButton.hidden = true;
     try {
       await requestJson(`/api/garments/${encodeURIComponent(saved.id)}/product-photo`, { method: 'POST', body: '{}' });
       showStatus(analysisStatus, `${saved.name}의 등록과 AI 상품 사진 생성이 끝났어요!`);
@@ -135,10 +191,15 @@ function fillForm(result) {
   form.elements.lengthCm.value = result.lengthCm;
   form.elements.widthCm.value = result.widthCm;
   form.elements.colorName.value = result.colorName;
-  form.elements.name.value = '';
+  if (!form.elements.name.value || form.elements.name.value === generatedName) {
+    generatedName = `${result.colorName || ''} ${result.garmentName || '옷'}`.trim();
+    form.elements.name.value = generatedName;
+  }
+  suggestMetadata();
   document.querySelector('#width-label').textContent = `${result.widthLabel}(cm)`;
   document.querySelector('#chosen-garment-type').textContent = `선택한 종류: ${result.garmentName}`;
   document.querySelector('#analysis-preview').src = result.analysisPhotoDataUrl;
+  document.querySelector('#analysis-preview').hidden = false;
   closetImageDataUrl = result.closetImageDataUrl;
   document.querySelector('#review-note').textContent = '초록 선은 옷 테두리, 주황 선은 길이, 파란 선은 너비예요. 사진과 숫자가 맞는지 살펴보고 필요하면 고쳐 주세요.';
 }

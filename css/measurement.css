@@ -255,6 +255,8 @@
 .closet-card-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:9px; }
 .closet-card-actions button,.closet-pagination button { min-height:34px; padding:7px 8px; border:1px solid #cbd9ed; border-radius:8px; color:#315fae; background:#fff; font-size:11px; font-weight:800; cursor:pointer; }
 .closet-card-actions button:hover,.closet-pagination button:hover:not(:disabled) { background:#eef4ff; }
+.closet-card-actions .closet-tryon-action { grid-column:1 / -1; min-height:44px; border-color:#4b83f5; color:#fff; background:#4b83f5; line-height:1.4; white-space:normal; }
+.closet-card-actions .closet-tryon-action:hover { background:#3269da; }
 .closet-pagination { display:flex; justify-content:center; align-items:center; gap:12px; margin-top:16px; color:#536783; font-size:12px; }
 .closet-pagination:empty { display:none; }
 .closet-pagination button:disabled { opacity:.45; cursor:not-allowed; }

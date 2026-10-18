@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>원하는 옷 기부 알림 검사</title>
+<link rel="stylesheet" href="/css/styles.css">
+<div id="host"></div><div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import {mountClothingWishes} from '../js/clothingWishes.js';
+import {renderRecommendation} from '../modules/recommendation.js';
+const checks=[];
+function check(ok,label){if(!ok)throw new Error(label);checks.push(label);}
+const wait=async(test)=>{for(let i=0;i<100;i++){if(test())return;await new Promise(resolve=>originalTimeout(resolve,10));}throw new Error('timeout');};
+const originalFetch=window.fetch,originalTimeout=window.setTimeout;
+const host=document.querySelector('#host');
+let controller,filters={gender:'전체',size:'140',season:'가을',category:'상의',style:'단정한 스타일',color:'밝은 색'},wishes=[],requests=[],poll;
+const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+window.setTimeout=(fn,delay,...args)=>delay===30000?(poll=fn,123):originalTimeout(fn,delay,...args);
+try{
+ window.fetch=async(url,options={})=>{
+   requests.push({url,options});
+   if(url==='/api/garments')return reply([]);
+   if(url.startsWith('/api/garments/'))return reply({error:'삭제'},404);
+   if(options.method==='POST'&&url.endsWith('/read'))wishes[0].matches.forEach(item=>item.unread=false);
+   else if(options.method==='POST'){const body=JSON.parse(options.body);wishes=[{id:'w1',filters:body.filters,matches:[]}];}
+   else if(options.method==='DELETE')wishes=[];
+   return reply({wishes});
+ };
+ controller=mountClothingWishes(host,()=>filters,()=>true);
+ await wait(()=>host.textContent.includes('아직 저장한'));
+ check(host.textContent.includes('사이즈: 140'),'선택한 조건 미리보기');
+ host.querySelector('[data-wish-save]').click();
+ await wait(()=>host.textContent.includes('알림을 등록했어요'));
+ check(requests.some(r=>r.options.method==='POST'&&JSON.parse(r.options.body).filters.style==='단정한 스타일'),'현재 추천 조건 전송');
+ check(host.textContent.includes('기다리고 있어요'),'새 옷이 없을 때 대기 안내');
+ filters={...filters,size:'150'};controller.updatePreview();
+ check(host.querySelector('[data-wish-preview]').textContent.includes('150')&&wishes[0].filters.size==='140','선택 변경이 저장한 알림 조건을 변경하지 않음');
+ wishes[0].matches=[{id:'new',name:'<img src=x onerror=alert(1)>',size:'140',unread:true}];
+ await poll();
+ check(host.querySelector('[data-wish-count]').textContent==='새 알림 1개','자동 확인 후 새 기부 알림 표시');
+ check(!host.querySelector('img'),'옷 이름 HTML 이스케이프');
+ host.querySelector('[data-wish-read]').click();
+ await wait(()=>host.textContent.includes('새 알림을 확인했어요'));
+ check(!host.querySelector('[data-wish-read]')&&!host.querySelector('[data-wish-count]').textContent,'읽음 처리 후 배지 해제');
+ host.querySelector('[data-wish-open]').click();
+ await wait(()=>host.textContent.includes('옷이 삭제'));
+ check(host.textContent.includes('옷이 삭제'),'삭제된 옷 상세 열기 오류 처리');
+ host.querySelector('[data-wish-delete]').click();
+ await wait(()=>host.textContent.includes('알림을 해제했어요'));
+ check(!host.querySelector('.clothing-wish'),'알림 해제 즉시 반영');
+ window.fetch=async()=>reply({error:'로그인하면 알림을 저장할 수 있어요.'},401);
+ host.querySelector('[data-wish-refresh]').click();
+ await wait(()=>host.textContent.includes('로그인하면'));
+ check(host.textContent.includes('로그인하면'),'로그인 필요 안내');
+ window.fetch=async()=>{throw new Error('offline');};
+ host.querySelector('[data-wish-save]').click();
+ await wait(()=>host.textContent.includes('알림 서버에 연결하지'));
+ check(!host.querySelector('[data-wish-save]').disabled,'통신 실패 후 재시도 가능');
+ let finish;
+ window.fetch=()=>new Promise(resolve=>{finish=resolve;});
+ host.querySelector('[data-wish-refresh]').click();controller.dispose();finish(reply({wishes:[{id:'stale',filters,matches:[]}]}));
+ await new Promise(resolve=>originalTimeout(resolve,20));
+ check(!host.querySelector('.clothing-wish'),'폐기한 화면에 늦은 응답 반영하지 않음');
+ window.fetch=async url=>url==='/api/garments'?reply([]):reply({wishes:[]});
+ const root=document.querySelector('#root');await renderRecommendation(root,{activeTab:'recommendation'});
+ check(!!root.querySelector('[data-wish-save]')&&root.textContent.includes('만족하는 옷이 없어요'),'등록된 옷 0벌이어도 추천 탭에서 알림 등록 가능');
+ check(root.querySelectorAll('[data-filter]').length===6,'기존 기본 추천 조건 유지');
+ root.clothingWishes.dispose();
+ document.querySelector('#result').textContent='PASS '+checks.length+' checks';
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.stack;}
+finally{controller?.dispose();window.fetch=originalFetch;window.setTimeout=originalTimeout;}
+</script>

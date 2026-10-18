@@ -1,0 +1,62 @@
+<!doctype html><meta charset="utf-8"><title>추천 필터 정밀 검사</title>
+<div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import { normalizeRecommendationItem, getRecommendationResults, renderRecommendation } from '../modules/recommendation.js';
+const checks = [];
+function check(value, label) { if (!value) throw new Error(label); checks.push(label); }
+const all = { gender:'전체',size:'전체',season:'전체',category:'전체',style:'전체',color:'전체' };
+const base = { id:'match',name:'조건 일치',category:'top',gender:'unisex',size:'150',season:'봄',style:'편한 스타일',colorName:'흰색',lengthCm:50,widthCm:40 };
+const selected = {gender:'남학생',size:'150',season:'봄',category:'상의',style:'편한 스타일',color:'밝은 색'};
+const variants = [base,
+  {...base,id:'wrong-size',size:'140'}, {...base,id:'wrong-season',season:'겨울'},
+  {...base,id:'wrong-category',category:'pants'}, {...base,id:'wrong-style',style:'활동적인 스타일'},
+  {...base,id:'wrong-color',colorName:'검정'}, {...base,id:'wrong-gender',gender:'female'}];
+const ids = (records, filters) => getRecommendationResults(records,filters).map(x=>x.item.id).sort().join(',');
+try {
+  check(ids(variants, selected)==='match', '사이즈·계절·종류·스타일·색상·성별 불일치 모두 제외');
+  check(ids([{...base,gender:'male'}], selected)==='match', '영문 남성 등록값과 남학생 선택 연결');
+  check(ids([{...base,gender:'female'}], {...selected,gender:'여학생'})==='match', '영문 여성 등록값과 여학생 선택 연결');
+  check(ids([base], {...selected,gender:'여학생'})==='match', '공용 옷은 남학생·여학생 모두 포함');
+  check(ids([{...base,size:150}], selected)==='match', '숫자 사이즈와 문자열 사이즈 일치');
+  check(ids([{...base,size:' 150 '}], selected)==='match', '사이즈 주변 공백 정리');
+  for (const field of ['size','season','style','colorName','gender']) {
+    check(getRecommendationResults([{...base,[field]:undefined}],selected).length===0, `${field} 미등록을 일치로 처리하지 않음`);
+  }
+  check(normalizeRecommendationItem({...base,colorName:'진청'}).color==='어두운 색', '진청은 어두운 색');
+  check(normalizeRecommendationItem({...base,colorName:'진갈색'}).color==='어두운 색', '진갈색은 어두운 색');
+  check(normalizeRecommendationItem({...base,colorName:'미등록'}).color==='', '모르는 색상을 밝은 색으로 추정하지 않음');
+  check(getRecommendationResults(variants,all).length===variants.length, '전체 선택은 조건을 해제');
+  check(getRecommendationResults([],selected).length===0, '빈 목록에서 다른 조건으로 자동 대체하지 않음');
+  const live = await fetch('/api/garments').then(r=>r.json());
+  const actual150=live.filter(item=>item.category==='top'&&String(item.size)==='150'&&(item.seasons||[item.season]).includes('봄')).length;
+  check(getRecommendationResults(live,{...all,size:'150',season:'봄',category:'상의'}).length===actual150, '사용자 제보 조건: 현재 봄·상의·150 데이터와 정확히 일치');
+  let combinations=0;
+  for (const gender of ['전체','남학생','여학생'])
+  for (const size of ['전체','120','130','140','150','160'])
+  for (const season of ['전체','봄','여름','가을','겨울'])
+  for (const category of ['전체','상의','하의'])
+  for (const style of ['전체','편한 스타일','활동적인 스타일'])
+  for (const color of ['전체','밝은 색','어두운 색']) {
+    const filters={gender,size,season,category,style,color};
+    for (const {item} of getRecommendationResults(live,filters)) {
+      if (gender!=='전체' && item.gender!=='공용' && item.gender!==gender) throw new Error('성별 조건 누출');
+      for (const key of ['size','season','category','style','color']) if (filters[key]!=='전체' && (key==='season'?!item.seasons.includes(filters[key]):item[key]!==filters[key])) throw new Error(`${key} 조건 누출`);
+    }
+    combinations++;
+  }
+  check(combinations===2430, '실제 데이터 선택 조합 2430개에서 조건 누출 없음');
+  const originalFetch=window.fetch;
+  const root=document.querySelector('#root');
+  window.fetch=async()=>new Response(JSON.stringify(variants),{headers:{'Content-Type':'application/json'}});
+  await renderRecommendation(root,{activeTab:'recommendation'});
+  for (const [key,value] of Object.entries(selected)) root.querySelector(`[data-filter="${key}"]`).value=value;
+  root.querySelector('[data-filter="size"]').dispatchEvent(new Event('change'));
+  check(root.querySelectorAll('.recommendation-card').length===1, '화면: 맞는 옷 1벌만 표시, TOP 3 강제 보충 없음');
+  check(root.querySelector('[data-save-id]').dataset.saveId==='match', '화면: 정확한 옷 표시');
+  root.querySelector('[data-filter="size"]').value='160';
+  root.querySelector('[data-filter="size"]').dispatchEvent(new Event('change'));
+  check(root.querySelectorAll('.recommendation-card').length===0 && !!root.querySelector('.recommendation-empty'), '화면: 일치 0벌 안내');
+  window.fetch=originalFetch;
+  document.querySelector('#result').textContent='PASS '+checks.length+' checks; '+combinations+' combinations';
+} catch(error) { document.querySelector('#result').textContent='FAIL '+error.stack; }
+</script>

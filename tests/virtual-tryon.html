@@ -1,0 +1,118 @@
+<!doctype html><meta charset="utf-8"><title>추천 가상 입어보기 검사</title>
+<link rel="stylesheet" href="/css/styles.css"><div id="root"></div><pre id="result">RUNNING</pre>
+<script type="module">
+import {openVirtualTryOn,closeVirtualTryOn} from '../js/virtualTryOn/index.js';
+import {prepareTexture,drawTop,drawBottom} from '../js/virtualTryOn/fit.js';
+import {renderRecommendation} from '../modules/recommendation.js';
+const checks=[];const check=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
+const wait=async(test)=>{for(let i=0;i<1000;i++){if(test())return;await new Promise(resolve=>setTimeout(resolve,10));}throw Error('timeout: '+document.querySelector('.virtual-tryon [data-status]')?.textContent);};
+const originalFetch=window.fetch,originalMedia=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+let dialog,controller,sourceTimer,streams=[],poseClosed=0,detects=0,loads=0,masksClosed=0,segmentCalls=0;
+const records=[{id:'top',name:'추천 상의',category:'top',gender:'unisex',size:'140',season:'봄',style:'편한 스타일',colorName:'파랑'}, {id:'bottom',name:'추천 하의',category:'pants',gender:'unisex',size:'140',season:'봄',bottomLength:'긴바지',colorName:'검정',style:'편한 스타일'}];
+const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
+const image=document.createElement('canvas');image.width=200;image.height=260;const paint=image.getContext('2d');paint.fillStyle='#ff0000';paint.fillRect(50,20,100,220);paint.fillStyle='#0000ff';paint.fillRect(10,40,45,80);paint.fillStyle='#ffff00';paint.fillRect(145,40,45,80);const blob=await new Promise(resolve=>image.toBlob(resolve));
+const points=Array.from({length:33},()=>({x:.5,y:.3,z:0,visibility:1}));
+for(let i=0;i<=10;i++)points[i]={x:.5+(i%3-1)*.025,y:.08+(i%2)*.02,z:0,visibility:1};
+for(const [id,x,y]of [[11,.65,.2],[12,.35,.2],[13,.75,.36],[14,.25,.36],[15,.8,.5],[16,.2,.5],[17,.8,.52],[18,.2,.52],[19,.82,.52],[20,.18,.52],[23,.6,.5],[24,.4,.5],[25,.61,.7],[26,.39,.7],[27,.62,.95],[28,.38,.95]])points[id]={x,y,z:0,visibility:1};
+let cameraPoints=points,maskCategory=2;
+const loader=async()=>{loads++;return {pose:{detectForVideo(){detects++;return {landmarks:[cameraPoints]};},close(){poseClosed++;}},segmenter:{segmentForVideo(video,time,callback){segmentCalls++;callback({categoryMask:{width:8,height:8,getAsUint8Array:()=>new Uint8Array(64).fill(maskCategory),close(){masksClosed++;}}});},close(){}}};};
+function colorCounts(canvas){const rgba=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data,counts={red:0,blue:0,yellow:0};for(let i=0;i<rgba.length;i+=4){if(rgba[i+3]<250)continue;if(rgba[i]>180&&rgba[i+1]<70&&rgba[i+2]<70)counts.red++;if(rgba[i+2]>180&&rgba[i]<70&&rgba[i+1]<70)counts.blue++;if(rgba[i]>180&&rgba[i+1]>180&&rgba[i+2]<70)counts.yellow++;}return counts;}
+function referenceMatch(actual,reference){const a=actual.getContext('2d').getImageData(0,0,640,480).data,b=reference.getContext('2d').getImageData(0,0,640,480).data;let checked=0,matched=0;for(let i=0;i<b.length;i+=4)if(b[i+3]>=250){checked++;if(Math.abs(a[i]-b[i])<4&&Math.abs(a[i+1]-b[i+1])<4&&Math.abs(a[i+2]-b[i+2])<4)matched++;}return checked>100&&matched/checked>.99;}
+function fetchMock(url){if(url==='/api/garments')return Promise.resolve(json(records));if(url==='/api/clothing-wishes')return Promise.resolve(json({wishes:[]}));if(url.endsWith('/tryon-photo'))return Promise.resolve(new Response(blob));const record=records.find(item=>url==='/api/garments/'+item.id);return Promise.resolve(json(record||{error:'deleted'},record?200:404));}
+try{
+ window.fetch=fetchMock;
+ const tex=prepareTexture(records[0],image),out=document.createElement('canvas');out.width=640;out.height=480;const ctx=out.getContext('2d');
+ const initial=drawTop(ctx,tex,points,640,480,{fit:1});
+ check(initial?.mode==='whole-image','상의 사진을 조각내지 않고 전체로 표시');
+ check(Math.abs(initial.bounds.w/initial.bounds.h-tex.geometry.bounds.w/tex.geometry.bounds.h)<.001,'상의 원본 사진 비율 유지');
+ check(ctx.getImageData(0,0,640,480).data.some((value,index)=>index%4===3&&value>0),'상의 실제 픽셀 합성');
+ const originalPixels=ctx.getImageData(0,0,640,480).data.slice(),initialColors=colorCounts(out);
+ check(initialColors.blue>100&&initialColors.yellow>100,'상의 양쪽 소매의 서로 다른 원본 색상 보존');
+ const changedArms=points.map((p,i)=>[13,14,15,16,17,18,19,20].includes(i)?{...p,x:1-p.x,y:.8,visibility:0}:p);
+ ctx.clearRect(0,0,640,480);drawTop(ctx,tex,changedArms,640,480,{fit:1});
+ check(ctx.getImageData(0,0,640,480).data.every((value,i)=>value===originalPixels[i]),'팔 위치와 인식률이 바뀌어도 옷 전체 모양 유지');
+ ctx.clearRect(0,0,640,480);check(drawBottom(ctx,prepareTexture(records[1],image),points,640,480,{fit:1}),'하의 전체 사진 렌더링');
+ check(!drawBottom(ctx,prepareTexture(records[1],image),points.map((p,i)=>i===23?{...p,visibility:0}:p),640,480,{fit:1}),'골반 미인식 시 추측 합성하지 않음');
+ controller=openVirtualTryOn(records,{visionLoader:loader});dialog=controller.dialog;
+ await wait(()=>!dialog.querySelector('[data-start]').disabled);
+ check(loads===0&&!streams.length,'명시적 버튼 클릭 전 모델·카메라 실행하지 않음');
+ check(dialog.querySelector('[data-layer]').options.length===2,'추천 세트의 두 옷 전달');
+ check(dialog.querySelector('[data-hint]').getBoundingClientRect().top>=dialog.querySelector('canvas').getBoundingClientRect().bottom-.5,'안내 문구가 옷이 보이는 영상 위를 가리지 않음');
+ navigator.mediaDevices.getUserMedia=async()=>{
+   const camera=document.createElement('canvas');camera.width=640;camera.height=480;const c=camera.getContext('2d');let t=0;sourceTimer=setInterval(()=>{c.fillStyle=t++%2?'#709080':'#809070';c.fillRect(0,0,640,480);},50);
+   const stream=camera.captureStream(20);streams.push(stream);return stream;
+ };
+ dialog.querySelector('[data-start]').click();await wait(()=>detects>0);
+ check(!dialog.querySelector('[data-stop]').disabled,'카메라 시작 후 합성 프레임 실행');
+ check(dialog.querySelector('canvas').width===640,'카메라 해상도 적용');
+ check(segmentCalls===0&&masksClosed===0,'피부·머리 분할로 옷을 다시 지우지 않음');
+ const pixels=dialog.querySelector('canvas').getContext('2d').getImageData(0,0,640,480).data;
+ check(pixels.some((value,index)=>index%4===0&&value>200&&pixels[index+1]<50),'최종 카메라 화면에 옷 사진 표시');
+ check(!dialog.querySelector('[data-adjust=length]'),'사진 비율을 바꾸는 별도 길이 조절 제거');
+ const range=dialog.querySelector('[data-adjust=fit]');range.value='1.2';range.dispatchEvent(new Event('input'));
+ dialog.querySelector('[data-layer]').value='1';dialog.querySelector('[data-layer]').dispatchEvent(new Event('change'));
+ check(range.value==='1','상하의 조절값 분리');
+ const originalClick=HTMLAnchorElement.prototype.click;let downloaded;
+ HTMLAnchorElement.prototype.click=function(){downloaded={url:this.href,name:this.download};};dialog.querySelector('[data-capture]').click();HTMLAnchorElement.prototype.click=originalClick;
+ check(downloaded?.url.startsWith('data:image/png')&&downloaded.name.endsWith('.png'),'사진은 브라우저에서 PNG로 저장');
+ dialog.querySelector('[data-close]').click();await wait(()=>!dialog.isConnected);
+ check(streams.every(stream=>stream.getTracks().every(track=>track.readyState==='ended')),'닫기 시 모든 카메라 트랙 종료');
+ check(poseClosed===1,'관절 인식 모델 해제');clearInterval(sourceTimer);
+ // Compare the final composite with the whole transparent texture. Checking only
+ // any red pixel would miss a disappearing left or right sleeve.
+ for(const test of [
+   {sleeve:'반팔',category:2,label:'반팔·손목 미인식'},
+   {sleeve:'긴팔',category:2,label:'긴팔·손목 미인식'},
+   {sleeve:'반팔',category:3,label:'얼굴 오분류 가능 모델'},
+   {sleeve:'긴팔',category:1,label:'머리카락 오분류 가능 모델'},
+ ]){
+   records[0].sleeveLength=test.sleeve;maskCategory=test.category;
+   cameraPoints=changedArms;
+   controller=openVirtualTryOn([records[0]],{visionLoader:loader});dialog=controller.dialog;
+   await wait(()=>!dialog.querySelector('[data-start]').disabled);
+   const before=detects;dialog.querySelector('[data-start]').click();await wait(()=>detects>=before+2);
+   const finalCanvas=dialog.querySelector('canvas');
+   const colors=colorCounts(finalCanvas),reference=document.createElement('canvas');reference.width=640;reference.height=480;
+   drawTop(reference.getContext('2d'),prepareTexture(records[0],image),changedArms,640,480,{fit:1});
+   check(colors.blue>100,test.label+'에서 왼쪽 파란 소매 원본 보존');
+   check(colors.yellow>100,test.label+'에서 오른쪽 노란 소매 원본 보존');
+   check(referenceMatch(finalCanvas,reference),test.label+'에서 최종 합성된 옷 전체가 원본 표시와 일치');
+   check(segmentCalls===0,test.label+'에서도 사람 분할 모델 미사용');
+   if(test.sleeve==='반팔'&&test.category===2){
+     const beforeMove=detects;cameraPoints=points;await wait(()=>detects>=beforeMove+3);
+     check(referenceMatch(finalCanvas,reference),'카메라 실행 중 팔을 움직여도 옷 전체 실루엣과 색상 유지');
+     for(const [x,y]of [[.2,-.2],[-.2,.2]]){
+       for(const [key,value]of [['x',x],['y',y]]){const slider=dialog.querySelector('[data-adjust='+key+']');slider.value=value;slider.dispatchEvent(new Event('input'));}
+       const beforeOffset=detects;await wait(()=>detects>=beforeOffset+2);
+       reference.getContext('2d').clearRect(0,0,640,480);drawTop(reference.getContext('2d'),prepareTexture(records[0],image),points,640,480,{fit:1,x,y});
+       check(referenceMatch(finalCanvas,reference),'위치 조절 '+x+'/'+y+'가 최종 합성에서 한 번만 적용');
+       const offsetColors=colorCounts(finalCanvas);check(offsetColors.blue>100&&offsetColors.yellow>100,'위치 조절 후에도 양쪽 소매 전체 유지');
+     }
+     for(const key of ['x','y']){const slider=dialog.querySelector('[data-adjust='+key+']');slider.value=0;slider.dispatchEvent(new Event('input'));}
+     cameraPoints=points.map((p,i)=>i===11?{...p,x:NaN}:p);const beforeLost=detects;await wait(()=>detects>=beforeLost+2);
+     const lostColors=colorCounts(finalCanvas);check(lostColors.blue===0&&lostColors.yellow===0&&lostColors.red===0,'어깨 좌표가 잘못되면 해당 옷을 안전하게 숨김');
+     cameraPoints=points;const beforeRecovery=detects;await wait(()=>detects>=beforeRecovery+3);
+     reference.getContext('2d').clearRect(0,0,640,480);drawTop(reference.getContext('2d'),prepareTexture(records[0],image),points,640,480,{fit:1});
+     check(referenceMatch(finalCanvas,reference),'잘못된 어깨 좌표 뒤 정상 인식되면 옷 전체 복구');
+   }
+   const background=finalCanvas.getContext('2d').getImageData(20,400,1,1).data;
+   check(background[1]>100&&background[0]<180,test.label+'에서 실제 카메라 배경 유지');
+   if(new URLSearchParams(location.search).has('evidence')){const figure=document.createElement('figure'),copy=document.createElement('img'),caption=document.createElement('figcaption');figure.style.cssText='display:inline-block;margin:8px';copy.src=finalCanvas.toDataURL('image/png');copy.width=320;copy.alt=test.label+'의 옷 전체 합성 검사';caption.textContent=test.label;figure.append(copy,caption);document.body.insertBefore(figure,document.querySelector('#result'));}
+   controller.close();clearInterval(sourceTimer);
+ }
+ delete records[0].sleeveLength;cameraPoints=points;maskCategory=2;
+ const old=navigator.mediaDevices.getUserMedia;navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('Denied','NotAllowedError');};
+ controller=openVirtualTryOn([records[0]],{visionLoader:loader});dialog=controller.dialog;await wait(()=>!dialog.querySelector('[data-start]').disabled);dialog.querySelector('[data-start]').click();await wait(()=>dialog.querySelector('[data-status]').textContent.includes('권한'));
+ check(!dialog.querySelector('[data-start]').disabled,'권한 거부 안내와 재시도');controller.close();navigator.mediaDevices.getUserMedia=old;
+ let resolveVision;controller=openVirtualTryOn([records[0]],{visionLoader:()=>new Promise(resolve=>{resolveVision=resolve;})});dialog=controller.dialog;await wait(()=>!dialog.querySelector('[data-start]').disabled);dialog.querySelector('[data-start]').click();controller.close();const closedBefore=poseClosed;resolveVision(await loader());await new Promise(resolve=>setTimeout(resolve,20));check(poseClosed===closedBefore+1,'닫은 뒤 완료된 모델도 해제');
+ let resolveCamera;navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>{resolveCamera=resolve;});controller=openVirtualTryOn([records[0]],{visionLoader:loader});dialog=controller.dialog;await wait(()=>!dialog.querySelector('[data-start]').disabled);dialog.querySelector('[data-start]').click();await wait(()=>resolveCamera);controller.close();const late=image.captureStream(0);resolveCamera(late);await new Promise(resolve=>setTimeout(resolve,20));check(late.getTracks().every(track=>track.readyState==='ended'),'닫힌 뒤 허용된 카메라 스트림도 즉시 종료');navigator.mediaDevices.getUserMedia=old;
+ controller=openVirtualTryOn([records[0]],{visionLoader:async()=>{throw Error('model failure');}});dialog=controller.dialog;await wait(()=>!dialog.querySelector('[data-start]').disabled);dialog.querySelector('[data-start]').click();await wait(()=>dialog.querySelector('[data-status]').textContent.includes('모델 또는'));check(!dialog.querySelector('[data-start]').disabled,'모델 실패 후 재시도');controller.close();
+ window.fetch=async()=>json({error:'deleted'},404);controller=openVirtualTryOn([records[0]],{visionLoader:loader});dialog=controller.dialog;await wait(()=>dialog.querySelector('[data-status]').textContent.includes('삭제'));check(dialog.querySelector('[data-start]').disabled,'삭제된 추천 옷은 입어보기 차단');controller.close();
+ window.fetch=fetchMock;const root=document.querySelector('#root');await renderRecommendation(root,{activeTab:'recommendation'});root.querySelector('[data-filter=size]').value='140';root.querySelector('[data-filter=size]').dispatchEvent(new Event('change'));
+ check(root.querySelectorAll('[data-tryon-id]').length===2,'TOP3 각 옷의 입어보기 버튼');root.querySelector('[data-select-outfit=top]').click();await wait(()=>root.querySelector('[data-tryon-pair]'));
+ root.querySelector('[data-tryon-pair]').click();await wait(()=>document.querySelector('.virtual-tryon [data-layer]')?.options.length===2);
+ check(document.querySelector('.virtual-tryon [data-names]').textContent.includes('추천 하의'),'실제 세트 버튼에서 두 옷 연결');root.replaceChildren();await wait(()=>!document.querySelector('.virtual-tryon'));check(!document.querySelector('.virtual-tryon'),'추천 탭 이탈 시 닫기');root.clothingWishes?.dispose();
+ document.querySelector('#result').textContent='PASS '+checks.length+' checks';
+}catch(error){document.querySelector('#result').textContent='FAIL '+error.stack;}
+finally{closeVirtualTryOn();clearInterval(sourceTimer);streams.forEach(s=>s.getTracks().forEach(t=>t.stop()));window.fetch=originalFetch;navigator.mediaDevices.getUserMedia=originalMedia;}
+</script>
