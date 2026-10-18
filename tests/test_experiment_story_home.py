@@ -76,7 +76,7 @@ class ExperimentStoryHomeTests(unittest.TestCase):
         self.assertIn('20장', html)
         self.assertIn('한 가지씩', html)
 
-    def test_home_has_three_learning_path_buttons_with_working_destinations(self):
+    def test_home_has_learning_path_buttons_with_working_destinations(self):
         html = LANDING_PAGE.read_text(encoding='utf-8')
         parser = HomeParser()
         parser.feed(html)
@@ -86,6 +86,7 @@ class ExperimentStoryHomeTests(unittest.TestCase):
             '옷 크기 재기 연구노트': 'clothing-size-research.html',
             '미리 입어 보기 (가상 입어보기)': '가상입어보기-개선보고서.html',
             '잘 어울리는 옷 추천': '추천기능-학습과발표.html',
+            'FitShare 서버는 어떻게 일할까요?': 'server-explained.html',
         }
         for label, destination in expected_paths.items():
             with self.subTest(label=label):
@@ -94,6 +95,35 @@ class ExperimentStoryHomeTests(unittest.TestCase):
                     self.assertIn(destination[1:], parser.ids)
                 else:
                     self.assertTrue((LANDING_PAGE.parent / destination).is_file())
+
+    def test_server_page_has_resolvable_local_resources_and_navigation(self):
+        page = DOCS / 'server-explained.html'
+        self.assertTrue(page.is_file(), 'The server topic must open a real page')
+        parser = HomeParser()
+        html = page.read_text(encoding='utf-8')
+        parser.feed(html)
+        self.assertTrue(any(link['href'] == 'index.html' for link in parser.links))
+        for link in parser.links:
+            href = link['href'] or ''
+            if href.startswith('#'):
+                self.assertIn(href[1:], parser.ids)
+        resources = []
+
+        class ResourceParser(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                if tag == 'img':
+                    resources.append(attrs['src'])
+                    self_test.assertTrue(attrs.get('alt', '').strip())
+                if tag == 'link' and attrs.get('rel') == 'stylesheet':
+                    resources.append(attrs['href'])
+        self_test = self
+        ResourceParser().feed(html)
+        self.assertGreaterEqual(len(parser.image_alts), 2)
+        for resource in resources:
+            with self.subTest(resource=resource):
+                self.assertNotIn('://', resource, 'Reading the guide must not need external resources')
+                self.assertTrue((DOCS / resource).is_file())
 
     def test_landing_page_is_a_standalone_topic_selector(self):
         html = LANDING_PAGE.read_text(encoding='utf-8')
