@@ -1,0 +1,470 @@
+{
+  "rev": 2,
+  "state": {
+    "version": 1,
+    "users": [
+      {
+        "id": "u1",
+        "name": "나눔학생 01"
+      },
+      {
+        "id": "u2",
+        "name": "나눔학생 02"
+      },
+      {
+        "id": "u3",
+        "name": "나눔학생 03"
+      },
+      {
+        "id": "u4",
+        "name": "나눔학생 04"
+      },
+      {
+        "id": "u5",
+        "name": "나눔학생 05"
+      },
+      {
+        "id": "u6",
+        "name": "나눔학생 06"
+      },
+      {
+        "id": "u7",
+        "name": "나눔학생 07"
+      },
+      {
+        "id": "u8",
+        "name": "나눔학생 08"
+      },
+      {
+        "id": "u9",
+        "name": "나눔학생 09"
+      },
+      {
+        "id": "u10",
+        "name": "나눔학생 10"
+      },
+      {
+        "id": "u11",
+        "name": "나눔학생 11"
+      },
+      {
+        "id": "u12",
+        "name": "나눔학생 12"
+      },
+      {
+        "id": "u13",
+        "name": "나눔학생 13"
+      },
+      {
+        "id": "u14",
+        "name": "나눔학생 14"
+      },
+      {
+        "id": "u15",
+        "name": "나눔학생 15"
+      },
+      {
+        "id": "u16",
+        "name": "나눔학생 16"
+      },
+      {
+        "id": "u17",
+        "name": "나눔학생 17"
+      },
+      {
+        "id": "u18",
+        "name": "나눔학생 18"
+      },
+      {
+        "id": "u19",
+        "name": "나눔학생 19"
+      },
+      {
+        "id": "u20",
+        "name": "나눔학생 20"
+      }
+    ],
+    "exchanges": [
+      {
+        "id": "e1",
+        "giverId": "u1",
+        "receiverId": "u2",
+        "itemName": "AIRism 코튼 스트라이프 크루넥 긴팔 A",
+        "garmentId": "c8e63526-9811-5b07-8ae0-2e6782bc6f37",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e2",
+        "giverId": "u2",
+        "receiverId": "u3",
+        "itemName": "AIRism 코튼 크루넥 긴팔",
+        "garmentId": "90922a31-20ec-5915-9077-9f12ab898d0b",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e3",
+        "giverId": "u3",
+        "receiverId": "u4",
+        "itemName": "립 크루넥 긴팔",
+        "garmentId": "130cb328-56e7-51c2-a7e5-3acbd67b85d9",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e4",
+        "giverId": "u4",
+        "receiverId": "u5",
+        "itemName": "저지 레귤러핏 진",
+        "garmentId": "33ddaf0f-1b56-5546-9af3-4d7480fce028",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e5",
+        "giverId": "u5",
+        "receiverId": "u6",
+        "itemName": "저지 레귤러핏 컬러 진",
+        "garmentId": "b7e65719-c565-5368-ab09-a9c8f14f8941",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e6",
+        "giverId": "u6",
+        "receiverId": "u7",
+        "itemName": "드라이 스웨트 팬츠",
+        "garmentId": "402dea13-847e-5377-bff7-6e353608b0bd",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e7",
+        "giverId": "u7",
+        "receiverId": "u8",
+        "itemName": "프릴 티셔츠",
+        "garmentId": "2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e8",
+        "giverId": "u8",
+        "receiverId": "u9",
+        "itemName": "데님 쇼트 팬츠",
+        "garmentId": "18328287-9b12-50dd-95b7-4c45e066ca24",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e9",
+        "giverId": "u9",
+        "receiverId": "u10",
+        "itemName": "데님 페인터 하프 팬츠",
+        "garmentId": "cb7dd65b-29ea-52b5-88bf-9c694d2577a0",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e10",
+        "giverId": "u10",
+        "receiverId": "u11",
+        "itemName": "KAWS UNIVERSE 스웨트셔츠 B",
+        "garmentId": "dc572e61-58c3-5f94-a5f2-704e855cba14",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e11",
+        "giverId": "u11",
+        "receiverId": "u12",
+        "itemName": "KAWS UNIVERSE 스웨트셔츠 A",
+        "garmentId": "3ad23eeb-65f6-522e-a200-2680ec98b333",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e12",
+        "giverId": "u12",
+        "receiverId": "u13",
+        "itemName": "PEANUTS 드라이 스웨트셔츠 B",
+        "garmentId": "1a904ac3-8fcc-57c5-81c0-f3ec4563952f",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e13",
+        "giverId": "u13",
+        "receiverId": "u14",
+        "itemName": "배럴 레그 진",
+        "garmentId": "a382945d-701c-5070-a1b4-d29dd9545715",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e14",
+        "giverId": "u14",
+        "receiverId": "u15",
+        "itemName": "드라이 스웨트 와이드 팬츠",
+        "garmentId": "1a6869a6-e92e-5299-af80-d1403c3113c9",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e15",
+        "giverId": "u15",
+        "receiverId": "u16",
+        "itemName": "드라이 스웨트 카고 팬츠",
+        "garmentId": "929b6f78-0252-5f9f-bf23-43a5e6f09fe2",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e16",
+        "giverId": "u16",
+        "receiverId": "u17",
+        "itemName": "소프트니트 후리스 크루넥 긴팔",
+        "garmentId": "501811ca-0c9d-5273-b680-9e4afaae8a20",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e17",
+        "giverId": "u17",
+        "receiverId": "u18",
+        "itemName": "플러피 후리스 풀집 재킷",
+        "garmentId": "848f3e95-4f5d-5e62-b110-090674171cf0",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e18",
+        "giverId": "u18",
+        "receiverId": "u19",
+        "itemName": "후리스 풀집 재킷",
+        "garmentId": "1abe21d9-b419-51c6-8155-95284e6728b3",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e19",
+        "giverId": "u19",
+        "receiverId": "u20",
+        "itemName": "보아 스웨트 팬츠",
+        "garmentId": "f00b7f50-390d-53d0-be8d-dcc8358ac2f3",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e20",
+        "giverId": "u20",
+        "receiverId": "u1",
+        "itemName": "웜 라인 팬츠",
+        "garmentId": "b4d0523f-8d3a-5f2e-a31a-69aa0977dab7",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e21",
+        "giverId": "u1",
+        "receiverId": "u2",
+        "itemName": "웜 라인 데님 팬츠",
+        "garmentId": "804bb17d-dfda-5443-96f7-3829627aeaad",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e22",
+        "giverId": "u2",
+        "receiverId": "u3",
+        "itemName": "하얀 크롭티2",
+        "garmentId": "dd37bd04-ef26-4613-863e-e32e6e8af790",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e23",
+        "giverId": "u3",
+        "receiverId": "u4",
+        "itemName": "데이터셋 5 바지",
+        "garmentId": "c1e48401-b3fa-4705-b5cf-68bc6fced1d5",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e24",
+        "giverId": "u4",
+        "receiverId": "u5",
+        "itemName": "데이터셋 4 점퍼",
+        "garmentId": "bc3c665e-77a5-40a9-922a-4ef7083dc482",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e25",
+        "giverId": "u5",
+        "receiverId": "u6",
+        "itemName": "데이터셋 3 원피스",
+        "garmentId": "3f55b205-6950-4cb1-bfb4-4be12aeed819",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e26",
+        "giverId": "u6",
+        "receiverId": "u7",
+        "itemName": "데이터셋 2 크롭 티셔츠",
+        "garmentId": "bf359ba8-8f62-4a15-9fea-6fa40d948ee9",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      },
+      {
+        "id": "e27",
+        "giverId": "u7",
+        "receiverId": "u8",
+        "itemName": "데이터셋 1 상의 외투",
+        "garmentId": "7534003a-a7f0-4bd6-aa78-a12112a9cec7",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": null
+      }
+    ],
+    "badges": [],
+    "finalizedMonths": []
+  }
+}

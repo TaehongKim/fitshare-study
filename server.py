@@ -790,14 +790,14 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 from tools.replicate_product_photo import ProductPhotoError, generate_product_photo
 
                 source = ensure_garment_cutout(garments_dir, garment_id, lock, for_product_photo=True)
-                prompt = ('Create a clean ecommerce studio product photograph of this exact garment on a warm ivory background. '
-                          'Preserve the photographed garment identity, silhouette, color, fabric texture, print, logo, seams, '
-                          'buttons, flat laid-out pose, and proportions. Preserve only patterns and details actually visible in the source. '
-                          'Do not invent, add, repeat, or extend stripes, prints, logos, or decorations onto plain, hidden, or occluded areas. '
-                          'Do not copy body patterns onto sleeves or infer matching patterns on unseen parts. Keep plain fabric plain. '
-                          'Change only the background and lighting. '
-                          'Do not fold sleeves or change the pose. Do not add a person, mannequin, hanger, text, label, '
-                          'or other object.')
+                prompt = ('이 사진의 옷을 온라인 상점에 어울리는 깔끔한 스튜디오 상품 사진으로 만들어 주세요. '
+                          '배경은 선명하고 즐거운 무지개 그라데이션으로 만들고, 무지개 색이 옷의 색상이나 원단에 영향을 주지 않게 해 주세요. '
+                          '사진 속 옷의 종류와 실루엣, 색상, 원단 질감, 무늬, 로고, 봉제선, 단추, 펼쳐 놓은 자세와 비율을 그대로 보존해 주세요. '
+                          '무늬와 장식은 원본 사진에서 실제로 보이는 것만 유지해 주세요. '
+                          '민무늬인 부분이나 숨겨지거나 가려진 부분에 줄무늬, 무늬, 로고 또는 장식을 새로 만들거나 복사하거나 이어 그리지 마세요. '
+                          '몸판의 무늬를 소매에 복사하지 말고, 보이지 않는 부분의 무늬를 추측하지 마세요. 민무늬 원단은 민무늬로 유지해 주세요. '
+                          '옷 자체는 바꾸지 말고 배경과 조명만 바꿔 주세요. 소매를 접거나 옷의 자세를 바꾸지 마세요. '
+                          '사람, 마네킹, 옷걸이, 글자, 라벨, 보노보노 캐릭터 또는 다른 물체를 추가하지 마세요.')
                 photo, mime = generate_product_photo(source, prompt, token, model_version)
             except ProductPhotoError as error:
                 return self.send_json(502, {'error': str(error)})
