@@ -50,13 +50,13 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
         garments_dir = staging / 'garments'
         garments_dir.mkdir(parents=True)
         accounts = AccountStore(staging)
-        password = secrets.token_urlsafe(12)
         students = []
         for number in range(1, STUDENT_COUNT + 1):
-            username = f'nanum{number:02}'
+            username = f'n{number}'
+            password = username
             name = f'나눔학생 {number:02}'
             account = accounts.signup(username, password, name)
-            students.append(account)
+            students.append({**account, 'password': password})
 
         demo_records = []
         now = datetime.now().astimezone().isoformat(timespec='seconds')
@@ -100,7 +100,7 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
             writer = csv.writer(stream)
             writer.writerow(['school', 'name', 'username', 'password'])
             for student in students:
-                writer.writerow(['나눔초등학교', student['name'], student['username'], password])
+                writer.writerow(['나눔초등학교', student['name'], student['username'], student['password']])
         write_json(staging / 'demo-manifest.json', {
             'school': '나눔초등학교', 'students': STUDENT_COUNT,
             'garments': len(demo_records), 'source': str(source),

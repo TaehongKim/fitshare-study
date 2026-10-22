@@ -30,7 +30,8 @@ class RegistrationPageTests(unittest.TestCase):
         app = (ROOT / 'js' / 'app.js').read_text(encoding='utf-8')
 
         self.assertIn('id="school-code"', html)
-        self.assertIn('value="대전서원초등학교"', html)
+        self.assertIn('value="나눔초등학교"', html)
+        self.assertIn('placeholder="예: 나눔초등학교"', html)
         self.assertIn("addEventListener('focus', () => schoolInput.select())", app)
         self.assertIn("addEventListener('click', () => schoolInput.select())", app)
 

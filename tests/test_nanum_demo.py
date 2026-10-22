@@ -45,11 +45,14 @@ class NanumDemoSeedTests(unittest.TestCase):
         self.assertEqual(len(credentials), 20)
         store = AccountStore(self.destination)
         for credential in credentials:
+            number = int(credential['username'][1:])
+            self.assertEqual(credential['username'], f'n{number}')
+            self.assertEqual(credential['password'], credential['username'])
             user = store.login(credential['username'], credential['password'])
             self.assertEqual(user['role'], 'student')
         items = json.loads((self.destination / 'garments' / 'index.json').read_text(encoding='utf-8'))
         self.assertEqual(len(items), 20)
-        self.assertEqual({item['ownerUsername'] for item in items}, {f'nanum{n:02}' for n in range(1, 21)})
+        self.assertEqual({item['ownerUsername'] for item in items}, {f'n{n}' for n in range(1, 21)})
         ranking = json.loads((self.destination / 'ranking.json').read_text(encoding='utf-8'))['state']
         self.assertEqual(len(ranking['users']), 20)
         self.assertEqual(len(ranking['exchanges']), 20)
@@ -75,10 +78,10 @@ class NanumDemoSeedTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             seed_demo(self.source, self.source / 'garments' / 'nanum-demo')
 
-    def test_demo_school_query_prefills_nanum_without_changing_existing_default(self):
+    def test_demo_school_query_prefills_nanum_and_nanum_is_the_default(self):
         html = (Path(__file__).resolve().parents[1] / 'index.html').read_text(encoding='utf-8')
         app = (Path(__file__).resolve().parents[1] / 'js' / 'app.js').read_text(encoding='utf-8')
-        self.assertIn('id="school-code" value="대전서원초등학교"', html)
+        self.assertIn('id="school-code" value="나눔초등학교"', html)
         self.assertIn("new URLSearchParams(window.location.search).get('school')", app)
         self.assertIn('schoolInput.value = requestedSchool.slice(0, 30)', app)
 
