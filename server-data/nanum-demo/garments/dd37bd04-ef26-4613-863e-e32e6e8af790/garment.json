@@ -5,7 +5,7 @@
   "gender": "unisex",
   "garmentTypeId": 1,
   "garmentTypeName": "상의 외투",
-  "ownerName": "나눔학생 02",
+  "ownerName": "이도윤",
   "colorName": "흰색",
   "lengthCm": 53.9,
   "widthCm": 54.8,
@@ -19,7 +19,7 @@
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:01:42.078587+00:00",
-  "size": "",
+  "size": "130",
   "style": "",
   "condition": "",
   "garmentKind": "티셔츠",
@@ -31,7 +31,8 @@
   "seasons": [],
   "metadataSources": {
     "garmentKind": "name-rule",
-    "bottomLength": "type-rule"
+    "bottomLength": "type-rule",
+    "size": "measurement-rule"
   },
   "ownerUsername": "n2"
 }

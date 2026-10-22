@@ -7,6 +7,7 @@ import math
 import os
 import re
 import shutil
+import ssl
 import threading
 import uuid
 from contextlib import nullcontext
@@ -28,7 +29,8 @@ MAX_BODY_BYTES = 18 * 1024 * 1024
 MAX_PHOTO_BYTES = 12 * 1024 * 1024
 VALID_CATEGORIES = {'top', 'bottom', 'dress', 'pants', 'skirt', 'other'}
 VALID_GENDERS = {'male', 'female', 'unisex', 'unknown'}
-GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지'}
+GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지', 6: '치마'}
+GARMENT_TYPE_CATEGORIES = {1: 'top', 2: 'top', 3: 'dress', 4: 'top', 5: 'pants', 6: 'skirt'}
 VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
 SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
@@ -208,11 +210,11 @@ def ensure_garment_cutout(garments_dir, garment_id, metadata_lock=None, *, for_p
     if not flattened.get('ok'):
         raise ValueError(flattened.get('message', '옷 이미지를 만들지 못했어요.'))
     if for_product_photo:
-        photo = make_product_cutout(flattened['image'], garment_id=item['garmentTypeId'])
+        photo = make_product_cutout(flattened['image'], garment_id=item['garmentTypeId'], category=item.get('category'))
     else:
         measured = measure_garment(flattened['image'], garment_id=item['garmentTypeId'], include_closet_image=True,
                                    scale_cm_per_pixel=flattened['scaleCmPerPixel'],
-                                   length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId']))
+                                   length_mask_provider=get_yolo_grabcut_provider(garment_id=item['garmentTypeId'], category=item.get('category')))
         photo = decode_png_data(measured.get('closetImageDataUrl'))
     if photo is None:
         raise ValueError('투명 옷장 사진을 만들지 못했어요.')
@@ -276,8 +278,14 @@ def get_product_thumbnail_bytes(garments_dir, garment_id):
     return thumbnail
 
 
-def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
-    """Create a testable HTTP server; tests can pass a temporary data directory."""
+def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_certfile=None, tls_keyfile=None, tls_port=None):
+    """Create an HTTP server and, optionally, a TLS listener sharing its handler and storage."""
+    if bool(tls_certfile) != bool(tls_keyfile):
+        raise ValueError('TLS certificate and key must both be supplied.')
+    tls_context = None
+    if tls_certfile:
+        tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        tls_context.load_cert_chain(certfile=str(tls_certfile), keyfile=str(tls_keyfile))
     storage = Path(data_dir).resolve()
     storage.mkdir(parents=True, exist_ok=True)
     lock = threading.Lock()
@@ -322,6 +330,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                     return self.send_json(200, report)
                 if parts == ['auth', 'me']:
                     return self.send_json(200, {'user': self.current_user()})
+                if parts == ['demo-ca']:
+                    return self.get_demo_ca_certificate()
                 if parts == ['ranking']:
                     return self.get_ranking()
                 if parts == ['garments']:
@@ -452,6 +462,19 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 return None
             return [unquote(part) for part in path.strip('/').split('/')[1:]]
 
+        def get_demo_ca_certificate(self):
+            path = storage / 'certs' / 'fitshare-demo-ca.crt'
+            if not path.is_file():
+                return self.send_json(404, {'error': '데모 HTTPS 인증서를 찾지 못했어요.'})
+            body = path.read_bytes()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/x-x509-ca-cert')
+            self.send_header('Content-Disposition', 'attachment; filename="fitshare-demo-ca.crt"')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            self.wfile.write(body)
+
         def read_payload(self):
             try:
                 length = int(self.headers.get('Content-Length', '0'))
@@ -551,7 +574,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 from tools.vision_pipeline import image_to_data_url, measure_photo_with_fallback
 
                 analysis = measure_photo_with_fallback(
-                    photo_bytes, background_id, garment_id=garment_id, include_closet_image=True,
+                    photo_bytes, background_id, garment_id=garment_id,
+                    category=GARMENT_TYPE_CATEGORIES[garment_id], include_closet_image=True,
                     allow_fallback=False)
                 flattened = analysis['rectified']
                 measured = analysis['measurement']
@@ -565,7 +589,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 'ok': True,
                 'garmentId': garment_id,
                 'garmentName': GARMENT_TYPE_NAMES[garment_id],
-                'category': 'dress' if garment_id == 3 else 'pants' if garment_id == 5 else 'top',
+                'category': GARMENT_TYPE_CATEGORIES[garment_id],
                 'lengthCm': measured['measuredLengthCm'],
                 'widthCm': measured['measuredWidthCm'],
                 'widthKind': measured['widthKind'],
@@ -874,7 +898,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             if not isinstance(requested_owner, str) or len(requested_owner.strip()) > 200:
                 return self.send_json(400, {'error': '올린 사람 이름은 200글자까지 쓸 수 있어요.'})
             owner_name = item.get('ownerName', '')
-            expected_category = 'dress' if garment_type_id == 3 else 'pants' if garment_type_id == 5 else 'top'
+            expected_category = GARMENT_TYPE_CATEGORIES.get(garment_type_id)
             if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
                     or category != expected_category or category not in VALID_CATEGORIES
                     or not isinstance(gender, str) or gender not in VALID_GENDERS
@@ -924,8 +948,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             user = self.current_user()
             if user is None:
                 return self.send_json(401, {'error': '로그인한 뒤 옷을 삭제할 수 있어요.'})
-            if user.get('role') != 'teacher':
-                return self.send_json(403, {'error': '선생님만 등록된 옷을 삭제할 수 있어요.'})
+            is_teacher = user.get('role') == 'teacher'
             if not valid_garment_record_id(garment_id):
                 return self.send_json(404, {'error': '삭제할 옷을 찾지 못했어요.'})
 
@@ -937,11 +960,27 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             try:
                 garment_dir = garments_dir / garment_id
                 item_path = garment_dir / 'garment.json'
-                if not isinstance(read_json(item_path), dict):
+                garment = read_json(item_path)
+                if not isinstance(garment, dict):
                     return self.send_json(404, {'error': '삭제할 옷을 찾지 못했어요.'})
+                if not is_teacher and not owns_garment(user, garment):
+                    return self.send_json(403, {'error': '본인이 올린 옷만 삭제할 수 있어요.'})
 
                 index_path = garments_dir / 'index.json'
                 with lock:
+                    if not is_teacher:
+                        ranking_path = storage / 'ranking.json'
+                        ranking = read_json(ranking_path)
+                        if ranking is None and ranking_path.exists():
+                            return self.send_json(500, {'error': '나눔 신청 기록을 확인하지 못해 옷을 삭제할 수 없어요.'})
+                        if ranking is not None:
+                            state = ranking.get('state') if isinstance(ranking, dict) else None
+                            exchanges = state.get('exchanges') if isinstance(state, dict) else None
+                            if not isinstance(exchanges, list):
+                                return self.send_json(500, {'error': '나눔 신청 기록을 확인하지 못해 옷을 삭제할 수 없어요.'})
+                            if any(isinstance(exchange, dict) and exchange.get('garmentId') == garment_id
+                                   for exchange in exchanges):
+                                return self.send_json(409, {'error': '다른 친구가 나눔을 신청했던 옷은 삭제할 수 없어요.'})
                     index = read_json(index_path)
                     if index is None and index_path.exists():
                         return self.send_json(500, {'error': '옷 목록을 읽지 못해 삭제할 수 없어요.'})
@@ -994,6 +1033,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             if not isinstance(owner_name, str) or len(owner_name.strip()) > 200:
                 return self.send_json(400, {'error': '올린 사람 이름은 200글자까지 쓸 수 있어요.'})
             if (not isinstance(name, str) or not name.strip() or len(name.strip()) > 60
+                    or category != GARMENT_TYPE_CATEGORIES.get(garment_type_id)
                     or category not in VALID_CATEGORIES or gender not in VALID_GENDERS
                     or isinstance(garment_type_id, bool) or garment_type_id not in GARMENT_TYPE_NAMES
                     or not isinstance(color_name, str) or not color_name.strip() or len(color_name) > 30
@@ -1342,11 +1382,16 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
                 category = garment.get('category', 'other')
                 length = garment.get('referenceLengthCm')
                 width = garment.get('referenceWidthCm')
+                collar_length = garment.get('referenceCollarToHemCm')
                 if (not SAFE_GARMENT_ID.fullmatch(str(garment.get('id', ''))) or not name
-                        or category not in VALID_CATEGORIES or not valid_measurement(length) or not valid_measurement(width)):
+                        or category not in VALID_CATEGORIES or not valid_measurement(length) or not valid_measurement(width)
+                        or (collar_length is not None and not valid_measurement(collar_length))):
                     return self.send_json(400, {'error': '옷 이름, 종류, 줄자 기준 크기를 확인해 주세요.'})
-                clean_garments.append({'id': garment['id'], 'name': name, 'category': category,
-                                       'referenceLengthCm': float(length), 'referenceWidthCm': float(width)})
+                clean_garment = {'id': garment['id'], 'name': name, 'category': category,
+                                 'referenceLengthCm': float(length), 'referenceWidthCm': float(width)}
+                if collar_length is not None:
+                    clean_garment['referenceCollarToHemCm'] = float(collar_length)
+                clean_garments.append(clean_garment)
             with lock:
                 rounds = []
                 if experiments_dir.exists():
@@ -1421,6 +1466,23 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR):
             return self.send_json(200, {'id': run_id, 'round': item['round'], 'completed': True})
 
     httpd = ThreadingHTTPServer((host, port), FitShareHandler)
+    httpd.tls_server = None
+    try:
+        if tls_context is not None:
+            if tls_port is None:
+                raise ValueError('TLS port must be supplied when TLS certificate and key are supplied.')
+            tls_server = ThreadingHTTPServer((host, tls_port), FitShareHandler)
+            try:
+                tls_server.socket = tls_context.wrap_socket(tls_server.socket, server_side=True)
+            except Exception:
+                tls_server.server_close()
+                raise
+            tls_server.garment_metadata_lock = lock
+            tls_server.product_generation_locks = product_generation_locks
+            httpd.tls_server = tls_server
+    except Exception:
+        httpd.server_close()
+        raise
     httpd.garment_metadata_lock = lock
     httpd.product_generation_locks = product_generation_locks
     return httpd
@@ -1434,7 +1496,11 @@ def main():
     host = os.environ.get('FITSHARE_HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', '8000'))
     storage = Path(os.environ.get('FITSHARE_DATA_DIR', str(DEFAULT_DATA_DIR)))
-    httpd = create_server(host, port, storage)
+    tls_certfile = os.environ.get('FITSHARE_TLS_CERT_FILE') or None
+    tls_keyfile = os.environ.get('FITSHARE_TLS_KEY_FILE') or None
+    tls_port = int(os.environ.get('FITSHARE_TLS_PORT', '8443')) if tls_certfile and tls_keyfile else None
+    httpd = create_server(host, port, storage, tls_certfile=tls_certfile,
+                          tls_keyfile=tls_keyfile, tls_port=tls_port)
     from tools.garment_thumbnails import prepare_garment_thumbnails
 
     def prepare_saved_thumbnails():
@@ -1447,13 +1513,21 @@ def main():
             return
 
     threading.Thread(target=prepare_saved_thumbnails, name='garment-thumbnail-warmup', daemon=True).start()
-    print(f'FitShare is running: http://{host}:{httpd.server_address[1]}/')
+    print(f'FitShare HTTP is running: http://{host}:{httpd.server_address[1]}/')
+    if httpd.tls_server is not None:
+        tls_thread = threading.Thread(target=httpd.tls_server.serve_forever,
+                                      name='fitshare-https', daemon=True)
+        tls_thread.start()
+        print(f'FitShare HTTPS is running: https://{host}:{httpd.tls_server.server_address[1]}/')
     print(f'Experiment photos and results are saved in: {storage.resolve()}')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         print('\nFitShare server stopped.')
     finally:
+        if httpd.tls_server is not None:
+            httpd.tls_server.shutdown()
+            httpd.tls_server.server_close()
         httpd.server_close()
 
 

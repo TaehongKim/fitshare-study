@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="학교 의류 자원 순환을 돕는 FitShare 공통 화면" />
     <title>FitShare | 함께 입고, 함께 나누는 스마트 옷장</title>
-    <link rel="stylesheet" href="css/styles.css?v=auth-2" />
-    <link rel="stylesheet" href="css/measurement.css?v=school-closet-2" />
+    <link rel="stylesheet" href="css/styles.css?v=hero-live-3" />
+    <link rel="stylesheet" href="css/measurement.css?v=school-closet-7" />
   </head>
   <body>
     <div class="app-shell">
@@ -51,13 +51,32 @@
               <a id="entry-action" class="entry-action" href="measure/register.html" hidden>옷 등록 시작하기 <span aria-hidden="true">→</span></a>
             </div>
           </div>
-          <div class="hero-art" aria-hidden="true"><div class="sun"></div><div class="hanger">♧</div><div class="floating-card card-one">👕<span>공유해요</span></div><div class="floating-card card-two">✨<span>딱 맞아요</span></div></div>
+          <div class="hero-art" aria-label="참여 랭킹과 추천 옷 미리보기">
+            <a class="hero-preview-link" href="#workspace-title" data-open-tab="ranking" aria-label="함께 나눈 마음 랭킹 페이지 열기">
+            <section class="hero-ranking-preview" aria-label="실제 참여 랭킹">
+              <div class="hero-preview-heading"><span class="hero-preview-icon" aria-hidden="true">🏆</span><div><p>SHARE RANKING</p><h2>함께 나눈 마음</h2></div></div>
+              <ol class="hero-rank-list" id="hero-rank-list" aria-live="polite" aria-busy="true"><li>&#49892;&#51228; &#45208;&#45588; &#44592;&#47197;&#51012; &#48520;&#47084;&#50724;&#44256; &#51080;&#50612;&#50836;.</li></ol>
+              <span class="hero-preview-note">랭킹 화면 미리보기</span>
+            </section>
+            </a>
+            <a class="hero-preview-link" href="#workspace-title" data-open-tab="recommendation" aria-label="오늘의 추천 페이지 열기">
+            <section class="hero-garment-preview" aria-label="실제 등록 옷 추천">
+              <div class="hero-garment-heading"><span>오늘의 추천</span><b>FIT PICK</b></div>
+              <div class="hero-garment-list" id="hero-garment-list" aria-label="세로로 나열한 추천 옷" aria-live="polite" aria-busy="true"><p>&#46321;&#47197;&#46108; &#50743;&#50640;&#49436; &#52628;&#52380;&#51012; &#52286;&#44256; &#51080;&#50612;&#50836;.</p></div>
+              <span class="hero-preview-note">등록 옷 추천 화면 미리보기</span>
+            </section>
+            </a>
+          </div>
         </section>
 
         <section id="school-closet" class="school-closet" aria-labelledby="school-closet-title" hidden>
           <div class="school-closet-heading">
             <div><p class="eyebrow">SCHOOL CLOSET</p><h2 id="school-closet-title">우리 학교에 등록된 옷</h2></div>
             <a href="measure/register.html">옷 등록하기 <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="school-closet-filters" role="group" aria-label="옷장 보기 방식">
+            <button type="button" data-closet-filter="available" aria-pressed="false">나눔 가능한 옷만 보기</button>
+            <button type="button" data-closet-filter="all" aria-pressed="true">모두 보기</button>
           </div>
           <p id="school-closet-status" class="school-closet-status" role="status" aria-live="polite">등록한 옷을 불러오고 있어요.</p>
           <div id="school-closet-list" class="school-closet-list"></div>
@@ -77,6 +96,6 @@
 
       <footer class="site-footer"><p><strong>FitShare 개발팀</strong> · 초등 코딩 페스티벌 테스트 버전</p><p>아이디어를 나누고, 지구를 가볍게 🌱</p><p><a href="measure-dataset.html">실측 배경 비교 결과 보기</a></p></footer>
     </div>
-    <script type="module" src="js/app.js?v=profile-2"></script>
+    <script type="module" src="js/app.js?v=hero-live-8"></script>
   </body>
 </html>

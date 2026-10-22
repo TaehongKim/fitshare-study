@@ -5,10 +5,12 @@ import { renderRanking } from '../modules/ranking.js?v=ranking-9';
 import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-3';
 import { openProfileDialog } from '../modules/profile.js?v=profile-4';
 import { createSchoolEntryResult } from './schoolEntry.js';
-import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-6';
-import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-6';
+import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-13';
+import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-13';
+import { initializeLandingShowcase } from './landingShowcase.js?v=hero-live-1';
 
 const root = document.querySelector('#module-root');
+initializeLandingShowcase();
 const tabs = document.querySelectorAll('.tab');
 const schoolInput = document.querySelector('#school-code');
 const requestedSchool = new URLSearchParams(window.location.search).get('school')?.trim();
@@ -20,6 +22,7 @@ const schoolClosetView = createGarmentCloset({
   list: schoolClosetList,
   status: schoolClosetStatus,
   pagination: document.querySelector('#school-closet-pages'),
+  filterControls: document.querySelector('.school-closet-filters'),
   onOpen: openGarmentDetail
 });
 const renderers = { measurement: renderMeasurement, recommendation: renderRecommendation, ranking: renderRanking };
@@ -36,6 +39,9 @@ function selectTab(tabName) {
 }
 
 tabs.forEach((tab) => tab.addEventListener('click', () => selectTab(tab.dataset.tab)));
+document.querySelectorAll('[data-open-tab]').forEach((link) => {
+  link.addEventListener('click', () => selectTab(link.dataset.openTab));
+});
 function enterSchool() {
   const input = document.querySelector('#school-code');
   const message = document.querySelector('#entry-message');

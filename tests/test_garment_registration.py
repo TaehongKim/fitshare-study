@@ -146,7 +146,7 @@ class GarmentRegistrationTests(unittest.TestCase):
         photo = 'data:image/jpeg;base64,' + base64.b64encode(b'not an image').decode('ascii')
         self.post_error('/api/garments/analyze', {'backgroundId': 'M9', 'garmentId': 1, 'photoDataUrl': photo}, 400)
         self.post_error('/api/garments/analyze', {'backgroundId': 'M4', 'garmentId': 1, 'photoDataUrl': photo}, 422)
-        self.post_error('/api/garments/analyze', {'backgroundId': 'M4', 'garmentId': 6, 'photoDataUrl': photo}, 400)
+        self.post_error('/api/garments/analyze', {'backgroundId': 'M4', 'garmentId': 7, 'photoDataUrl': photo}, 400)
 
     def test_saved_garment_requires_gender_choice_and_keeps_photo(self):
         jpeg_bytes = b'\xff\xd8\xfftest jpeg bytes'
@@ -237,6 +237,42 @@ class GarmentRegistrationTests(unittest.TestCase):
         with urllib.request.urlopen(self.base_url + result['photoUrl'], timeout=3) as response:
             self.assertEqual(response.read(), original)
 
+    def test_skirt_can_be_analyzed_saved_and_updated_as_a_skirt(self):
+        from unittest.mock import patch
+
+        measurement = {
+            'measuredLengthCm': 52.0, 'measuredWidthCm': 31.0, 'widthKind': 'waist',
+            'maskMethods': {'width': 'GrabCut', 'length': 'YOLO+GrabCut'}, 'colorName': 'blue',
+            'box': [10, 10, 80, 90], 'confidence': 1.0,
+            'overlayDataUrl': 'data:image/jpeg;base64,AA==',
+            'closetImageDataUrl': 'data:image/png;base64,AA==', 'message': 'ok'
+        }
+        analysis = {'rectified': {'image': object(), 'method': 'test'}, 'measurement': measurement,
+                    'fallbackUsed': False, 'fallbackReason': '', 'pipelineMode': 'hybrid'}
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xff').decode('ascii')
+        with patch('tools.vision_pipeline.measure_photo_with_fallback', return_value=analysis) as process_photo, \
+                patch('tools.vision_pipeline.image_to_data_url', return_value='data:image/jpeg;base64,AA=='):
+            _, measured = self.request_json('/api/garments/analyze', 'POST', {
+                'backgroundId': 'M4', 'garmentId': 6, 'photoDataUrl': photo
+            })
+        self.assertEqual(measured['category'], 'skirt')
+        self.assertEqual(measured['garmentName'], '치마')
+        self.assertEqual(process_photo.call_args.kwargs['category'], 'skirt')
+
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'skirt-owner', 'password': 'pw', 'name': 'Skirt Owner'})
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': '파란 플리츠 치마', 'category': 'skirt', 'garmentTypeId': 6, 'gender': 'female',
+            'lengthCm': 52, 'widthCm': 31, 'colorName': '파랑', 'photoDataUrl': photo,
+        })
+        self.assertEqual(saved['category'], 'skirt')
+        self.assertEqual(saved['garmentTypeName'], '치마')
+        updated = {**saved, 'name': '고친 플리츠 치마', 'category': 'skirt', 'garmentTypeId': 6,
+                   'gender': 'female', 'lengthCm': 53, 'widthCm': 32, 'colorName': '파랑'}
+        _, result = self.request_json(f"/api/garments/{saved['id']}/update", 'POST', updated)
+        self.assertEqual(result['category'], 'skirt')
+        self.assertEqual(result['garmentTypeName'], '치마')
+
     def test_garment_information_update_rejects_invalid_fields(self):
         self.request_json('/api/auth/signup', 'POST', {
             'username': 'teacher', 'password': 'pw', 'name': 'Teacher', 'teacherCode': 'fitshare'})
@@ -276,7 +312,7 @@ class GarmentRegistrationTests(unittest.TestCase):
         _, garments = self.request_json('/api/garments')
         self.assertNotIn(saved['id'], [item['id'] for item in garments])
 
-    def test_student_cannot_delete_even_their_own_garment(self):
+    def test_student_can_delete_their_own_garment_before_any_exchange(self):
         self.request_json('/api/auth/signup', 'POST', {
             'username': 'student', 'password': 'pw', 'name': 'Student'})
         photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
@@ -286,11 +322,58 @@ class GarmentRegistrationTests(unittest.TestCase):
         })
         garment_dir = Path(self.temp_dir.name) / 'garments' / saved['id']
 
+        status, result = self.request_json(f"/api/garments/{saved['id']}", 'DELETE')
+
+        self.assertEqual(status, 200)
+        self.assertEqual(result, {'ok': True})
+        self.assertFalse(garment_dir.exists())
+        _, garments = self.request_json('/api/garments')
+        self.assertNotIn(saved['id'], [item['id'] for item in garments])
+
+    def test_student_cannot_delete_another_students_garment(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student1', 'password': 'pw', 'name': 'Student One'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': 'Shared owner garment', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': 'blue', 'photoDataUrl': photo,
+        })
+        self.request_json('/api/auth/logout', 'POST', {})
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student2', 'password': 'pw', 'name': 'Student Two'})
+
         self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 403)
 
-        self.assertTrue((garment_dir / 'photo.jpg').is_file())
-        _, garments = self.request_json('/api/garments')
-        self.assertIn(saved['id'], [item['id'] for item in garments])
+    def test_student_cannot_delete_after_an_exchange_request_even_if_cancelled(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student', 'password': 'pw', 'name': 'Student'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': 'Requested garment', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': 'blue', 'photoDataUrl': photo,
+        })
+        state = {'version': 1, 'users': [], 'exchanges': [
+            {'id': 'e1', 'garmentId': saved['id'], 'status': 'cancelled'}
+        ], 'badges': [], 'finalizedMonths': []}
+        status, _ = self.request_json('/api/ranking', 'POST', {'baseRev': 0, 'state': state})
+        self.assertEqual(status, 200)
+
+        self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 409)
+
+    def test_student_cannot_delete_while_exchange_is_reserved(self):
+        self.request_json('/api/auth/signup', 'POST', {
+            'username': 'student', 'password': 'pw', 'name': 'Student'})
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample original').decode('ascii')
+        _, saved = self.request_json('/api/garments', 'POST', {
+            'name': 'Reserved garment', 'category': 'top', 'garmentTypeId': 1, 'gender': 'unknown',
+            'lengthCm': 50, 'widthCm': 45, 'colorName': 'blue', 'photoDataUrl': photo,
+        })
+        state = {'version': 1, 'users': [], 'exchanges': [
+            {'id': 'e1', 'garmentId': saved['id'], 'status': 'reserved'}
+        ], 'badges': [], 'finalizedMonths': []}
+        self.request_json('/api/ranking', 'POST', {'baseRev': 0, 'state': state})
+
+        self.request_error(f"/api/garments/{saved['id']}", 'DELETE', 409)
 
     def test_garment_delete_requires_teacher_login_and_existing_id(self):
         self.request_error('/api/garments/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'DELETE', 401)

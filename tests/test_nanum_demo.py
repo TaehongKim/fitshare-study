@@ -8,6 +8,14 @@ from tools.accounts import AccountStore
 from tools.seed_nanum_demo import seed_demo
 
 
+REALISTIC_STUDENT_NAMES = [
+    '김서윤', '이도윤', '박하은', '최서준', '정지우',
+    '강서아', '조이준', '윤하린', '장도현', '임지안',
+    '한예준', '오수아', '서준우', '신채원', '권민준',
+    '황다은', '안유나', '송시우', '류하준', '전가은'
+]
+
+
 class NanumDemoSeedTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -43,6 +51,7 @@ class NanumDemoSeedTests(unittest.TestCase):
         with (self.destination / 'demo-accounts.csv').open(encoding='utf-8-sig', newline='') as stream:
             credentials = list(csv.DictReader(stream))
         self.assertEqual(len(credentials), 20)
+        self.assertEqual([credential['name'] for credential in credentials], REALISTIC_STUDENT_NAMES)
         store = AccountStore(self.destination)
         for credential in credentials:
             number = int(credential['username'][1:])
@@ -50,14 +59,19 @@ class NanumDemoSeedTests(unittest.TestCase):
             self.assertEqual(credential['password'], credential['username'])
             user = store.login(credential['username'], credential['password'])
             self.assertEqual(user['role'], 'student')
+            self.assertEqual(user['name'], REALISTIC_STUDENT_NAMES[number - 1])
         items = json.loads((self.destination / 'garments' / 'index.json').read_text(encoding='utf-8'))
         self.assertEqual(len(items), 20)
         self.assertEqual({item['ownerUsername'] for item in items}, {f'n{n}' for n in range(1, 21)})
         ranking = json.loads((self.destination / 'ranking.json').read_text(encoding='utf-8'))['state']
         self.assertEqual(len(ranking['users']), 20)
+        self.assertEqual([user['name'] for user in ranking['users']], REALISTIC_STUDENT_NAMES)
         self.assertEqual(len(ranking['exchanges']), 20)
         self.assertTrue(all(exchange['status'] == 'completed' and exchange['revealedAt']
                             and exchange['giverToReceiver'] and exchange['receiverToGiver']
+                            for exchange in ranking['exchanges']))
+        self.assertTrue(all(exchange.get('isDemoReview') and exchange.get('review', {}).get('text')
+                            and '\n' not in exchange['review']['text']
                             for exchange in ranking['exchanges']))
         self.assertEqual((self.source / 'accounts.json').read_text(encoding='utf-8'), '{"keep":"original"}')
         self.assertEqual((self.source / 'garments' / 'garment-1' / 'photo.jpg').read_bytes(), b'original-photo')
@@ -84,6 +98,34 @@ class NanumDemoSeedTests(unittest.TestCase):
         self.assertIn('id="school-code" value="나눔초등학교"', html)
         self.assertIn("new URLSearchParams(window.location.search).get('school')", app)
         self.assertIn('schoolInput.value = requestedSchool.slice(0, 30)', app)
+
+    def test_existing_demo_names_match_across_accounts_ranking_and_garments(self):
+        demo = Path(__file__).resolve().parents[1] / 'server-data' / 'nanum-demo'
+        with (demo / 'demo-accounts.csv').open(encoding='utf-8-sig', newline='') as stream:
+            students = [row for row in csv.DictReader(stream) if row['username'].startswith('n')]
+        self.assertEqual([row['name'] for row in students], REALISTIC_STUDENT_NAMES)
+
+        accounts = json.loads((demo / 'accounts.json').read_text(encoding='utf-8'))
+        self.assertEqual([accounts[f'n{i}']['name'] for i in range(1, 21)], REALISTIC_STUDENT_NAMES)
+        ranking = json.loads((demo / 'ranking.json').read_text(encoding='utf-8'))['state']
+        ranked_students = [user for user in ranking['users'] if user['id'] != 'u21']
+        self.assertEqual([user['name'] for user in ranked_students], REALISTIC_STUDENT_NAMES)
+        self.assertEqual(next(user['name'] for user in ranking['users'] if user['id'] == 'u21'), '나눔선생님')
+        garments = json.loads((demo / 'garments' / 'index.json').read_text(encoding='utf-8'))
+        for garment in garments:
+            number = int(garment['ownerUsername'][1:])
+            self.assertEqual(garment['ownerName'], REALISTIC_STUDENT_NAMES[number - 1])
+
+    def test_completed_demo_shares_have_one_line_virtual_reviews(self):
+        demo = Path(__file__).resolve().parents[1] / 'server-data' / 'nanum-demo'
+        ranking = json.loads((demo / 'ranking.json').read_text(encoding='utf-8'))['state']
+        completed = [exchange for exchange in ranking['exchanges'] if exchange['status'] == 'completed']
+        self.assertTrue(completed)
+        for exchange in completed:
+            self.assertTrue(exchange.get('isDemoReview'))
+            self.assertTrue(exchange.get('review', {}).get('text'))
+            self.assertLessEqual(len(exchange['review']['text']), 100)
+            self.assertNotIn('\n', exchange['review']['text'])
 
 
 if __name__ == '__main__':

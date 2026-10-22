@@ -2,7 +2,7 @@
   "id": "7534003a-a7f0-4bd6-aa78-a12112a9cec7",
   "name": "데이터셋 1 상의 외투",
   "category": "top",
-  "gender": "unknown",
+  "gender": "unisex",
   "garmentTypeId": 1,
   "garmentTypeName": "상의 외투",
   "colorName": "검정",
@@ -16,7 +16,7 @@
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:03:34.008590+00:00",
-  "size": "",
+  "size": "160",
   "style": "",
   "condition": "",
   "garmentKind": "",
@@ -25,10 +25,17 @@
   "thickness": "",
   "stretch": "",
   "pattern": "",
-  "seasons": [],
+  "seasons": [
+    "가을",
+    "겨울"
+  ],
   "metadataSources": {
-    "bottomLength": "type-rule"
+    "bottomLength": "type-rule",
+    "seasons": "manual",
+    "size": "measurement-rule"
   },
-  "ownerName": "나눔학생 07",
-  "ownerUsername": "n7"
+  "ownerName": "조이준",
+  "ownerUsername": "n7",
+  "closetPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/closet-photo",
+  "season": "가을"
 }

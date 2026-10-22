@@ -1216,7 +1216,7 @@
     "productPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:01:42.078587+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "130",
     "style": "",
     "condition": "",
     "garmentKind": "티셔츠",
@@ -1228,7 +1228,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "name-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1248,7 +1249,7 @@
     "productPhotoUrl": "/api/garments/c1e48401-b3fa-4705-b5cf-68bc6fced1d5/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:26.001429+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "바지",
@@ -1260,7 +1261,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "sleeveLength": "type-rule"
+      "sleeveLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1280,7 +1282,7 @@
     "productPhotoUrl": "/api/garments/bc3c665e-77a5-40a9-922a-4ef7083dc482/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:12.184390+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "점퍼",
@@ -1292,7 +1294,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1312,7 +1315,7 @@
     "productPhotoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:03:18.576657+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "130",
     "style": "",
     "condition": "",
     "garmentKind": "원피스",
@@ -1324,7 +1327,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1344,7 +1348,7 @@
     "productPhotoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:39.085079+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "110",
     "style": "",
     "condition": "",
     "garmentKind": "티셔츠",
@@ -1356,7 +1360,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "name-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1376,7 +1381,7 @@
     "productPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:03:34.008590+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "",
@@ -1387,7 +1392,8 @@
     "pattern": "",
     "seasons": [],
     "metadataSources": {
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   }
 ]

@@ -6,6 +6,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RegistrationPageTests(unittest.TestCase):
+    def test_school_closet_offers_available_and_all_garment_filters(self):
+        html = (ROOT / 'index.html').read_text(encoding='utf-8')
+        closet = (ROOT / 'js/measurement/garmentCloset.js').read_text(encoding='utf-8')
+        self.assertIn('data-closet-filter="available"', html)
+        self.assertIn('data-closet-filter="all"', html)
+        self.assertIn('filterControls', closet)
+        self.assertIn("getShareStatus(garment).key === 'available'", closet)
+        self.assertIn('aria-pressed', closet)
+
+    def test_registration_type_list_includes_skirts(self):
+        html = (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8')
+        self.assertIn('<option value="6">6. 치마</option>', html)
+
     def test_camera_action_opens_video_instead_of_only_a_file_picker(self):
         from html.parser import HTMLParser
 
@@ -81,13 +94,24 @@ class RegistrationPageTests(unittest.TestCase):
 
         self.assertIn('school-closet-pages', html)
         self.assertIn('garment-list-pages', register_html)
-        self.assertIn('PAGE_SIZE = 10', closet)
+        self.assertIn('PAGE_SIZE = 12', closet)
+        self.assertIn('Date.parse(garment.createdAt)', closet)
+        self.assertIn('return a.createdAt - b.createdAt', closet)
+        css = (ROOT / 'css' / 'measurement.css').read_text(encoding='utf-8')
+        self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))', css)
+        self.assertIn('grid-template-columns:repeat(6,minmax(0,1fr))', css)
+        self.assertIn('grid-template-columns:repeat(3,minmax(0,1fr))', css)
+        self.assertIn('grid-template-columns:repeat(2,minmax(0,1fr))', css)
         self.assertIn('loading = \'lazy\'', closet)
+        self.assertIn('closet-estimated-size', closet)
+        self.assertIn('estimatedSize.textContent = `추정 호수 ${/^', closet)
+        self.assertIn("/^\\d{2,3}$/.test(savedSize)", closet)
         self.assertIn('배경 포함 사진 보기', closet)
         self.assertIn('정보 수정', closet)
         self.assertIn('unknown', closet)
         self.assertIn('createGarmentCloset', app)
         self.assertIn('createGarmentCloset', registration)
+        self.assertIn('.closet-card-actions .closet-open-action { grid-column:1 / -1;', css)
 
 if __name__ == '__main__':
     unittest.main()

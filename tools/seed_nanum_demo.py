@@ -14,6 +14,24 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE = ROOT / 'server-data'
 DEFAULT_DESTINATION = ROOT / 'server-data' / 'nanum-demo'
 STUDENT_COUNT = 20
+STUDENT_NICKNAMES = (
+    '김서윤', '이도윤', '박하은', '최서준', '정지우',
+    '강서아', '조이준', '윤하린', '장도현', '임지안',
+    '한예준', '오수아', '서준우', '신채원', '권민준',
+    '황다은', '안유나', '송시우', '류하준', '전가은'
+)
+DEMO_REVIEWS = (
+    '색이 예쁘고 편해서 학교에 입고 왔어요!',
+    '친구가 나눠 준 옷이라 더 소중하게 느껴져요.',
+    '사이즈가 잘 맞아서 자주 입고 있어요.',
+    '깨끗하고 따뜻해서 요즘 잘 입어요.',
+    '마음에 쏙 들어요. 다음에도 같이 나누고 싶어요!',
+    '새 옷을 만난 것 같아 기분이 좋아요.',
+    '활동하기 편하고 색깔도 마음에 들어요.',
+    '친구와 옷 이야기를 나눌 수 있어 즐거웠어요.',
+    '잘 어울린다고 해서 기뻤어요. 고마워요!',
+    '소중한 옷을 나눠 줘서 고맙고 잘 입을게요.'
+)
 
 
 def write_json(path, value):
@@ -54,7 +72,7 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
         for number in range(1, STUDENT_COUNT + 1):
             username = f'n{number}'
             password = username
-            name = f'나눔학생 {number:02}'
+            name = STUDENT_NICKNAMES[number - 1]
             account = accounts.signup(username, password, name)
             students.append({**account, 'password': password})
 
@@ -79,6 +97,7 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
             list_item['ownerUsername'] = owner['username']
             demo_records.append(list_item)
 
+            review = DEMO_REVIEWS[index % len(DEMO_REVIEWS)]
             exchanges.append({
                 'id': f'e{index + 1}', 'giverId': f'u{owner_index + 1}',
                 'receiverId': f'u{(owner_index + 1) % STUDENT_COUNT + 1}',
@@ -86,7 +105,8 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
                 'status': 'completed', 'createdAt': now, 'completedAt': now,
                 'giverToReceiver': 6 + (index % 5),
                 'receiverToGiver': 5 + ((index * 3) % 6),
-                'revealedAt': now, 'review': None
+                'revealedAt': now, 'review': {'text': review, 'createdAt': now},
+                'isDemoReview': True
             })
 
         write_json(garments_dir / 'index.json', demo_records)

@@ -65,11 +65,12 @@ AI가 임의로 핵심 로직을 바꾸지 않는다.
 - 학생이 자기 말로 로직을 설명할 수 있다.
 - `git diff`를 확인한 뒤 commit/push 한다.
 
-## 8. Superpowers 스킬 사용 규칙
+## 8. Superlite 스킬 사용 규칙
 
-- 전역 Superpowers 스킬 경로: `C:\Users\ttaho\.agents\skills\superpowers\skills`
-- 작업을 시작하기 전에, 요청과 맞는 스킬의 `SKILL.md`를 먼저 확인한다.
-- 스킬의 절차는 따르되, 이 문서(AGENTS.md)의 프로젝트 규칙이 항상 우선이다.
+- 전역 Codex 플러그인 `superlite@superlite-dev`를 사용한다. 스킬은 `%CODEX_HOME%\plugins\cache\superlite-dev\superlite\<version>\skills`에서 확인한다.
+- 작업을 시작할 때 이 요청에 맞는 Superlite `SKILL.md`와 `using-superlite\references\codex-tools.md`를 먼저 확인한다.
+- Superpowers는 기본 워크플로로 사용하지 않는다. Superlite가 없거나 실행되지 않으면 임의로 Superpowers로 대체하지 말고 이유를 알린다.
+- Superlite 절차를 따르되, 이 문서(AGENTS.md)의 프로젝트 규칙이 항상 우선이다.
 - 이 프로젝트에서는 과한 자동화보다 "학생이 제시한 로직을 구현" 원칙을 우선한다.
 - 스킬 적용 후에도 변경 범위는 최소화하고, 담당 모듈 경계를 지킨다.
 

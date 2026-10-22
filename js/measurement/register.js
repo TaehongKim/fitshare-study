@@ -1,8 +1,8 @@
 ﻿import { readRegistrationPhoto } from './registrationPhoto.js?v=garment-registration-2';
-import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-6';
-import { fetchMe } from '../auth.js?v=auth-2';
+import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-13';
+import { fetchMe } from '../auth.js?v=auth-3';
 import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
-import { createGarmentMetadataFields } from '../garmentMetadata.js';
+import { createGarmentMetadataFields } from '../garmentMetadata.js?v=skirt-1';
 
 const photoInputs = [document.querySelector('#camera-photo'), document.querySelector('#gallery-photo')];
 const photoPreview = document.querySelector('#garment-preview');
@@ -211,6 +211,7 @@ async function loadGarments() {
 function categoryForId(garmentId) {
   if (garmentId === 3) return 'dress';
   if (garmentId === 5) return 'pants';
+  if (garmentId === 6) return 'skirt';
   return 'top';
 }
 
