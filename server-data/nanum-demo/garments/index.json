@@ -2,6 +2,44 @@
   {
     "bottomLength": "해당 없음",
     "seasons": [
+      "여름"
+    ],
+    "season": "여름",
+    "metadataSources": {
+      "bottomLength": "type-rule",
+      "seasons": "manual",
+      "size": "measurement-rule"
+    },
+    "measurementMethod": "photo-analysis",
+    "id": "c92fb92a-2f82-4db5-a95d-be6f821e6d81",
+    "name": "흰색 상의 외투",
+    "category": "top",
+    "gender": "female",
+    "garmentTypeId": 1,
+    "garmentTypeName": "상의 외투",
+    "schoolCode": "나눔초등학교",
+    "ownerName": "송시우",
+    "colorName": "흰색",
+    "lengthCm": 54.5,
+    "widthCm": 55.5,
+    "createdAt": "2026-10-23T12:02:23+00:00",
+    "closetPhotoUrl": "/api/garments/c92fb92a-2f82-4db5-a95d-be6f821e6d81/closet-photo",
+    "backgroundId": "M4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
+    "size": "130",
+    "ownerUsername": "s18",
+    "donorId": "s18",
+    "garmentTypeCode": "o",
+    "garmentNumber": 20,
+    "garmentCode": "나눔초등학교_o_020_s18",
+    "productPhotoFile": "product-photo.jpg",
+    "productPhotoUrl": "/api/garments/c92fb92a-2f82-4db5-a95d-be6f821e6d81/product-photo",
+    "productPhotoGeneratedAt": "2026-10-23T12:03:02.274437+00:00"
+  },
+  {
+    "bottomLength": "해당 없음",
+    "seasons": [
       "봄",
       "여름",
       "가을",

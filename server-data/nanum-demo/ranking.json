@@ -1,5 +1,5 @@
 {
-  "rev": 5,
+  "rev": 6,
   "state": {
     "version": 1,
     "users": [
@@ -259,6 +259,19 @@
         "garmentId": "bf359ba8-8f62-4a15-9fea-6fa40d948ee9",
         "status": "cancelled",
         "createdAt": "2026-10-22T14:13:03.408Z",
+        "giverToReceiver": null,
+        "receiverToGiver": null,
+        "revealedAt": null,
+        "review": null
+      },
+      {
+        "id": "e11",
+        "giverId": "u7",
+        "receiverId": "u1",
+        "itemName": "데이터셋 1 상의 외투",
+        "garmentId": "7534003a-a7f0-4bd6-aa78-a12112a9cec7",
+        "status": "reserved",
+        "createdAt": "2026-10-23T11:44:50.562Z",
         "giverToReceiver": null,
         "receiverToGiver": null,
         "revealedAt": null,
