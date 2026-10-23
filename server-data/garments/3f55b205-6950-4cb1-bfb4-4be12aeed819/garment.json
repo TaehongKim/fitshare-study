@@ -10,13 +10,13 @@
   "widthCm": 37.2,
   "createdAt": "2026-10-09T14:00:30+00:00",
   "photoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/photo",
-  "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-  "thumbnailVersion": 2,
-  "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
+  "thumbnailVersion": 3,
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3",
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:03:18.576657+00:00",
-  "size": "",
+  "size": "130",
   "style": "",
   "condition": "",
   "garmentKind": "원피스",
@@ -28,6 +28,7 @@
   "seasons": [],
   "metadataSources": {
     "garmentKind": "type-rule",
-    "bottomLength": "type-rule"
+    "bottomLength": "type-rule",
+    "size": "measurement-rule"
   }
 }

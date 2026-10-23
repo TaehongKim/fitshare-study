@@ -10,13 +10,13 @@
   "widthCm": 47.3,
   "createdAt": "2026-10-09T14:01:14+00:00",
   "photoUrl": "/api/garments/c1e48401-b3fa-4705-b5cf-68bc6fced1d5/photo",
-  "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-  "thumbnailVersion": 2,
-  "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
+  "thumbnailVersion": 3,
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3",
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/c1e48401-b3fa-4705-b5cf-68bc6fced1d5/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:05:26.001429+00:00",
-  "size": "",
+  "size": "160",
   "style": "",
   "condition": "",
   "garmentKind": "바지",
@@ -28,6 +28,7 @@
   "seasons": [],
   "metadataSources": {
     "garmentKind": "type-rule",
-    "sleeveLength": "type-rule"
+    "sleeveLength": "type-rule",
+    "size": "measurement-rule"
   }
 }

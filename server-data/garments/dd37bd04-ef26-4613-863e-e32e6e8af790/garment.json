@@ -13,13 +13,13 @@
   "photoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/photo",
   "closetPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/closet-photo",
   "backgroundId": "M4",
-  "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-  "thumbnailVersion": 2,
-  "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
+  "thumbnailVersion": 3,
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3",
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:01:42.078587+00:00",
-  "size": "",
+  "size": "130",
   "style": "",
   "condition": "",
   "garmentKind": "티셔츠",
@@ -31,6 +31,7 @@
   "seasons": [],
   "metadataSources": {
     "garmentKind": "name-rule",
-    "bottomLength": "type-rule"
+    "bottomLength": "type-rule",
+    "size": "measurement-rule"
   }
 }

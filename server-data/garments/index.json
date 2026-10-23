@@ -20,7 +20,7 @@
     "closetPhotoUrl": "/api/garments/c8e63526-9811-5b07-8ae0-2e6782bc6f37/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474833-000/00?colorDisplayCode=69",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474833/item/goods_69_474833_3x4.jpg?width=600",
@@ -54,7 +54,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "90922a31-20ec-5915-9077-9f12ab898d0b",
@@ -77,7 +78,7 @@
     "closetPhotoUrl": "/api/garments/90922a31-20ec-5915-9077-9f12ab898d0b/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474832-000/00?colorDisplayCode=00",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474832/item/goods_00_474832_3x4.jpg?width=600",
@@ -111,7 +112,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "130cb328-56e7-51c2-a7e5-3acbd67b85d9",
@@ -134,7 +136,7 @@
     "closetPhotoUrl": "/api/garments/130cb328-56e7-51c2-a7e5-3acbd67b85d9/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486992-000/00?colorDisplayCode=11",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486992/item/goods_11_486992_3x4.jpg?width=600",
@@ -168,7 +170,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "33ddaf0f-1b56-5546-9af3-4d7480fce028",
@@ -191,7 +194,7 @@
     "closetPhotoUrl": "/api/garments/33ddaf0f-1b56-5546-9af3-4d7480fce028/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486637-000/00?colorDisplayCode=64",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486637/item/goods_64_486637_3x4.jpg?width=600",
@@ -225,7 +228,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "b7e65719-c565-5368-ab09-a9c8f14f8941",
@@ -248,7 +252,7 @@
     "closetPhotoUrl": "/api/garments/b7e65719-c565-5368-ab09-a9c8f14f8941/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486638-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486638/item/goods_09_486638_3x4.jpg?width=600",
@@ -282,7 +286,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "402dea13-847e-5377-bff7-6e353608b0bd",
@@ -305,7 +310,7 @@
     "closetPhotoUrl": "/api/garments/402dea13-847e-5377-bff7-6e353608b0bd/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E488426-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488426/item/goods_02_488426_3x4.jpg?width=600",
@@ -339,7 +344,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d",
@@ -362,7 +368,7 @@
     "closetPhotoUrl": "/api/garments/2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E483382-000/00?colorDisplayCode=00",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/483382/item/goods_00_483382_3x4.jpg?width=600",
@@ -396,7 +402,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "18328287-9b12-50dd-95b7-4c45e066ca24",
@@ -419,7 +426,7 @@
     "closetPhotoUrl": "/api/garments/18328287-9b12-50dd-95b7-4c45e066ca24/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474703-000/00?colorDisplayCode=67",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474703/item/goods_67_474703_3x4.jpg?width=600",
@@ -453,7 +460,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "cb7dd65b-29ea-52b5-88bf-9c694d2577a0",
@@ -476,7 +484,7 @@
     "closetPhotoUrl": "/api/garments/cb7dd65b-29ea-52b5-88bf-9c694d2577a0/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E457729-000/00?colorDisplayCode=64",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/457729/item/goods_64_457729_3x4.jpg?width=600",
@@ -510,7 +518,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "dc572e61-58c3-5f94-a5f2-704e855cba14",
@@ -533,7 +542,7 @@
     "closetPhotoUrl": "/api/garments/dc572e61-58c3-5f94-a5f2-704e855cba14/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E492992-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492992/item/goods_02_492992_3x4.jpg?width=600",
@@ -567,7 +576,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "3ad23eeb-65f6-522e-a200-2680ec98b333",
@@ -590,7 +600,7 @@
     "closetPhotoUrl": "/api/garments/3ad23eeb-65f6-522e-a200-2680ec98b333/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E492991-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492991/item/goods_09_492991_3x4.jpg?width=600",
@@ -624,7 +634,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1a904ac3-8fcc-57c5-81c0-f3ec4563952f",
@@ -647,7 +658,7 @@
     "closetPhotoUrl": "/api/garments/1a904ac3-8fcc-57c5-81c0-f3ec4563952f/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E487338-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487338/item/goods_02_487338_3x4.jpg?width=600",
@@ -681,7 +692,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "a382945d-701c-5070-a1b4-d29dd9545715",
@@ -704,7 +716,7 @@
     "closetPhotoUrl": "/api/garments/a382945d-701c-5070-a1b4-d29dd9545715/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486630-000/00?colorDisplayCode=67",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486630/item/goods_67_486630_3x4.jpg?width=600",
@@ -738,7 +750,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1a6869a6-e92e-5299-af80-d1403c3113c9",
@@ -761,7 +774,7 @@
     "closetPhotoUrl": "/api/garments/1a6869a6-e92e-5299-af80-d1403c3113c9/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E488163-000/00?colorDisplayCode=03",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488163/item/goods_03_488163_3x4.jpg?width=600",
@@ -795,7 +808,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "929b6f78-0252-5f9f-bf23-43a5e6f09fe2",
@@ -818,7 +832,7 @@
     "closetPhotoUrl": "/api/garments/929b6f78-0252-5f9f-bf23-43a5e6f09fe2/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E485162-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485162/item/goods_09_485162_3x4.jpg?width=600",
@@ -852,7 +866,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "501811ca-0c9d-5273-b680-9e4afaae8a20",
@@ -875,7 +890,7 @@
     "closetPhotoUrl": "/api/garments/501811ca-0c9d-5273-b680-9e4afaae8a20/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486658-000/00?colorDisplayCode=61",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486658/item/goods_61_486658_3x4.jpg?width=600",
@@ -909,7 +924,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "848f3e95-4f5d-5e62-b110-090674171cf0",
@@ -932,7 +948,7 @@
     "closetPhotoUrl": "/api/garments/848f3e95-4f5d-5e62-b110-090674171cf0/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478168-000/00?colorDisplayCode=39",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478168/item/goods_39_478168_3x4.jpg?width=600",
@@ -966,7 +982,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1abe21d9-b419-51c6-8155-95284e6728b3",
@@ -989,7 +1006,7 @@
     "closetPhotoUrl": "/api/garments/1abe21d9-b419-51c6-8155-95284e6728b3/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478141-000/00?colorDisplayCode=30",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478141/item/goods_30_478141_3x4.jpg?width=600",
@@ -1023,7 +1040,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "f00b7f50-390d-53d0-be8d-dcc8358ac2f3",
@@ -1046,7 +1064,7 @@
     "closetPhotoUrl": "/api/garments/f00b7f50-390d-53d0-be8d-dcc8358ac2f3/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478140-000/00?colorDisplayCode=60",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478140/item/goods_60_478140_3x4.jpg?width=600",
@@ -1080,7 +1098,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "b4d0523f-8d3a-5f2e-a31a-69aa0977dab7",
@@ -1103,7 +1122,7 @@
     "closetPhotoUrl": "/api/garments/b4d0523f-8d3a-5f2e-a31a-69aa0977dab7/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478127-000/00?colorDisplayCode=56",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478127/item/goods_56_478127_3x4.jpg?width=600",
@@ -1137,7 +1156,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "804bb17d-dfda-5443-96f7-3829627aeaad",
@@ -1160,7 +1180,7 @@
     "closetPhotoUrl": "/api/garments/804bb17d-dfda-5443-96f7-3829627aeaad/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486629-000/00?colorDisplayCode=68",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486629/item/goods_68_486629_3x4.jpg?width=600",
@@ -1194,7 +1214,8 @@
     },
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-    "createdAt": "2026-10-17T00:00:00+09:00"
+    "createdAt": "2026-10-17T00:00:00+09:00",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "dd37bd04-ef26-4613-863e-e32e6e8af790",
@@ -1210,13 +1231,13 @@
     "createdAt": "2026-10-17T05:06:35+00:00",
     "closetPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/closet-photo",
     "backgroundId": "M4",
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-    "thumbnailVersion": 2,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:01:42.078587+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "130",
     "style": "",
     "condition": "",
     "garmentKind": "티셔츠",
@@ -1228,7 +1249,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "name-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1242,13 +1264,13 @@
     "lengthCm": 96.5,
     "widthCm": 47.3,
     "createdAt": "2026-10-09T14:01:14+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/c1e48401-b3fa-4705-b5cf-68bc6fced1d5/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:26.001429+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "바지",
@@ -1260,7 +1282,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "sleeveLength": "type-rule"
+      "sleeveLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1274,13 +1297,13 @@
     "lengthCm": 63.2,
     "widthCm": 50.1,
     "createdAt": "2026-10-09T14:00:54+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/bc3c665e-77a5-40a9-922a-4ef7083dc482/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:12.184390+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "점퍼",
@@ -1292,7 +1315,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1306,13 +1330,13 @@
     "lengthCm": 69.4,
     "widthCm": 37.2,
     "createdAt": "2026-10-09T14:00:30+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:03:18.576657+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "130",
     "style": "",
     "condition": "",
     "garmentKind": "원피스",
@@ -1324,7 +1348,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "type-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1338,13 +1363,13 @@
     "lengthCm": 46.8,
     "widthCm": 53.8,
     "createdAt": "2026-10-09T13:59:58+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:39.085079+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "110",
     "style": "",
     "condition": "",
     "garmentKind": "티셔츠",
@@ -1356,7 +1381,8 @@
     "seasons": [],
     "metadataSources": {
       "garmentKind": "name-rule",
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   },
   {
@@ -1370,13 +1396,13 @@
     "lengthCm": 64.8,
     "widthCm": 53.8,
     "createdAt": "2026-10-09T13:59:24+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:03:34.008590+00:00",
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
-    "size": "",
+    "size": "160",
     "style": "",
     "condition": "",
     "garmentKind": "",
@@ -1387,7 +1413,8 @@
     "pattern": "",
     "seasons": [],
     "metadataSources": {
-      "bottomLength": "type-rule"
+      "bottomLength": "type-rule",
+      "size": "measurement-rule"
     }
   }
 ]

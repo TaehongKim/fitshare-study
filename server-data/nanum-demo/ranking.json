@@ -1,0 +1,271 @@
+{
+  "rev": 5,
+  "state": {
+    "version": 1,
+    "users": [
+      {
+        "id": "u1",
+        "name": "김서윤"
+      },
+      {
+        "id": "u2",
+        "name": "이도윤"
+      },
+      {
+        "id": "u3",
+        "name": "박하은"
+      },
+      {
+        "id": "u4",
+        "name": "최서준"
+      },
+      {
+        "id": "u5",
+        "name": "정지우"
+      },
+      {
+        "id": "u6",
+        "name": "강서아"
+      },
+      {
+        "id": "u7",
+        "name": "조이준"
+      },
+      {
+        "id": "u8",
+        "name": "윤하린"
+      },
+      {
+        "id": "u9",
+        "name": "장도현"
+      },
+      {
+        "id": "u10",
+        "name": "임지안"
+      },
+      {
+        "id": "u11",
+        "name": "한예준"
+      },
+      {
+        "id": "u12",
+        "name": "오수아"
+      },
+      {
+        "id": "u13",
+        "name": "서준우"
+      },
+      {
+        "id": "u14",
+        "name": "신채원"
+      },
+      {
+        "id": "u15",
+        "name": "권민준"
+      },
+      {
+        "id": "u16",
+        "name": "황다은"
+      },
+      {
+        "id": "u17",
+        "name": "안유나"
+      },
+      {
+        "id": "u18",
+        "name": "송시우"
+      },
+      {
+        "id": "u19",
+        "name": "류하준"
+      },
+      {
+        "id": "u20",
+        "name": "전가은"
+      },
+      {
+        "id": "u21",
+        "name": "나눔선생님"
+      }
+    ],
+    "exchanges": [
+      {
+        "id": "e1",
+        "giverId": "u1",
+        "receiverId": "u2",
+        "itemName": "AIRism 코튼 스트라이프 크루넥 긴팔 A",
+        "garmentId": "c8e63526-9811-5b07-8ae0-2e6782bc6f37",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "색이 예뻐서 친구들과 놀 때 자주 입어요!",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e2",
+        "giverId": "u2",
+        "receiverId": "u3",
+        "itemName": "AIRism 코튼 크루넥 긴팔",
+        "garmentId": "90922a31-20ec-5915-9077-9f12ab898d0b",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "길이가 잘 맞고 편해서 좋아요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e3",
+        "giverId": "u3",
+        "receiverId": "u4",
+        "itemName": "립 크루넥 긴팔",
+        "garmentId": "130cb328-56e7-51c2-a7e5-3acbd67b85d9",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "친구가 나눠 준 옷이라 더 아끼게 돼요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e4",
+        "giverId": "u4",
+        "receiverId": "u5",
+        "itemName": "저지 레귤러핏 진",
+        "garmentId": "33ddaf0f-1b56-5546-9af3-4d7480fce028",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "가볍고 활동하기 편해서 마음에 들어요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e5",
+        "giverId": "u5",
+        "receiverId": "u6",
+        "itemName": "저지 레귤러핏 컬러 진",
+        "garmentId": "b7e65719-c565-5368-ab09-a9c8f14f8941",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 10,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "새 옷처럼 깨끗해서 기분 좋게 입었어요!",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e6",
+        "giverId": "u6",
+        "receiverId": "u7",
+        "itemName": "드라이 스웨트 팬츠",
+        "garmentId": "402dea13-847e-5377-bff7-6e353608b0bd",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 6,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "색깔이 마음에 들어요. 나눠 줘서 고마워요!",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e7",
+        "giverId": "u7",
+        "receiverId": "u8",
+        "itemName": "프릴 티셔츠",
+        "garmentId": "2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 7,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "친구랑 옷을 나누는 경험이 즐거웠어요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e8",
+        "giverId": "u8",
+        "receiverId": "u9",
+        "itemName": "데님 쇼트 팬츠",
+        "garmentId": "18328287-9b12-50dd-95b7-4c45e066ca24",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 8,
+        "receiverToGiver": 8,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "잘 어울린다는 말을 들어서 기뻐요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e9",
+        "giverId": "u9",
+        "receiverId": "u10",
+        "itemName": "데님 페인터 하프 팬츠",
+        "garmentId": "cb7dd65b-29ea-52b5-88bf-9c694d2577a0",
+        "status": "completed",
+        "createdAt": "2026-10-18T15:47:26+09:00",
+        "completedAt": "2026-10-18T15:47:26+09:00",
+        "giverToReceiver": 9,
+        "receiverToGiver": 5,
+        "revealedAt": "2026-10-18T15:47:26+09:00",
+        "review": {
+          "text": "따뜻하고 편해서 요즘 자주 입고 있어요.",
+          "createdAt": "2026-10-18T15:47:26+09:00"
+        },
+        "isDemoReview": true
+      },
+      {
+        "id": "e10",
+        "giverId": "u6",
+        "receiverId": "u21",
+        "itemName": "데이터셋 2 크롭 티셔츠",
+        "garmentId": "bf359ba8-8f62-4a15-9fea-6fa40d948ee9",
+        "status": "cancelled",
+        "createdAt": "2026-10-22T14:13:03.408Z",
+        "giverToReceiver": null,
+        "receiverToGiver": null,
+        "revealedAt": null,
+        "review": null
+      }
+    ],
+    "badges": [],
+    "finalizedMonths": []
+  }
+}

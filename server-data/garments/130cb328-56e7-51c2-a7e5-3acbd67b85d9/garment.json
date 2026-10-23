@@ -19,7 +19,7 @@
   "closetPhotoUrl": "/api/garments/130cb328-56e7-51c2-a7e5-3acbd67b85d9/closet-photo",
   "backgroundId": "M4",
   "closetPhotoSource": "provided-garment-only",
-  "thumbnailVersion": 2,
+  "thumbnailVersion": 3,
   "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486992-000/00?colorDisplayCode=11",
   "sourceCheckedAt": "2026-10-17",
   "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486992/item/goods_11_486992_3x4.jpg?width=600",
@@ -53,5 +53,7 @@
   },
   "genderSource": "not-used-as-restriction",
   "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
-  "createdAt": "2026-10-17T00:00:00+09:00"
+  "createdAt": "2026-10-17T00:00:00+09:00",
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3"
 }
