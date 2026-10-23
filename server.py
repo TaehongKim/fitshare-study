@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlsplit
 from tools.accounts import SESSION_SECONDS, AccountStore, AuthError
 from tools.garment_thumbnails import GARMENT_MASK_PIPELINE_VERSION
 from tools.garment_metadata import clean_metadata
+from tools.garment_size_estimation import estimate_korean_size
 from tools.clothing_wishes import clean_filters, new_wish, public_wish, valid_store
 
 
@@ -1215,6 +1216,16 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 'maskPipelineVersion': GARMENT_MASK_PIPELINE_VERSION,
                 'thumbnailVersion': 2 if thumbnail is not None else 0,
             }
+            size_category = 'shorts' if category == 'pants' and item.get('bottomLength') == '반바지' else category
+            if not item.get('size') and size_category in {'top', 'dress', 'pants', 'skirt', 'shorts'}:
+                try:
+                    item['size'] = estimate_korean_size(size_category, item['widthCm'], item['lengthCm'])
+                except ValueError:
+                    pass
+                else:
+                    metadata_sources = dict(item.get('metadataSources') or {})
+                    metadata_sources['size'] = 'measurement-rule'
+                    item['metadataSources'] = metadata_sources
             if user is not None:
                 item['ownerUsername'] = user['username']
                 item['donorId'] = user['username']

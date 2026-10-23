@@ -12,9 +12,10 @@ def complete(item):
     sources = dict(item.get('metadataSources') or {})
     for key in CHOICES:
         result.setdefault(key, '')
-    if not result['size'] and item.get('category') in {'top', 'dress', 'pants'}:
+    size_category = 'shorts' if item.get('category') == 'pants' and item.get('bottomLength') == '반바지' else item.get('category')
+    if not result['size'] and size_category in {'top', 'dress', 'pants', 'skirt', 'shorts'}:
         try:
-            result['size'] = estimate_korean_size(item['category'], item.get('widthCm'), item.get('lengthCm'))
+            result['size'] = estimate_korean_size(size_category, item.get('widthCm'), item.get('lengthCm'))
         except (KeyError, ValueError):
             pass
         else:

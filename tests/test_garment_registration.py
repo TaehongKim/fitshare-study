@@ -168,6 +168,32 @@ class GarmentRegistrationTests(unittest.TestCase):
         with urllib.request.urlopen(self.base_url + detail['photoUrl'], timeout=3) as response:
             self.assertEqual(response.read(), jpeg_bytes)
 
+    def test_registration_estimates_size_from_measurements_and_keeps_manual_size(self):
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'\xff\xd8\xffsample').decode('ascii')
+        cases = (
+            ('top', 1, 53.8, 46.8, '110', {}),
+            ('skirt', 6, 46.4, 48.1, '160', {}),
+            ('pants', 5, 45.5, 47.3, '160', {'bottomLength': '\ubc18\ubc14\uc9c0'}),
+        )
+        for index, (category, type_id, width, length, expected_size, details) in enumerate(cases):
+            with self.subTest(category=category):
+                _, saved = self.request_json('/api/garments', 'POST', {
+                    'name': f'estimated-{index}', 'category': category, 'garmentTypeId': type_id,
+                    'gender': 'unknown', 'lengthCm': length, 'widthCm': width,
+                    'colorName': 'blue', 'photoDataUrl': photo, **details,
+                })
+                self.assertEqual(saved['size'], expected_size)
+                self.assertEqual(saved['metadataSources']['size'], 'measurement-rule')
+
+        _, manual = self.request_json('/api/garments', 'POST', {
+            'name': 'manual-size', 'category': 'top', 'garmentTypeId': 1,
+            'gender': 'unknown', 'lengthCm': 46.8, 'widthCm': 53.8,
+            'colorName': 'blue', 'photoDataUrl': photo,
+            'size': '140', 'metadataSources': {'size': 'manual'},
+        })
+        self.assertEqual(manual['size'], '140')
+        self.assertEqual(manual['metadataSources']['size'], 'manual')
+
     def test_saved_garment_keeps_original_and_serves_transparent_closet_image(self):
         photo_bytes = Path(server.PROJECT_ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_1_w55_h65.jpg').read_bytes()
         photo = 'data:image/jpeg;base64,' + base64.b64encode(photo_bytes).decode('ascii')
