@@ -20,6 +20,26 @@ $resolvedDataDir = if ([System.IO.Path]::IsPathRooted($DataDir)) {
 } else {
     [System.IO.Path]::GetFullPath((Join-Path $projectRoot $DataDir))
 }
+$ipFile = Join-Path $resolvedDataDir 'fitshare-server.ip'
+
+if (-not $IPAddress) {
+    if (Test-Path -LiteralPath $ipFile) {
+        $savedAddress = (Get-Content -LiteralPath $ipFile -Raw).Trim()
+        $savedAddressIsActive = $false
+        foreach ($networkAddress in (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue)) {
+            if ($networkAddress.IPAddress -ne $savedAddress) { continue }
+            $ipInterface = Get-NetIPInterface -AddressFamily IPv4 -InterfaceIndex $networkAddress.InterfaceIndex -ErrorAction SilentlyContinue
+            if ($ipInterface.ConnectionState -eq 'Connected') {
+                $savedAddressIsActive = $true
+                break
+            }
+        }
+        if (-not $savedAddressIsActive) {
+            throw "The saved FitShare IP $savedAddress is not assigned to an active adapter. Reserve this IP in the router or pass -IPAddress to select a new one."
+        }
+        $IPAddress = $savedAddress
+    }
+}
 
 if (-not $IPAddress) {
     $candidates = @(
@@ -80,6 +100,8 @@ foreach ($port in @($HttpPort, $HttpsPort)) {
 }
 
 $processesToStop = @()
+$serverScript = Join-Path $projectRoot 'server.py'
+$serverScriptPattern = '(?i)' + [regex]::Escape($serverScript)
 $pidFile = Join-Path $resolvedDataDir 'fitshare-server.pid'
 $managedPid = $null
 if (Test-Path -LiteralPath $pidFile) {
@@ -90,9 +112,10 @@ if (Test-Path -LiteralPath $pidFile) {
 foreach ($ownerId in $owners) {
     $owner = Get-CimInstance Win32_Process -Filter "ProcessId = $ownerId"
     if (-not $owner) { continue }
-    if ($owner.Name -notin @('python.exe', 'pythonw.exe') -or
-        $owner.CommandLine -notmatch '(?i)(?:^|\s|\\)server\.py(?:"|\s|$)' -or
-        $managedPid -ne [int]$owner.ProcessId) {
+    $isPythonServer = $owner.Name -in @('python.exe', 'pythonw.exe') -and
+        $owner.CommandLine -match '(?i)(?:^|\s|\\)server\.py(?:"|\s|$)'
+    $matchesProjectServer = $isPythonServer -and $owner.CommandLine -match $serverScriptPattern
+    if (-not $isPythonServer -or ($managedPid -ne [int]$owner.ProcessId -and -not $matchesProjectServer)) {
         throw "Port $port is occupied by PID $ownerId ($($owner.Name)), not a managed FitShare server. No processes were stopped."
     }
     $processesToStop += $owner
@@ -143,7 +166,7 @@ foreach ($name in $environmentNames) {
 [Environment]::SetEnvironmentVariable('FITSHARE_TLS_KEY_FILE', (Join-Path $resolvedDataDir 'certs\fitshare-demo-server.key'), 'Process')
 
 try {
-    $newProcess = Start-Process -FilePath $PythonPath -ArgumentList @('-u', 'server.py') -WorkingDirectory $projectRoot -WindowStyle Hidden -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+    $newProcess = Start-Process -FilePath $PythonPath -ArgumentList @('-u', $serverScript) -WorkingDirectory $projectRoot -WindowStyle Hidden -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
 } finally {
     foreach ($name in $environmentNames) {
         [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], 'Process')
@@ -176,6 +199,7 @@ if (-not $httpReady -or -not $httpsReady) {
 }
 
 Write-Output "Stopped FitShare process IDs: $($owners -join ', ')"
+Set-Content -LiteralPath $ipFile -Value $IPAddress -NoNewline
 Set-Content -LiteralPath $pidFile -Value $newProcess.Id -NoNewline
 Write-Output "Started FitShare server PID: $($newProcess.Id)"
 Write-Output ("HTTP URL: http://{0}:{1}/" -f $IPAddress, $HttpPort)

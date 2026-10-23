@@ -47,6 +47,21 @@ class RestartLauncherTests(unittest.TestCase):
         self.assertIn('DataDir = $resolvedDataDir', script)
         self.assertIn('if ($Force) { $setupParameters.Force = $true }', script)
 
+    def test_restart_script_reuses_the_last_successful_ip(self):
+        script = RESTART_SCRIPT.read_text(encoding='utf-8')
+
+        self.assertIn("$ipFile = Join-Path $resolvedDataDir 'fitshare-server.ip'", script)
+        self.assertIn('Get-Content -LiteralPath $ipFile', script)
+        self.assertIn('Get-NetIPAddress -AddressFamily IPv4', script)
+        self.assertIn("$ipInterface.ConnectionState -eq 'Connected'", script)
+        self.assertIn('Set-Content -LiteralPath $ipFile -Value $IPAddress', script)
+
+    def test_restart_script_can_identify_this_projects_server_when_pid_file_is_stale(self):
+        script = RESTART_SCRIPT.read_text(encoding='utf-8')
+
+        self.assertIn("$serverScript = Join-Path $projectRoot 'server.py'", script)
+        self.assertIn('$matchesProjectServer', script)
+
 
 @unittest.skipUnless(os.name == 'nt', 'The restart script controls Windows processes.')
 class RestartServerScriptTests(unittest.TestCase):
@@ -114,7 +129,7 @@ class RestartServerScriptTests(unittest.TestCase):
             'FITSHARE_TLS_KEY_FILE': str(data_dir / 'certs' / 'fitshare-demo-server.key'),
         })
         process = subprocess.Popen(
-            [sys.executable, '-u', 'server.py'], cwd=ROOT, env=env,
+            [sys.executable, '-u', str(ROOT / 'server.py')], cwd=ROOT, env=env,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         self.addCleanup(self.stop_pid, process.pid)
@@ -171,6 +186,41 @@ class RestartServerScriptTests(unittest.TestCase):
         self.wait_for_http(http_port)
         context = ssl.create_default_context(cafile=str(ca_file))
         connection = http.client.HTTPSConnection('127.0.0.2', https_port, context=context, timeout=3)
+        connection.request('GET', '/api/auth/me')
+        response = connection.getresponse()
+        response.read()
+        connection.close()
+        self.assertEqual(response.status, 200)
+
+    def test_stale_pid_file_reuses_pinned_ip_and_restarts_this_projects_listener(self):
+        folder = tempfile.TemporaryDirectory()
+        self.addCleanup(folder.cleanup)
+        data_dir = Path(folder.name)
+        ca_file = self.create_certificate(data_dir)
+        ip_file = data_dir / 'fitshare-server.ip'
+        ip_file.write_text('127.0.0.1', encoding='ascii')
+        http_port, https_port = self.free_port(), self.free_port()
+        old = self.start_fitshare(data_dir, http_port, https_port)
+        self.wait_for_http(http_port)
+        (data_dir / 'fitshare-server.pid').write_text('99999999', encoding='ascii')
+
+        executable = shutil.which('powershell.exe') or shutil.which('powershell')
+        result = subprocess.run(
+            [executable, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(RESTART_SCRIPT),
+             '-HttpPort', str(http_port), '-HttpsPort', str(https_port),
+             '-DataDir', str(data_dir), '-PythonPath', sys.executable],
+            cwd=ROOT, capture_output=True, text=True, timeout=40,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(ip_file.read_text(encoding='ascii'), '127.0.0.1')
+        new_pid = int((data_dir / 'fitshare-server.pid').read_text(encoding='ascii'))
+        self.addCleanup(self.stop_pid, new_pid)
+        self.assertNotEqual(new_pid, old.pid)
+        old.wait(timeout=5)
+        self.wait_for_http(http_port)
+        context = ssl.create_default_context(cafile=str(ca_file))
+        connection = http.client.HTTPSConnection('127.0.0.1', https_port, context=context, timeout=3)
         connection.request('GET', '/api/auth/me')
         response = connection.getresponse()
         response.read()
