@@ -4,6 +4,7 @@ import { renderRecommendation } from '../modules/recommendation.js';
 import { renderRanking } from '../modules/ranking.js?v=ranking-9';
 import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-3';
 import { openProfileDialog } from '../modules/profile.js?v=profile-4';
+import { openTodaySharingDialog } from '../modules/todaySharing.js?v=teacher-handoff-1';
 import { createSchoolEntryResult } from './schoolEntry.js';
 import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-13';
 import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-13';
@@ -94,6 +95,7 @@ function showApp() {
   userBox.hidden = !user;
   document.querySelector('#user-name').textContent = user ? `🙂 ${user.name} 님 · 내페이지` : '';
   document.querySelector('#user-name').hidden = !user;
+  document.querySelector('#today-sharing-button').hidden = user?.role !== 'teacher';
   if (user) selectTab(state.activeTab);
   else {
     if(typeof disposeModule==='function')disposeModule();
@@ -136,6 +138,7 @@ authForm.addEventListener('submit', async (event) => {
   }
 });
 document.querySelector('#user-name').addEventListener('click', () => openProfileDialog());
+document.querySelector('#today-sharing-button').addEventListener('click', () => openTodaySharingDialog());
 document.querySelector('#logout-button').addEventListener('click', async () => {
   await logout();
   schoolCloset.hidden = true;

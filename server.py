@@ -382,6 +382,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                     return self.handle_auth(parts[1], payload)
                 if parts == ['ranking']:
                     return self.save_ranking(payload)
+                if parts == ['ranking', 'teacher-handoff']:
+                    return self.complete_teacher_handoff(payload)
                 if parts == ['garments', 'analyze']:
                     return self.analyze_garment(payload)
                 if parts == ['garments']:
@@ -616,7 +618,8 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
             return self.send_json(200, {'rev': record.get('rev', 0), 'state': record['state']})
 
         def save_ranking(self, payload):
-            if self.current_user() is None:
+            user = self.current_user()
+            if user is None:
                 return self.send_json(401, {'error': '로그인한 뒤에 나눔 기록을 저장할 수 있어요.'})
             state = payload.get('state')
             base_rev = payload.get('baseRev')
@@ -630,8 +633,61 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                     # 다른 사람이 먼저 저장했어요. 화면이 최신 기록을 받아 다시 시도합니다.
                     return self.send_json(409, {'error': '다른 친구가 먼저 저장했어요.', 'rev': current,
                                                 'state': record.get('state') if isinstance(record, dict) else None})
+                previous_state = record.get('state') if isinstance(record, dict) else None
+                if user.get('role') != 'teacher' and not self.student_can_confirm_own_handoff(previous_state, state, user):
+                    return self.send_json(403, {'error': '다른 친구의 나눔 완료는 선생님만 표시할 수 있어요.'})
                 write_json_safely(storage / 'ranking.json', {'rev': current + 1, 'state': state})
             return self.send_json(200, {'rev': current + 1})
+
+        @staticmethod
+        def student_can_confirm_own_handoff(previous_state, next_state, user):
+            if not isinstance(previous_state, dict):
+                return True
+            previous_exchanges = previous_state.get('exchanges', [])
+            next_exchanges = next_state.get('exchanges', [])
+            next_by_id = {item.get('id'): item for item in next_exchanges if isinstance(item, dict)}
+            previous_users = {item.get('id'): item.get('name') for item in previous_state.get('users', []) if isinstance(item, dict)}
+            for previous in previous_exchanges:
+                if not isinstance(previous, dict) or previous.get('status') != 'reserved':
+                    continue
+                updated = next_by_id.get(previous.get('id'))
+                if not updated or updated.get('status') != 'completed':
+                    continue
+                if any(updated.get(key) != previous.get(key) for key in ('giverId', 'receiverId', 'garmentId', 'itemName')):
+                    return False
+                if previous_users.get(previous.get('receiverId')) != user.get('name'):
+                    return False
+            return True
+
+        def complete_teacher_handoff(self, payload):
+            user = self.current_user()
+            if user is None:
+                return self.send_json(401, {'error': '선생님 계정으로 로그인해 주세요.'})
+            if user.get('role') != 'teacher':
+                return self.send_json(403, {'error': '선생님만 전달 완료를 표시할 수 있어요.'})
+            exchange_id = payload.get('exchangeId')
+            base_rev = payload.get('baseRev')
+            if not isinstance(exchange_id, str) or not exchange_id or isinstance(base_rev, bool) or not isinstance(base_rev, int):
+                return self.send_json(400, {'error': '완료할 예약 정보가 올바르지 않아요.'})
+            with lock:
+                record = read_json(storage / 'ranking.json')
+                current = record.get('rev', 0) if isinstance(record, dict) else 0
+                state = record.get('state') if isinstance(record, dict) else None
+                if base_rev != current:
+                    return self.send_json(409, {'error': '다른 친구가 먼저 기록했어요.', 'rev': current, 'state': state})
+                if not isinstance(state, dict) or not isinstance(state.get('exchanges'), list):
+                    return self.send_json(404, {'error': '나눔 예약을 찾을 수 없어요.'})
+                exchange = next((item for item in state['exchanges'] if isinstance(item, dict) and item.get('id') == exchange_id), None)
+                if exchange is None:
+                    return self.send_json(404, {'error': '나눔 예약을 찾을 수 없어요.'})
+                if exchange.get('status') != 'reserved':
+                    return self.send_json(409, {'error': '전달 대기 중인 예약만 완료로 표시할 수 있어요.'})
+                completed_at = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+                completed_exchange = {**exchange, 'status': 'completed', 'completedAt': completed_at}
+                next_state = {**state, 'exchanges': [completed_exchange if isinstance(item, dict) and item.get('id') == exchange_id else item
+                                                       for item in state['exchanges']]}
+                write_json_safely(storage / 'ranking.json', {'rev': current + 1, 'state': next_state})
+            return self.send_json(200, {'rev': current + 1, 'state': next_state})
 
         def list_garments(self):
             items = read_json(garments_dir / 'index.json') or []

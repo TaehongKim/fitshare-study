@@ -1,5 +1,21 @@
 /* 참여 랭킹 화면 전용 스타일입니다. 공통 변수(--ink, --blue 등)는 styles.css 것을 그대로 씁니다. */
 .ranking-panel { padding:24px; border:1px solid var(--line); border-radius:20px; background:#fff; }
+.user-box .today-sharing-nav { min-height:38px; padding:7px 11px; border:1px solid #f1d18b; border-radius:10px; color:#76500b; background:#fff7df; font-size:12px; font-weight:800; cursor:pointer; }
+.today-sharing-dialog { width:min(94vw,620px); max-height:92vh; overflow:auto; }
+.today-sharing-eyebrow { margin:0 0 4px; color:#987022; font-size:11px; font-weight:800; }
+.today-sharing-intro { margin:8px 0 14px; color:var(--muted); font-size:13px; line-height:1.6; }
+.today-sharing-section-title { margin:18px 0 9px; font:18px 'Jua'; }
+.today-sharing-card { margin:9px 0; padding:14px; border:1px solid #f0dfb9; border-radius:14px; background:#fffdfa; }
+.today-sharing-card.is-done { border-color:#cfe9df; background:#f6fcf9; }
+.today-sharing-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.today-sharing-status { color:#855d0c; font-size:12px; font-weight:900; }
+.today-sharing-card.is-done .today-sharing-status { color:#278263; }
+.today-sharing-card time { color:var(--muted); font-size:11px; }
+.today-sharing-card h4 { margin:11px 0 5px; font:19px 'Jua'; }
+.today-sharing-card p { margin:0; color:#59667a; font-size:13px; line-height:1.6; }
+.today-sharing-card p b { color:var(--ink); }
+.today-sharing-complete { width:100%; min-height:46px; margin-top:13px; border:0; border-radius:10px; color:#fff; background:#258b6f; font-size:14px; font-weight:900; cursor:pointer; }
+.today-sharing-complete:disabled { opacity:.6; cursor:wait; }
 .ranking-intro { display:flex; align-items:center; gap:18px; }
 .ranking-intro h3 { margin:0 0 5px; font:24px 'Jua'; }
 .ranking-intro p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }

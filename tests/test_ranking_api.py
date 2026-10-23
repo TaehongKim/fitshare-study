@@ -142,6 +142,48 @@ class RankingApiTests(unittest.TestCase):
         self.assertEqual(self.call('/api/ranking')[1]['rev'], 0)
 
 
+    def test_teacher_handoff_requires_teacher_and_completes_only_reserved_exchange(self):
+        state = {**EMPTY,
+                 'users': [{'id': 'u1', 'name': '지수'}, {'id': 'u2', 'name': '민수'}],
+                 'exchanges': [{'id': 'e1', 'giverId': 'u1', 'receiverId': 'u2', 'garmentId': 'coat-1',
+                                'itemName': '겨울 코트', 'status': 'reserved', 'createdAt': '2026-10-23T00:00:00Z'}]}
+        self.login('student', '민수')
+        self.assertEqual(self.call('/api/ranking', {'baseRev': 0, 'state': state})[0], 200)
+        self.assertEqual(self.call('/api/ranking/teacher-handoff', {'baseRev': 1, 'exchangeId': 'e1'})[0], 403)
+        self.call('/api/auth/logout', {})
+        status, teacher = self.call('/api/auth/signup', {'username': 'teacher', 'password': 'secret1',
+                                                          'name': '선생님', 'teacherCode': 'fitshare'})
+        self.assertEqual((status, teacher['user']['role']), (201, 'teacher'))
+        status, result = self.call('/api/ranking/teacher-handoff', {'baseRev': 1, 'exchangeId': 'e1'})
+        self.assertEqual(status, 200, result)
+        self.assertEqual(result['state']['exchanges'][0]['status'], 'completed')
+        self.assertTrue(result['state']['exchanges'][0]['completedAt'])
+        self.assertEqual(self.call('/api/ranking/teacher-handoff', {'baseRev': 2, 'exchangeId': 'e1'})[0], 409)
+
+    def test_teacher_handoff_requires_current_revision_and_existing_reservation(self):
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'secret1', 'name': '선생님',
+                                       'teacherCode': 'fitshare'})
+        self.assertEqual(self.call('/api/ranking/teacher-handoff', {'baseRev': 0, 'exchangeId': 'missing'})[0], 404)
+        state = {**EMPTY, 'users': [{'id': 'u1', 'name': '지수'}, {'id': 'u2', 'name': '민수'}],
+                 'exchanges': [{'id': 'e1', 'giverId': 'u1', 'receiverId': 'u2', 'itemName': '점퍼',
+                                'status': 'reserved', 'createdAt': '2026-10-23T00:00:00Z'}]}
+        self.call('/api/ranking', {'baseRev': 0, 'state': state})
+        status, stale = self.call('/api/ranking/teacher-handoff', {'baseRev': 0, 'exchangeId': 'e1'})
+        self.assertEqual((status, stale['rev'], stale['state']), (409, 1, state))
+
+
+    def test_student_cannot_complete_another_students_reservation_through_general_sync(self):
+        self.login('other', '다른학생')
+        reserved = {**EMPTY, 'users': [{'id': 'u1', 'name': '지수'}, {'id': 'u2', 'name': '민수'}],
+                    'exchanges': [{'id': 'e1', 'giverId': 'u1', 'receiverId': 'u2', 'garmentId': 'coat-1',
+                                   'itemName': '겨울 코트', 'status': 'reserved', 'createdAt': '2026-10-23T00:00:00Z'}]}
+        self.call('/api/ranking', {'baseRev': 0, 'state': reserved})
+        forged = {**reserved, 'exchanges': [{**reserved['exchanges'][0], 'status': 'completed',
+                                             'completedAt': '2026-10-23T00:01:00Z'}]}
+        self.assertEqual(self.call('/api/ranking', {'baseRev': 1, 'state': forged})[0], 403)
+        self.assertEqual(self.call('/api/ranking')[1]['state']['exchanges'][0]['status'], 'reserved')
+
+
 
     def test_signup_login_logout_and_me(self):
 

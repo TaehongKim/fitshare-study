@@ -6,6 +6,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class TeacherUiTests(unittest.TestCase):
+    def test_today_sharing_is_teacher_only_and_shows_handoff_details(self):
+        page = (ROOT / 'index.html').read_text(encoding='utf-8')
+        app = (ROOT / 'js/app.js').read_text(encoding='utf-8')
+        sharing = (ROOT / 'modules/todaySharing.js').read_text(encoding='utf-8')
+        server = (ROOT / 'server.py').read_text(encoding='utf-8')
+        store = (ROOT / 'modules/rankingStore.js').read_text(encoding='utf-8')
+        style = (ROOT / 'css/ranking.css').read_text(encoding='utf-8')
+        self.assertIn('id="today-sharing-button"', page)
+        self.assertIn("user?.role !== 'teacher'", app)
+        self.assertIn('openTodaySharingDialog', app)
+        self.assertIn("item.status === 'reserved'", sharing)
+        self.assertIn('item.itemName', sharing)
+        self.assertIn('users.get(item.giverId)', sharing)
+        self.assertIn('users.get(item.receiverId)', sharing)
+        self.assertIn('나눔 완료', sharing)
+        self.assertIn('markTeacherHandoffShared', sharing)
+        self.assertIn("if user.get('role') != 'teacher':", server)
+        self.assertIn("parts == ['ranking', 'teacher-handoff']", server)
+        self.assertIn("'/api/ranking/teacher-handoff'", store)
+        self.assertIn('.today-sharing-card', style)
+
     def test_measured_size_estimates_are_labeled_as_estimates_in_detail(self):
         detail = (ROOT / 'modules/garmentDetail.js').read_text(encoding='utf-8')
         self.assertIn("garment.metadataSources?.size === 'measurement-rule'", detail)
