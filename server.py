@@ -843,8 +843,17 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 return self.send_json(422, {'error': '상의와 하의만 입어볼 수 있어요.'})
             try:
                 from tools.tryon_photo import make_tryon_photo, original_tryon_source
-                source = original_tryon_source(garments_dir / garment_id, item)
-                photo = make_tryon_photo(source, item.get('category'), item.get('bottomLength', ''))
+                photo = None
+                try:
+                    # 옷장·AI 상품 사진과 같은 YOLO+SAM 투명 컷아웃을 먼저 써요.
+                    cutout = ensure_garment_cutout(garments_dir, garment_id, lock)
+                    photo = make_tryon_photo(cutout, item.get('category'), item.get('bottomLength', ''))
+                except Exception as error:
+                    # 컷아웃이 없거나 YOLO·SAM 모델을 쓸 수 없으면 원본 사진에서 예전 방식으로 옷을 분리해요.
+                    self.log_error('YOLO+SAM try-on cutout unavailable for %s: %s', garment_id, error)
+                if photo is None:
+                    source = original_tryon_source(garments_dir / garment_id, item)
+                    photo = make_tryon_photo(source, item.get('category'), item.get('bottomLength', ''))
             except (OSError, ValueError, RuntimeError, ImportError) as error:
                 return self.send_json(422, {'error': str(error) or '입어보기용 사진을 준비하지 못했어요.'})
             self.send_response(200)
