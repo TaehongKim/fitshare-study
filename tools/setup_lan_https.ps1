@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$IPAddress,
     [string]$DataDir = 'server-data\nanum-demo',
     [string]$OpenSslPath,
@@ -27,7 +27,7 @@ if (-not $IPAddress) {
 $parsedAddress = $null
 if (-not [System.Net.IPAddress]::TryParse($IPAddress, [ref]$parsedAddress) -or
     $parsedAddress.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) {
-    throw 'Provide a valid IPv4 LAN address with -IPAddress.'
+    throw '-IPAddress 옵션에 올바른 IPv4 로컬 네트워크 주소를 지정해 주세요.'
 }
 
 if (-not $OpenSslPath) {
@@ -42,7 +42,7 @@ if (-not $OpenSslPath) {
     }
 }
 if (-not $OpenSslPath -or -not (Test-Path -LiteralPath $OpenSslPath)) {
-    throw 'OpenSSL was not found. Git for Windows includes openssl.exe.'
+    throw 'OpenSSL을 찾지 못했어요. Git for Windows에 포함된 openssl.exe를 사용할 수 있습니다.'
 }
 
 function Invoke-OpenSsl([string[]]$Arguments) {
@@ -89,33 +89,33 @@ if ($existingFiles.Count -eq 4 -and -not $Force) {
     & $OpenSslPath x509 -in $serverCertificate -checkip $IPAddress -noout 2>$null
     if ($LASTEXITCODE -eq 0) {
         $fingerprint = (& $OpenSslPath x509 -in $caCertificate -noout -fingerprint -sha256) -join ''
-        Write-Output "LAN IP: $IPAddress"
-        Write-Output "HTTPS server certificate: $serverCertificate"
-        Write-Output "HTTPS server private key: $serverKey"
-        Write-Output ("Phone CA download: http://{0}:8001/api/demo-ca" -f $IPAddress)
-        Write-Output ("FitShare HTTPS URL: https://{0}:8443/" -f $IPAddress)
-        Write-Output "CA fingerprint: $fingerprint"
-        Write-Output 'Before trusting the CA, compare its SHA-256 fingerprint on the phone with the value printed above.'
+        Write-Output "로컬 IP 주소: $IPAddress"
+        Write-Output "HTTPS 서버 인증서: $serverCertificate"
+        Write-Output "HTTPS 서버 개인 키: $serverKey"
+        Write-Output ("휴대폰 인증서 다운로드: http://{0}:8001/api/demo-ca" -f $IPAddress)
+        Write-Output ("FitShare HTTPS 주소: https://{0}:8443/" -f $IPAddress)
+        Write-Output "인증서 지문: $fingerprint"
+        Write-Output '인증서를 신뢰하기 전에 휴대폰에 표시된 SHA-256 지문이 위 값과 같은지 확인해 주세요.'
         return
     }
-    Write-Output "IP $IPAddress does NOT match the existing server certificate; renewing only the server certificate and preserving the demo CA."
+    Write-Output "IP 주소 $IPAddress 가 기존 서버 인증서와 달라 서버 인증서만 새로 만들고 데모 인증서는 유지합니다."
     New-DemoServerCertificate $IPAddress
     $fingerprint = (& $OpenSslPath x509 -in $caCertificate -noout -fingerprint -sha256) -join ''
-    Write-Output "LAN IP: $IPAddress"
-    Write-Output "HTTPS server certificate: $serverCertificate"
-    Write-Output "HTTPS server private key: $serverKey"
-    Write-Output ("Phone CA download: http://{0}:8001/api/demo-ca" -f $IPAddress)
-    Write-Output ("FitShare HTTPS URL: https://{0}:8443/" -f $IPAddress)
-    Write-Output "CA fingerprint: $fingerprint"
-    Write-Output 'The existing demo CA was preserved, so a previously trusted CA does not need to be installed again.'
+    Write-Output "로컬 IP 주소: $IPAddress"
+    Write-Output "HTTPS 서버 인증서: $serverCertificate"
+    Write-Output "HTTPS 서버 개인 키: $serverKey"
+    Write-Output ("휴대폰 인증서 다운로드: http://{0}:8001/api/demo-ca" -f $IPAddress)
+    Write-Output ("FitShare HTTPS 주소: https://{0}:8443/" -f $IPAddress)
+    Write-Output "인증서 지문: $fingerprint"
+    Write-Output '기존 데모 인증서를 유지했으므로, 이미 휴대폰에 설치한 인증서는 다시 설치하지 않아도 됩니다.'
     return
 }
 if ($existingFiles.Count -gt 0 -and -not $Force) {
-    throw 'Some demo certificate files already exist. Re-run with -Force to replace only the listed demo certificate files.'
+    throw '일부 데모 인증서 파일이 이미 있습니다. 목록의 인증서 파일만 교체하려면 -Force 옵션을 붙여 다시 실행해 주세요.'
 }
 if ($Force) {
     if ($existingFiles.Count -gt 0) {
-        Write-Warning 'Force replaces the demo CA and server certificate; reinstall the downloaded CA on phones that use HTTPS camera access.'
+        Write-Warning '강제 실행은 데모 인증서와 서버 인증서를 교체합니다. HTTPS 카메라를 사용하는 휴대폰에는 내려받은 인증서를 다시 설치해야 합니다.'
     }
     @($caKey, $caCertificate, $serverKey, $serverCertificate,
       (Join-Path $certificateDirectory 'fitshare-demo-server.csr'),
@@ -135,10 +135,10 @@ Invoke-OpenSsl @(
 New-DemoServerCertificate $IPAddress
 
 $fingerprint = (& $OpenSslPath x509 -in $caCertificate -noout -fingerprint -sha256) -join ''
-Write-Output "LAN IP: $IPAddress"
-Write-Output "HTTPS server certificate: $serverCertificate"
-Write-Output "HTTPS server private key: $serverKey"
-Write-Output ("Phone CA download: http://{0}:8001/api/demo-ca" -f $IPAddress)
-Write-Output ("FitShare HTTPS URL: https://{0}:8443/" -f $IPAddress)
-Write-Output "CA fingerprint: $fingerprint"
-Write-Output 'Before trusting the CA, compare its SHA-256 fingerprint on the phone with the value printed above.'
+Write-Output "로컬 IP 주소: $IPAddress"
+Write-Output "HTTPS 서버 인증서: $serverCertificate"
+Write-Output "HTTPS 서버 개인 키: $serverKey"
+Write-Output ("휴대폰 인증서 다운로드: http://{0}:8001/api/demo-ca" -f $IPAddress)
+Write-Output ("FitShare HTTPS 주소: https://{0}:8443/" -f $IPAddress)
+Write-Output "인증서 지문: $fingerprint"
+Write-Output '인증서를 신뢰하기 전에 휴대폰에 표시된 SHA-256 지문이 위 값과 같은지 확인해 주세요.'

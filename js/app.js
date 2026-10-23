@@ -6,8 +6,8 @@ import { fetchMe, getUser, login, logout, signup } from './auth.js?v=auth-3';
 import { openProfileDialog } from '../modules/profile.js?v=profile-4';
 import { openTodaySharingDialog } from '../modules/todaySharing.js?v=garment-codes-1';
 import { createSchoolEntryResult } from './schoolEntry.js';
-import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-14';
-import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-13';
+import { createGarmentCloset } from './measurement/garmentCloset.js?v=closet-tools-19';
+import { openGarmentDetail } from '../modules/garmentDetail.js?v=detail-16';
 import { initializeLandingShowcase } from './landingShowcase.js?v=hero-live-1';
 
 const root = document.querySelector('#module-root');

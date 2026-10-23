@@ -348,6 +348,42 @@ class RankingApiTests(unittest.TestCase):
         self.assertEqual(saved['photoUrl'], f'/api/garments/{garment_id}/photo')
         self.assertEqual(saved['productPhotoFile'], 'product-photo.png')
 
+    def test_only_teacher_can_delete_product_photo_and_original_stays(self):
+        garment_id, source = self.add_saved_garment()
+        folder = Path(self.temp_dir.name) / 'garments' / garment_id
+        (folder / 'product-photo.png').write_bytes(b'ai-photo')
+        (folder / 'product-thumbnail.jpg').write_bytes(b'thumb')
+        item = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        item.update({'productPhotoFile': 'product-photo.png', 'productPhotoUrl': 'x', 'productPhotoGeneratedAt': 'now'})
+        (folder / 'garment.json').write_text(json.dumps(item), encoding='utf-8')
+        (folder.parent / 'index.json').write_text(json.dumps([item]), encoding='utf-8')
+
+        def delete():
+            request = urllib.request.Request(self.base_url + f'/api/garments/{garment_id}/product-photo', method='DELETE')
+            try:
+                with self.opener.open(request) as result:
+                    return result.status
+            except urllib.error.HTTPError as error:
+                return error.code
+
+        self.assertEqual(delete(), 401)
+        self.login('student', 'Student')
+        self.assertEqual(delete(), 403)
+        self.assertTrue((folder / 'product-photo.png').exists())
+        self.call('/api/auth/logout', {})
+        self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',
+                                       'teacherCode': 'fitshare'})
+        self.assertEqual(delete(), 200)
+        self.assertEqual(delete(), 404)
+        self.assertFalse((folder / 'product-photo.png').exists())
+        self.assertFalse((folder / 'product-thumbnail.jpg').exists())
+        self.assertEqual((folder / 'photo.jpg').read_bytes(), source)
+        for path in (folder / 'garment.json', folder.parent / 'index.json'):
+            data = json.loads(path.read_text(encoding='utf-8'))
+            record = data[0] if isinstance(data, list) else data
+            self.assertNotIn('productPhotoFile', record)
+            self.assertNotIn('productPhotoGeneratedAt', record)
+
     def test_product_photo_reports_missing_server_configuration(self):
         garment_id, _ = self.add_saved_garment()
         self.call('/api/auth/signup', {'username': 'teacher', 'password': 'pw', 'name': 'Teacher',

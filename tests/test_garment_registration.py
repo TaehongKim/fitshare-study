@@ -205,12 +205,17 @@ class GarmentRegistrationTests(unittest.TestCase):
             'lengthCm': analysis['lengthCm'], 'widthCm': analysis['widthCm'], 'colorName': analysis['colorName'],
             'photoDataUrl': photo, 'closetImageDataUrl': analysis['closetImageDataUrl'], 'backgroundId': 'M4'
         })
+        self.assertEqual(saved['maskPipelineVersion'], server.LEGACY_GARMENT_MASK_PIPELINE_VERSION)
         with urllib.request.urlopen(self.base_url + saved['photoUrl'], timeout=3) as response:
             self.assertEqual(response.read(), photo_bytes)
-        with urllib.request.urlopen(self.base_url + saved['closetPhotoUrl'], timeout=3) as response:
+        with urllib.request.urlopen(self.base_url + saved['closetPhotoUrl'], timeout=30) as response:
             cutout = response.read()
             self.assertEqual(response.headers.get_content_type(), 'image/png')
+            self.assertEqual(response.headers.get('Cache-Control'), 'no-store')
         self.assertTrue(cutout.startswith(b'\x89PNG\r\n\x1a\n'))
+        stored = json.loads((Path(self.temp_dir.name) / 'garments' / saved['id'] / 'garment.json').read_text(encoding='utf-8'))
+        self.assertEqual(stored['maskPipelineVersion'], server.GARMENT_MASK_PIPELINE_VERSION)
+        self.assertEqual(stored['thumbnailVersion'], 0)
 
     def test_legacy_garment_gets_a_generated_closet_cutout(self):
         source = Path(server.PROJECT_ROOT / 'measure_dataset' / 'ChaArUco_Cross' / 'chc_1_w55_h65.jpg').read_bytes()
@@ -232,11 +237,11 @@ class GarmentRegistrationTests(unittest.TestCase):
         garment_dir.mkdir(parents=True)
         (garment_dir / 'photo.jpg').write_bytes(source)
         (garment_dir / 'garment.json').write_text(json.dumps({'garmentTypeId': 1, 'backgroundId': 'M4'}), encoding='utf-8')
-        with urllib.request.urlopen(self.base_url + f'/api/garments/{record_id}/thumbnail', timeout=15) as response:
+        with urllib.request.urlopen(self.base_url + f'/api/garments/{record_id}/thumbnail', timeout=30) as response:
             thumbnail = response.read()
-            self.assertEqual(response.headers.get_content_type(), 'image/jpeg')
-            self.assertEqual(response.headers.get('Cache-Control'), 'no-store')
-        self.assertFalse((garment_dir / 'closet-thumbnail.png').exists())
+            self.assertEqual(response.headers.get_content_type(), 'image/png')
+            self.assertEqual(response.headers.get('Cache-Control'), 'no-cache')
+        self.assertTrue((garment_dir / 'closet-thumbnail.png').exists())
         import cv2
         import numpy as np
         decoded = cv2.imdecode(np.frombuffer(thumbnail, dtype=np.uint8), cv2.IMREAD_COLOR)

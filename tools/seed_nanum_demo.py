@@ -70,8 +70,8 @@ def seed_demo(source_dir=DEFAULT_SOURCE, destination_dir=DEFAULT_DESTINATION):
         accounts = AccountStore(staging)
         students = []
         for number in range(1, STUDENT_COUNT + 1):
-            username = f'n{number}'
-            password = username
+            username = f's{number}'
+            password = '111'
             name = STUDENT_NICKNAMES[number - 1]
             account = accounts.signup(username, password, name)
             students.append({**account, 'password': password})

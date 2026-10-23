@@ -28,7 +28,7 @@ export function openGarmentDetail(garment, onClosetUpdated, { hasExchangeHistory
   const id = encodeURIComponent(garment.id);
   const image = el('img', 'garment-detail-photo');
   image.alt = `${garment.name} 사진`;
-  const choices = [`/api/garments/${id}/thumbnail?v=image-priority-1`, `/api/garments/${id}/closet-photo`, `/api/garments/${id}/photo`];
+  const choices = [`/api/garments/${id}/thumbnail?v=product-yolo-priority-3`, `/api/garments/${id}/closet-thumbnail?v=yolo-sam-v3`, `/api/garments/${id}/closet-photo?v=yolo-sam-v3`, `/api/garments/${id}/photo`];
   let choice = 0;
   image.onerror = () => { choice += 1; if (choice < choices.length) image.src = choices[choice]; else image.onerror = null; };
   image.src = choices[0];
@@ -64,6 +64,9 @@ export function openGarmentDetail(garment, onClosetUpdated, { hasExchangeHistory
     const regeneratePhoto = el('button', 'rk-ghost', 'AI 사진 다시 만들기');
     regeneratePhoto.type = 'button';
     regeneratePhoto.hidden = !productPhotoUrl;
+    const deletePhoto = el('button', 'rk-ghost', 'AI 사진 삭제');
+    deletePhoto.type = 'button';
+    deletePhoto.hidden = !productPhotoUrl;
     let generating = false;
 
     function showProductPhoto() {
@@ -91,6 +94,7 @@ export function openGarmentDetail(garment, onClosetUpdated, { hasExchangeHistory
         garment.productPhotoGeneratedAt = productPhotoVersion;
         productPhoto.textContent = 'AI 상품 사진 보기';
         regeneratePhoto.hidden = false;
+        deletePhoto.hidden = false;
         showProductPhoto();
         message.textContent = regenerate ? '새 AI 사진으로 바꿨어요. 원본 사진은 그대로 있어요.' : 'AI 상품 사진을 저장했어요. 원본 사진은 그대로 있어요.';
         if (typeof onClosetUpdated === 'function') onClosetUpdated();
@@ -110,7 +114,37 @@ export function openGarmentDetail(garment, onClosetUpdated, { hasExchangeHistory
       else generatePhoto();
     });
     regeneratePhoto.addEventListener('click', () => generatePhoto(true));
-    photoControls.append(productPhoto, regeneratePhoto);
+    deletePhoto.addEventListener('click', async () => {
+      if (generating) return;
+      if (!window.confirm('AI 상품 사진을 삭제할까요? 원본 사진과 옷 정보는 그대로 있고, 나중에 다시 만들 수 있어요.')) return;
+      generating = true;
+      deletePhoto.disabled = true;
+      message.classList.remove('is-error');
+      try {
+        const response = await fetch(`/api/garments/${id}/product-photo`, { method: 'DELETE' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || 'AI 상품 사진을 삭제하지 못했어요.');
+        productPhotoUrl = null;
+        productPhotoVersion = '';
+        delete garment.productPhotoUrl;
+        delete garment.productPhotoGeneratedAt;
+        productPhoto.textContent = 'AI 상품 사진 만들기';
+        regeneratePhoto.hidden = true;
+        deletePhoto.hidden = true;
+        image.classList.remove('is-product-photo');
+        choice = 1;
+        image.src = `/api/garments/${id}/closet-thumbnail?v=yolo-sam-v3&t=${Date.now()}`;
+        message.textContent = 'AI 상품 사진을 삭제했어요. 원본 사진은 그대로 있어요.';
+        if (typeof onClosetUpdated === 'function') onClosetUpdated();
+      } catch (error) {
+        message.classList.add('is-error');
+        message.textContent = error.message || 'AI 상품 사진을 삭제하지 못했어요.';
+      } finally {
+        generating = false;
+        deletePhoto.disabled = false;
+      }
+    });
+    photoControls.append(productPhoto, regeneratePhoto, deletePhoto);
   }
 
   const info = el('dl', 'garment-detail-info');

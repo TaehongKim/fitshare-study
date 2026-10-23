@@ -19,7 +19,7 @@
   "closetPhotoUrl": "/api/garments/402dea13-847e-5377-bff7-6e353608b0bd/closet-photo",
   "backgroundId": "M4",
   "closetPhotoSource": "provided-garment-only",
-  "thumbnailVersion": 2,
+  "thumbnailVersion": 3,
   "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E488426-000/00?colorDisplayCode=02",
   "sourceCheckedAt": "2026-10-17",
   "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488426/item/goods_02_488426_3x4.jpg?width=600",
@@ -54,5 +54,12 @@
   "genderSource": "not-used-as-restriction",
   "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
   "createdAt": "2026-10-17T00:00:00+09:00",
-  "ownerUsername": "n6"
+  "ownerUsername": "s6",
+  "schoolCode": "나눔초등학교",
+  "garmentTypeCode": "p",
+  "garmentNumber": 4,
+  "donorId": "s6",
+  "garmentCode": "나눔초등학교_p_004_n6",
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3"
 }

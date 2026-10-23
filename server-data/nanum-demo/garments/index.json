@@ -1,5 +1,151 @@
 [
   {
+    "bottomLength": "해당 없음",
+    "seasons": [
+      "봄",
+      "여름",
+      "가을",
+      "겨울"
+    ],
+    "season": "봄",
+    "metadataSources": {
+      "bottomLength": "type-rule",
+      "seasons": "manual",
+      "size": "measurement-rule"
+    },
+    "measurementMethod": "photo-analysis",
+    "id": "a8a1d527-8513-4c9b-8f22-d374afbf80ba",
+    "name": "회색 티셔츠",
+    "category": "top",
+    "gender": "male",
+    "garmentTypeId": 2,
+    "garmentTypeName": "티셔츠",
+    "schoolCode": "나눔초등학교",
+    "ownerName": "나눔선생님",
+    "colorName": "회색",
+    "lengthCm": 70.0,
+    "widthCm": 55.5,
+    "createdAt": "2026-10-23T04:40:11+00:00",
+    "closetPhotoUrl": "/api/garments/a8a1d527-8513-4c9b-8f22-d374afbf80ba/closet-photo",
+    "backgroundId": "M4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
+    "size": "160",
+    "ownerUsername": "t1",
+    "donorId": "t1",
+    "garmentTypeCode": "t",
+    "garmentNumber": 2,
+    "garmentCode": "나눔초등학교_t_002_t1",
+    "productPhotoFile": "product-photo.jpg",
+    "productPhotoUrl": "/api/garments/a8a1d527-8513-4c9b-8f22-d374afbf80ba/product-photo",
+    "productPhotoGeneratedAt": "2026-10-23T05:06:56.013848+00:00"
+  },
+  {
+    "bottomLength": "해당 없음",
+    "seasons": [
+      "봄",
+      "여름"
+    ],
+    "season": "봄",
+    "metadataSources": {
+      "bottomLength": "type-rule",
+      "seasons": "manual",
+      "size": "measurement-rule"
+    },
+    "measurementMethod": "photo-analysis",
+    "id": "9e27147c-a87e-419f-9bd7-454491e4c89d",
+    "name": "회색 상의 외투",
+    "category": "top",
+    "gender": "female",
+    "garmentTypeId": 1,
+    "garmentTypeName": "상의 외투",
+    "schoolCode": "나눔초등학교",
+    "ownerName": "나눔선생님",
+    "colorName": "회색",
+    "lengthCm": 54.4,
+    "widthCm": 55.5,
+    "createdAt": "2026-10-23T04:31:22+00:00",
+    "closetPhotoUrl": "/api/garments/9e27147c-a87e-419f-9bd7-454491e4c89d/closet-photo",
+    "backgroundId": "M4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
+    "size": "130",
+    "ownerUsername": "t1",
+    "donorId": "t1",
+    "garmentTypeCode": "o",
+    "garmentNumber": 19,
+    "garmentCode": "나눔초등학교_o_019_t1"
+  },
+  {
+    "garmentKind": "바지",
+    "sleeveLength": "해당 없음",
+    "metadataSources": {
+      "garmentKind": "type-rule",
+      "sleeveLength": "type-rule",
+      "size": "measurement-rule"
+    },
+    "measurementMethod": "photo-analysis",
+    "id": "1419bc88-8949-472b-88f3-68835cffb0e0",
+    "name": "검정 트레이닝 긴바지",
+    "category": "pants",
+    "gender": "unknown",
+    "garmentTypeId": 5,
+    "garmentTypeName": "바지",
+    "schoolCode": "나눔초등학교",
+    "ownerName": "황다은",
+    "colorName": "검정",
+    "lengthCm": 87.3,
+    "widthCm": 35.1,
+    "createdAt": "2026-10-23T04:10:56+00:00",
+    "closetPhotoUrl": "/api/garments/1419bc88-8949-472b-88f3-68835cffb0e0/closet-photo",
+    "backgroundId": "M4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
+    "size": "160",
+    "ownerUsername": "s16",
+    "donorId": "s16",
+    "garmentTypeCode": "p",
+    "garmentNumber": 18,
+    "garmentCode": "나눔초등학교_p_018_n16"
+  },
+  {
+    "garmentKind": "바지",
+    "sleeveLength": "해당 없음",
+    "bottomLength": "긴바지",
+    "seasons": [],
+    "season": "",
+    "metadataSources": {
+      "garmentKind": "type-rule",
+      "sleeveLength": "type-rule",
+      "bottomLength": "manual",
+      "seasons": "manual",
+      "size": "measurement-rule"
+    },
+    "measurementMethod": "photo-analysis",
+    "id": "b62f5d56-9a5a-4934-9298-4283dd822bcc",
+    "name": "파란색 청바지",
+    "category": "pants",
+    "gender": "unknown",
+    "garmentTypeId": 5,
+    "garmentTypeName": "바지",
+    "schoolCode": "나눔초등학교",
+    "ownerName": "임지안",
+    "colorName": "파랑",
+    "lengthCm": 83.1,
+    "widthCm": 41.4,
+    "createdAt": "2026-10-23T04:09:43+00:00",
+    "closetPhotoUrl": "/api/garments/b62f5d56-9a5a-4934-9298-4283dd822bcc/closet-photo",
+    "backgroundId": "M4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
+    "size": "150",
+    "ownerUsername": "s10",
+    "donorId": "s10",
+    "garmentTypeCode": "p",
+    "garmentNumber": 16,
+    "garmentCode": "나눔초등학교_p_016_n10"
+  },
+  {
     "id": "c8e63526-9811-5b07-8ae0-2e6782bc6f37",
     "name": "AIRism 코튼 스트라이프 크루넥 긴팔 A",
     "category": "top",
@@ -20,7 +166,7 @@
     "closetPhotoUrl": "/api/garments/c8e63526-9811-5b07-8ae0-2e6782bc6f37/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474833-000/00?colorDisplayCode=69",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474833/item/goods_69_474833_3x4.jpg?width=600",
@@ -55,7 +201,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n1"
+    "ownerUsername": "s1",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 2,
+    "donorId": "s1",
+    "garmentCode": "나눔초등학교_o_002_n1",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "90922a31-20ec-5915-9077-9f12ab898d0b",
@@ -78,7 +230,7 @@
     "closetPhotoUrl": "/api/garments/90922a31-20ec-5915-9077-9f12ab898d0b/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474832-000/00?colorDisplayCode=00",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474832/item/goods_00_474832_3x4.jpg?width=600",
@@ -113,7 +265,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n2"
+    "ownerUsername": "s2",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 3,
+    "donorId": "s2",
+    "garmentCode": "나눔초등학교_o_003_n2",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "130cb328-56e7-51c2-a7e5-3acbd67b85d9",
@@ -136,7 +294,7 @@
     "closetPhotoUrl": "/api/garments/130cb328-56e7-51c2-a7e5-3acbd67b85d9/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486992-000/00?colorDisplayCode=11",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486992/item/goods_11_486992_3x4.jpg?width=600",
@@ -171,7 +329,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n3"
+    "ownerUsername": "s3",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 4,
+    "donorId": "s3",
+    "garmentCode": "나눔초등학교_o_004_n3",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "33ddaf0f-1b56-5546-9af3-4d7480fce028",
@@ -194,7 +358,7 @@
     "closetPhotoUrl": "/api/garments/33ddaf0f-1b56-5546-9af3-4d7480fce028/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486637-000/00?colorDisplayCode=64",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486637/item/goods_64_486637_3x4.jpg?width=600",
@@ -229,7 +393,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n4"
+    "ownerUsername": "s4",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 2,
+    "donorId": "s4",
+    "garmentCode": "나눔초등학교_p_002_n4",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "b7e65719-c565-5368-ab09-a9c8f14f8941",
@@ -252,7 +422,7 @@
     "closetPhotoUrl": "/api/garments/b7e65719-c565-5368-ab09-a9c8f14f8941/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486638-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486638/item/goods_09_486638_3x4.jpg?width=600",
@@ -287,7 +457,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n5"
+    "ownerUsername": "s5",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 3,
+    "donorId": "s5",
+    "garmentCode": "나눔초등학교_p_003_n5",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "402dea13-847e-5377-bff7-6e353608b0bd",
@@ -310,7 +486,7 @@
     "closetPhotoUrl": "/api/garments/402dea13-847e-5377-bff7-6e353608b0bd/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E488426-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488426/item/goods_02_488426_3x4.jpg?width=600",
@@ -345,7 +521,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n6"
+    "ownerUsername": "s6",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 4,
+    "donorId": "s6",
+    "garmentCode": "나눔초등학교_p_004_n6",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d",
@@ -368,7 +550,7 @@
     "closetPhotoUrl": "/api/garments/2cd6b58d-8ad6-5f2a-b89f-f2f8d69c7e4d/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E483382-000/00?colorDisplayCode=00",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/483382/item/goods_00_483382_3x4.jpg?width=600",
@@ -403,7 +585,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n7"
+    "ownerUsername": "s7",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 5,
+    "donorId": "s7",
+    "garmentCode": "나눔초등학교_o_005_n7",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "18328287-9b12-50dd-95b7-4c45e066ca24",
@@ -426,7 +614,7 @@
     "closetPhotoUrl": "/api/garments/18328287-9b12-50dd-95b7-4c45e066ca24/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E474703-000/00?colorDisplayCode=67",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/474703/item/goods_67_474703_3x4.jpg?width=600",
@@ -461,7 +649,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n8"
+    "ownerUsername": "s8",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 5,
+    "donorId": "s8",
+    "garmentCode": "나눔초등학교_p_005_n8",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "cb7dd65b-29ea-52b5-88bf-9c694d2577a0",
@@ -484,7 +678,7 @@
     "closetPhotoUrl": "/api/garments/cb7dd65b-29ea-52b5-88bf-9c694d2577a0/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E457729-000/00?colorDisplayCode=64",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/457729/item/goods_64_457729_3x4.jpg?width=600",
@@ -519,7 +713,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n9"
+    "ownerUsername": "s9",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 6,
+    "donorId": "s9",
+    "garmentCode": "나눔초등학교_p_006_n9",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "dc572e61-58c3-5f94-a5f2-704e855cba14",
@@ -542,7 +742,7 @@
     "closetPhotoUrl": "/api/garments/dc572e61-58c3-5f94-a5f2-704e855cba14/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E492992-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492992/item/goods_02_492992_3x4.jpg?width=600",
@@ -577,7 +777,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n10"
+    "ownerUsername": "s10",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 6,
+    "donorId": "s10",
+    "garmentCode": "나눔초등학교_o_006_n10",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "3ad23eeb-65f6-522e-a200-2680ec98b333",
@@ -600,7 +806,7 @@
     "closetPhotoUrl": "/api/garments/3ad23eeb-65f6-522e-a200-2680ec98b333/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E492991-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/492991/item/goods_09_492991_3x4.jpg?width=600",
@@ -635,7 +841,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n11"
+    "ownerUsername": "s11",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 7,
+    "donorId": "s11",
+    "garmentCode": "나눔초등학교_o_007_n11",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1a904ac3-8fcc-57c5-81c0-f3ec4563952f",
@@ -658,7 +870,7 @@
     "closetPhotoUrl": "/api/garments/1a904ac3-8fcc-57c5-81c0-f3ec4563952f/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E487338-000/00?colorDisplayCode=02",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/487338/item/goods_02_487338_3x4.jpg?width=600",
@@ -693,7 +905,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n12"
+    "ownerUsername": "s12",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 8,
+    "donorId": "s12",
+    "garmentCode": "나눔초등학교_o_008_n12",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "a382945d-701c-5070-a1b4-d29dd9545715",
@@ -716,7 +934,7 @@
     "closetPhotoUrl": "/api/garments/a382945d-701c-5070-a1b4-d29dd9545715/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486630-000/00?colorDisplayCode=67",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486630/item/goods_67_486630_3x4.jpg?width=600",
@@ -751,7 +969,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n13"
+    "ownerUsername": "s13",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 7,
+    "donorId": "s13",
+    "garmentCode": "나눔초등학교_p_007_n13",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1a6869a6-e92e-5299-af80-d1403c3113c9",
@@ -774,7 +998,7 @@
     "closetPhotoUrl": "/api/garments/1a6869a6-e92e-5299-af80-d1403c3113c9/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E488163-000/00?colorDisplayCode=03",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/488163/item/goods_03_488163_3x4.jpg?width=600",
@@ -809,7 +1033,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n14"
+    "ownerUsername": "s14",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 8,
+    "donorId": "s14",
+    "garmentCode": "나눔초등학교_p_008_n14",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "929b6f78-0252-5f9f-bf23-43a5e6f09fe2",
@@ -832,7 +1062,7 @@
     "closetPhotoUrl": "/api/garments/929b6f78-0252-5f9f-bf23-43a5e6f09fe2/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E485162-000/00?colorDisplayCode=09",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/485162/item/goods_09_485162_3x4.jpg?width=600",
@@ -867,7 +1097,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n15"
+    "ownerUsername": "s15",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 9,
+    "donorId": "s15",
+    "garmentCode": "나눔초등학교_p_009_n15",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "501811ca-0c9d-5273-b680-9e4afaae8a20",
@@ -890,7 +1126,7 @@
     "closetPhotoUrl": "/api/garments/501811ca-0c9d-5273-b680-9e4afaae8a20/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486658-000/00?colorDisplayCode=61",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486658/item/goods_61_486658_3x4.jpg?width=600",
@@ -925,7 +1161,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n16"
+    "ownerUsername": "s16",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 9,
+    "donorId": "s16",
+    "garmentCode": "나눔초등학교_o_009_n16",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "848f3e95-4f5d-5e62-b110-090674171cf0",
@@ -948,7 +1190,7 @@
     "closetPhotoUrl": "/api/garments/848f3e95-4f5d-5e62-b110-090674171cf0/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478168-000/00?colorDisplayCode=39",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478168/item/goods_39_478168_3x4.jpg?width=600",
@@ -983,7 +1225,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n17"
+    "ownerUsername": "s17",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 10,
+    "donorId": "s17",
+    "garmentCode": "나눔초등학교_o_010_n17",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "1abe21d9-b419-51c6-8155-95284e6728b3",
@@ -1006,7 +1254,7 @@
     "closetPhotoUrl": "/api/garments/1abe21d9-b419-51c6-8155-95284e6728b3/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478141-000/00?colorDisplayCode=30",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478141/item/goods_30_478141_3x4.jpg?width=600",
@@ -1041,7 +1289,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n18"
+    "ownerUsername": "s18",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 11,
+    "donorId": "s18",
+    "garmentCode": "나눔초등학교_o_011_n18",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "f00b7f50-390d-53d0-be8d-dcc8358ac2f3",
@@ -1064,7 +1318,7 @@
     "closetPhotoUrl": "/api/garments/f00b7f50-390d-53d0-be8d-dcc8358ac2f3/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478140-000/00?colorDisplayCode=60",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478140/item/goods_60_478140_3x4.jpg?width=600",
@@ -1099,7 +1353,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n19"
+    "ownerUsername": "s19",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 10,
+    "donorId": "s19",
+    "garmentCode": "나눔초등학교_p_010_n19",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "b4d0523f-8d3a-5f2e-a31a-69aa0977dab7",
@@ -1122,7 +1382,7 @@
     "closetPhotoUrl": "/api/garments/b4d0523f-8d3a-5f2e-a31a-69aa0977dab7/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E478127-000/00?colorDisplayCode=56",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/478127/item/goods_56_478127_3x4.jpg?width=600",
@@ -1157,7 +1417,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n20"
+    "ownerUsername": "s20",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 11,
+    "donorId": "s20",
+    "garmentCode": "나눔초등학교_p_011_n20",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "804bb17d-dfda-5443-96f7-3829627aeaad",
@@ -1180,7 +1446,7 @@
     "closetPhotoUrl": "/api/garments/804bb17d-dfda-5443-96f7-3829627aeaad/closet-photo",
     "backgroundId": "M4",
     "closetPhotoSource": "provided-garment-only",
-    "thumbnailVersion": 2,
+    "thumbnailVersion": 3,
     "sourceUrl": "https://www.uniqlo.com/kr/ko/products/E486629-000/00?colorDisplayCode=68",
     "sourceCheckedAt": "2026-10-17",
     "sourceImageUrl": "https://image.uniqlo.com/UQ/ST3/AsianCommon/imagesgoods/486629/item/goods_68_486629_3x4.jpg?width=600",
@@ -1215,7 +1481,13 @@
     "genderSource": "not-used-as-restriction",
     "description": "추천 개발과 나눔 기능 체험용으로 등록한 옷이에요. 치수와 등록자는 가상 데이터예요.",
     "createdAt": "2026-10-17T00:00:00+09:00",
-    "ownerUsername": "n1"
+    "ownerUsername": "s1",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 12,
+    "donorId": "s1",
+    "garmentCode": "나눔초등학교_p_012_n1",
+    "maskPipelineVersion": "yolo-sam-vit-b-v3"
   },
   {
     "id": "dd37bd04-ef26-4613-863e-e32e6e8af790",
@@ -1231,8 +1503,8 @@
     "createdAt": "2026-10-17T05:06:35+00:00",
     "closetPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/closet-photo",
     "backgroundId": "M4",
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-    "thumbnailVersion": 2,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/dd37bd04-ef26-4613-863e-e32e6e8af790/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:01:42.078587+00:00",
@@ -1252,7 +1524,12 @@
       "bottomLength": "type-rule",
       "size": "measurement-rule"
     },
-    "ownerUsername": "n2"
+    "ownerUsername": "s2",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 12,
+    "donorId": "s2",
+    "garmentCode": "나눔초등학교_o_012_n2"
   },
   {
     "id": "c1e48401-b3fa-4705-b5cf-68bc6fced1d5",
@@ -1265,8 +1542,8 @@
     "lengthCm": 96.5,
     "widthCm": 47.3,
     "createdAt": "2026-10-09T14:01:14+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/c1e48401-b3fa-4705-b5cf-68bc6fced1d5/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:26.001429+00:00",
@@ -1287,7 +1564,12 @@
       "size": "measurement-rule"
     },
     "ownerName": "박하은",
-    "ownerUsername": "n3"
+    "ownerUsername": "s3",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "p",
+    "garmentNumber": 1,
+    "donorId": "s3",
+    "garmentCode": "나눔초등학교_p_001_n3"
   },
   {
     "id": "bc3c665e-77a5-40a9-922a-4ef7083dc482",
@@ -1300,8 +1582,8 @@
     "lengthCm": 63.2,
     "widthCm": 50.1,
     "createdAt": "2026-10-09T14:00:54+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/bc3c665e-77a5-40a9-922a-4ef7083dc482/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:05:12.184390+00:00",
@@ -1322,7 +1604,12 @@
       "size": "measurement-rule"
     },
     "ownerName": "최서준",
-    "ownerUsername": "n4"
+    "ownerUsername": "s4",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "j",
+    "garmentNumber": 1,
+    "donorId": "s4",
+    "garmentCode": "나눔초등학교_j_001_n4"
   },
   {
     "id": "3f55b205-6950-4cb1-bfb4-4be12aeed819",
@@ -1335,8 +1622,8 @@
     "lengthCm": 69.4,
     "widthCm": 37.2,
     "createdAt": "2026-10-09T14:00:30+00:00",
-    "thumbnailVersion": 2,
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
+    "thumbnailVersion": 3,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/product-photo",
     "productPhotoGeneratedAt": "2026-10-17T07:03:18.576657+00:00",
@@ -1357,7 +1644,12 @@
       "size": "measurement-rule"
     },
     "ownerName": "정지우",
-    "ownerUsername": "n5"
+    "ownerUsername": "s5",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "d",
+    "garmentNumber": 1,
+    "donorId": "s5",
+    "garmentCode": "나눔초등학교_d_001_n5"
   },
   {
     "id": "bf359ba8-8f62-4a15-9fea-6fa40d948ee9",
@@ -1370,8 +1662,8 @@
     "lengthCm": 46.8,
     "widthCm": 53.8,
     "createdAt": "2026-10-09T13:59:58+00:00",
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-    "thumbnailVersion": 2,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/product-photo",
@@ -1395,9 +1687,14 @@
       "size": "measurement-rule"
     },
     "ownerName": "강서아",
-    "ownerUsername": "n6",
+    "ownerUsername": "s6",
     "closetPhotoUrl": "/api/garments/bf359ba8-8f62-4a15-9fea-6fa40d948ee9/closet-photo",
-    "season": "여름"
+    "season": "여름",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "t",
+    "garmentNumber": 1,
+    "donorId": "s6",
+    "garmentCode": "나눔초등학교_t_001_n6"
   },
   {
     "id": "7534003a-a7f0-4bd6-aa78-a12112a9cec7",
@@ -1410,8 +1707,8 @@
     "lengthCm": 64.8,
     "widthCm": 53.8,
     "createdAt": "2026-10-09T13:59:24+00:00",
-    "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-    "thumbnailVersion": 2,
+    "maskPipelineVersion": "yolo-sam-vit-b-v3",
+    "thumbnailVersion": 3,
     "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
     "productPhotoFile": "product-photo.jpg",
     "productPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/product-photo",
@@ -1435,8 +1732,13 @@
       "size": "measurement-rule"
     },
     "ownerName": "조이준",
-    "ownerUsername": "n7",
+    "ownerUsername": "s7",
     "closetPhotoUrl": "/api/garments/7534003a-a7f0-4bd6-aa78-a12112a9cec7/closet-photo",
-    "season": "가을"
+    "season": "가을",
+    "schoolCode": "나눔초등학교",
+    "garmentTypeCode": "o",
+    "garmentNumber": 1,
+    "donorId": "s7",
+    "garmentCode": "나눔초등학교_o_001_n7"
   }
 ]

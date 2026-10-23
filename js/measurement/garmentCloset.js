@@ -8,7 +8,7 @@ import { loadState, pullState, subscribe } from '../../modules/rankingStore.js';
 const PAGE_SIZE = 12;
 const GARMENT_TYPES = [
   { id: 1, name: '상의 외투' },
-  { id: 2, name: '크롭 티셔츠' },
+  { id: 2, name: '티셔츠' },
   { id: 3, name: '원피스' },
   { id: 4, name: '점퍼' },
   { id: 5, name: '바지' },
@@ -55,7 +55,7 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
     else updateShareStatuses();
   });
 
-  async function reload() {
+  async function reload(prioritizeId = null) {
     status.textContent = '옷 목록을 불러오고 있어요.';
     list.replaceChildren();
     pagination.replaceChildren();
@@ -66,6 +66,8 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
       garments = (Array.isArray(result) ? result : [])
         .map((garment, index) => ({ garment, index, createdAt: Date.parse(garment.createdAt) }))
         .sort((a, b) => {
+          if (prioritizeId && a.garment.id === prioritizeId) return -1;
+          if (prioritizeId && b.garment.id === prioritizeId) return 1;
           const aValid = Number.isFinite(a.createdAt);
           const bValid = Number.isFinite(b.createdAt);
           if (aValid && bValid && a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
@@ -75,7 +77,9 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
         .map(({ garment }) => garment);
       sharingState = loadState();
       const visibleGarments = getVisibleGarments();
-      currentPage = Math.min(currentPage, Math.max(0, Math.ceil(visibleGarments.length / PAGE_SIZE) - 1));
+      currentPage = prioritizeId
+        ? 0
+        : Math.min(currentPage, Math.max(0, Math.ceil(visibleGarments.length / PAGE_SIZE) - 1));
       render();
     } catch (error) {
       status.textContent = error.message || '옷장 서버에 연결하지 못했어요.';
@@ -144,7 +148,7 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
     function showCleanPhoto() {
       const id = encodeURIComponent(garment.id);
       const choices = [
-        `/api/garments/${id}/thumbnail?v=image-priority-1`,
+        `/api/garments/${id}/thumbnail?v=product-yolo-priority-3&g=${encodeURIComponent(garment.productPhotoGeneratedAt || 'none')}`,
         `/api/garments/${id}/closet-photo`,
         `/api/garments/${id}/photo`
       ];

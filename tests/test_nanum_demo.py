@@ -55,14 +55,14 @@ class NanumDemoSeedTests(unittest.TestCase):
         store = AccountStore(self.destination)
         for credential in credentials:
             number = int(credential['username'][1:])
-            self.assertEqual(credential['username'], f'n{number}')
-            self.assertEqual(credential['password'], credential['username'])
+            self.assertEqual(credential['username'], f's{number}')
+            self.assertEqual(credential['password'], '111')
             user = store.login(credential['username'], credential['password'])
             self.assertEqual(user['role'], 'student')
             self.assertEqual(user['name'], REALISTIC_STUDENT_NAMES[number - 1])
         items = json.loads((self.destination / 'garments' / 'index.json').read_text(encoding='utf-8'))
         self.assertEqual(len(items), 20)
-        self.assertEqual({item['ownerUsername'] for item in items}, {f'n{n}' for n in range(1, 21)})
+        self.assertEqual({item['ownerUsername'] for item in items}, {f's{n}' for n in range(1, 21)})
         ranking = json.loads((self.destination / 'ranking.json').read_text(encoding='utf-8'))['state']
         self.assertEqual(len(ranking['users']), 20)
         self.assertEqual([user['name'] for user in ranking['users']], REALISTIC_STUDENT_NAMES)
@@ -102,11 +102,11 @@ class NanumDemoSeedTests(unittest.TestCase):
     def test_existing_demo_names_match_across_accounts_ranking_and_garments(self):
         demo = Path(__file__).resolve().parents[1] / 'server-data' / 'nanum-demo'
         with (demo / 'demo-accounts.csv').open(encoding='utf-8-sig', newline='') as stream:
-            students = [row for row in csv.DictReader(stream) if row['username'].startswith('n')]
+            students = [row for row in csv.DictReader(stream) if row['username'].startswith('s')]
         self.assertEqual([row['name'] for row in students], REALISTIC_STUDENT_NAMES)
 
         accounts = json.loads((demo / 'accounts.json').read_text(encoding='utf-8'))
-        self.assertEqual([accounts[f'n{i}']['name'] for i in range(1, 21)], REALISTIC_STUDENT_NAMES)
+        self.assertEqual([accounts[f's{i}']['name'] for i in range(1, 21)], REALISTIC_STUDENT_NAMES)
         ranking = json.loads((demo / 'ranking.json').read_text(encoding='utf-8'))['state']
         ranked_students = [user for user in ranking['users'] if user['id'] != 'u21']
         self.assertEqual([user['name'] for user in ranked_students], REALISTIC_STUDENT_NAMES)

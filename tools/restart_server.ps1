@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$IPAddress,
     [ValidateRange(1, 65535)][int]$HttpPort = 8001,
@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if ($HttpPort -eq $HttpsPort) {
-    throw 'HTTP and HTTPS ports must be different.'
+    throw 'HTTP 포트와 HTTPS 포트는 서로 달라야 합니다.'
 }
 
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -35,7 +35,7 @@ if (-not $IPAddress) {
             }
         }
         if (-not $savedAddressIsActive) {
-            Write-Warning "Saved FitShare IP $savedAddress is no longer active. Selecting an active private IPv4 address automatically."
+            Write-Warning "저장된 FitShare IP 주소 $savedAddress 는 더 이상 활성 네트워크에 없습니다. 사용 가능한 사설 IPv4 주소를 자동으로 선택합니다."
             $IPAddress = $null
         } else {
             $IPAddress = $savedAddress
@@ -65,7 +65,7 @@ if (-not $IPAddress) {
     if ($address) { $IPAddress = $address.IPAddress }
 }
 if (-not $IPAddress) {
-    throw 'Could not find an active private IPv4 address (10.x, 172.16-31.x, or 192.168.x). Connect to Wi-Fi/Ethernet or supply -IPAddress explicitly.'
+    throw '활성 사설 IPv4 주소(10.x, 172.16~31.x, 192.168.x)를 찾지 못했어요. Wi-Fi 또는 이더넷에 연결하거나 -IPAddress 옵션에 주소를 지정해 주세요.'
 }
 
 $setupScript = Join-Path $PSScriptRoot 'setup_lan_https.ps1'
@@ -76,7 +76,7 @@ $setupParameters = @{
 if ($Force) { $setupParameters.Force = $true }
 & $setupScript @setupParameters
 if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
-    throw 'LAN HTTPS certificate setup failed. The existing server has not been stopped.'
+    throw '로컬 네트워크 HTTPS 인증서를 준비하지 못했어요. 기존 서버는 중지하지 않았습니다.'
 }
 
 if (-not $PythonPath) {
@@ -84,7 +84,7 @@ if (-not $PythonPath) {
     if ($pythonCommand) { $PythonPath = $pythonCommand.Source }
 }
 if (-not $PythonPath -or -not (Test-Path -LiteralPath $PythonPath)) {
-    throw 'python.exe was not found. Supply its full path with -PythonPath.'
+    throw 'python.exe를 찾지 못했어요. -PythonPath 옵션에 실행 파일의 전체 경로를 지정해 주세요.'
 }
 
 function Get-PortOwnerIds([int]$Port) {
@@ -118,7 +118,7 @@ foreach ($ownerId in $owners) {
         $owner.CommandLine -match '(?i)(?:^|\s|\\)server\.py(?:"|\s|$)'
     $matchesProjectServer = $isPythonServer -and $owner.CommandLine -match $serverScriptPattern
     if (-not $isPythonServer -or ($managedPid -ne [int]$owner.ProcessId -and -not $matchesProjectServer)) {
-        throw "Port $port is occupied by PID $ownerId ($($owner.Name)), not a managed FitShare server. No processes were stopped."
+        throw "포트 $port 을(를) PID $ownerId ($($owner.Name)) 프로세스가 사용 중이고 FitShare 서버가 아닙니다. 어떤 프로세스도 종료하지 않았어요."
     }
     $processesToStop += $owner
 }
@@ -140,7 +140,7 @@ foreach ($port in @($HttpPort, $HttpsPort)) {
     $stillRunning += Get-PortOwnerIds $port
 }
 if (@($stillRunning | Where-Object { $_ -in $owners }).Count -gt 0) {
-    throw 'The old FitShare process did not release its listening ports in time.'
+    throw '기존 FitShare 프로세스가 제한 시간 안에 포트를 해제하지 않았어요.'
 }
 
 New-Item -ItemType Directory -Path $resolvedDataDir -Force | Out-Null
@@ -197,14 +197,14 @@ if (-not $httpReady -or -not $httpsReady) {
     }
     $logTail = @()
     if (Test-Path -LiteralPath $stderrLog) { $logTail = Get-Content -LiteralPath $stderrLog -Tail 20 }
-    throw ("FitShare did not start on both ports. See {0}{1}{2}" -f $stderrLog, [Environment]::NewLine, ($logTail -join [Environment]::NewLine))
+    throw ("FitShare 서버가 두 포트에서 시작되지 않았어요. 로그를 확인해 주세요: {0}{1}{2}" -f $stderrLog, [Environment]::NewLine, ($logTail -join [Environment]::NewLine))
 }
 
-Write-Output "Stopped FitShare process IDs: $($owners -join ', ')"
+Write-Output "중지한 FitShare 프로세스 ID: $($owners -join ', ')"
 Set-Content -LiteralPath $ipFile -Value $IPAddress -NoNewline
 Set-Content -LiteralPath $pidFile -Value $newProcess.Id -NoNewline
-Write-Output "Started FitShare server PID: $($newProcess.Id)"
-Write-Output ("HTTP URL: http://{0}:{1}/" -f $IPAddress, $HttpPort)
-Write-Output ("HTTPS URL: https://{0}:{1}/" -f $IPAddress, $HttpsPort)
-Write-Output ("CA download URL: http://{0}:{1}/api/demo-ca" -f $IPAddress, $HttpPort)
-Write-Output "Server logs: $stdoutLog and $stderrLog"
+Write-Output "FitShare 서버가 실행 중이에요. 프로세스 ID: $($newProcess.Id)"
+Write-Output ("접속 주소 (HTTP): http://{0}:{1}/" -f $IPAddress, $HttpPort)
+Write-Output ("접속 주소 (HTTPS): https://{0}:{1}/" -f $IPAddress, $HttpsPort)
+Write-Output ("인증서 다운로드 주소: http://{0}:{1}/api/demo-ca" -f $IPAddress, $HttpPort)
+Write-Output "서버 로그 파일: $stdoutLog 및 $stderrLog"

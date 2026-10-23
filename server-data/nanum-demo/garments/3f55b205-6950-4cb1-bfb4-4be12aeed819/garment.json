@@ -9,13 +9,12 @@
   "lengthCm": 69.4,
   "widthCm": 37.2,
   "createdAt": "2026-10-09T14:00:30+00:00",
-  "photoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/photo",
-  "maskPipelineVersion": "round7-848-yolo-grabcut-v1",
-  "thumbnailVersion": 2,
-  "productMaskPipelineVersion": "yolo-sam-vit-b-v1",
+  "thumbnailVersion": 3,
+  "maskPipelineVersion": "yolo-sam-vit-b-v3",
   "productPhotoFile": "product-photo.jpg",
   "productPhotoUrl": "/api/garments/3f55b205-6950-4cb1-bfb4-4be12aeed819/product-photo",
   "productPhotoGeneratedAt": "2026-10-17T07:03:18.576657+00:00",
+  "productMaskPipelineVersion": "yolo-sam-vit-b-v3",
   "size": "130",
   "style": "",
   "condition": "",
@@ -32,5 +31,10 @@
     "size": "measurement-rule"
   },
   "ownerName": "정지우",
-  "ownerUsername": "n5"
+  "ownerUsername": "s5",
+  "schoolCode": "나눔초등학교",
+  "garmentTypeCode": "d",
+  "garmentNumber": 1,
+  "donorId": "s5",
+  "garmentCode": "나눔초등학교_d_001_n5"
 }

@@ -6,6 +6,38 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RegistrationPageTests(unittest.TestCase):
+    def test_saved_garment_is_refreshed_to_the_first_registration_list_position(self):
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        closet = (ROOT / 'js' / 'measurement' / 'garmentCloset.js').read_text(encoding='utf-8')
+
+        self.assertIn('await loadGarments(saved.id);', registration)
+        self.assertIn('async function loadGarments(prioritizeId)', registration)
+        self.assertIn('reload(prioritizeId)', registration)
+        self.assertIn('async function reload(prioritizeId = null)', closet)
+        self.assertIn('if (prioritizeId && a.garment.id === prioritizeId) return -1;', closet)
+        self.assertIn('if (prioritizeId && b.garment.id === prioritizeId) return 1;', closet)
+        self.assertIn('register.js?v=progress-1', (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8'))
+
+    def test_garment_type_two_is_labeled_as_tshirt_in_registration_and_catalog(self):
+        registration = (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8')
+        closet = (ROOT / 'js' / 'measurement' / 'garmentCloset.js').read_text(encoding='utf-8')
+        server = (ROOT / 'server.py').read_text(encoding='utf-8')
+
+        self.assertIn('<option value="2">2. 티셔츠</option>', registration)
+        self.assertNotIn('<option value="2">2. 크롭 티셔츠</option>', registration)
+        self.assertIn("{ id: 2, name: '티셔츠' }", closet)
+        self.assertIn("2: '티셔츠'", server)
+
+    def test_closet_thumbnail_priority_is_product_then_yolo_sam_cutout(self):
+        closet = (ROOT / 'js' / 'measurement' / 'garmentCloset.js').read_text(encoding='utf-8')
+        detail = (ROOT / 'modules' / 'garmentDetail.js').read_text(encoding='utf-8')
+        product_first = '/thumbnail?v=product-yolo-priority-3'
+        closet_cutout = '/closet-thumbnail?v=yolo-sam-v3'
+        self.assertIn(product_first, closet)
+        self.assertLess(detail.index(product_first), detail.index(closet_cutout))
+        app = (ROOT / 'index.html').read_text(encoding='utf-8')
+        self.assertIn('app.js?v=garment-codes-3', app)
+
     def test_school_closet_offers_available_and_all_garment_filters(self):
         html = (ROOT / 'index.html').read_text(encoding='utf-8')
         closet = (ROOT / 'js/measurement/garmentCloset.js').read_text(encoding='utf-8')
@@ -56,6 +88,40 @@ class RegistrationPageTests(unittest.TestCase):
         self.assertIn('playsinline', parser.items['camera-video'][1])
         self.assertIn('hidden', parser.items['camera-panel'][1])
         self.assertEqual(parser.items['gallery-photo'][1]['type'], 'file')
+
+    def test_gallery_picker_has_explicit_tablet_friendly_button(self):
+        from html.parser import HTMLParser
+
+        class Elements(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.items = {}
+
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if 'id' in values:
+                    self.items[values['id']] = (tag, values)
+
+        parser = Elements()
+        parser.feed((ROOT / 'measure' / 'register.html').read_text(encoding='utf-8'))
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        self.assertEqual(parser.items['choose-gallery-photo'][0], 'button')
+        self.assertEqual(parser.items['gallery-photo'][0], 'input')
+        self.assertIn("'#choose-gallery-photo'", registration)
+
+    def test_gallery_button_opens_native_file_picker_from_user_tap(self):
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        self.assertIn("document.querySelector('#choose-gallery-photo').addEventListener('click'", registration)
+        self.assertIn('galleryInput.click()', registration)
+
+    def test_cancelled_gallery_picker_does_not_process_an_empty_selection(self):
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        self.assertIn('if (!selectedFile) return;', registration)
+
+    def test_gallery_picker_resets_input_to_allow_reselecting_same_photo(self):
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        self.assertIn("input.value = ''", registration)
+        self.assertIn('const selectedFile = input.files?.[0]', registration)
 
     def test_school_code_is_prefilled_and_selected_for_easy_replacement(self):
         html = (ROOT / 'index.html').read_text(encoding='utf-8')

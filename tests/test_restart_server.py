@@ -22,9 +22,23 @@ class RestartLauncherTests(unittest.TestCase):
     def test_path_command_dispatches_to_the_one_click_launcher(self):
         command = PATH_COMMAND.read_text(encoding='ascii')
 
-        self.assertIn('"%~dp0tools\\restart_server.ps1"', command)
+        self.assertIn('chcp 65001 >nul', command)
+        self.assertIn('"%~dp0tools\\restart_server_launcher.ps1"', command)
         self.assertIn('%*', command)
         self.assertIn('pause', command.lower())
+
+    def test_launcher_uses_utf8_console_and_korean_status_messages(self):
+        helper = (ROOT / 'tools' / 'restart_server_launcher.ps1').read_text(encoding='utf-8-sig')
+        self.assertIn('[Console]::OutputEncoding', helper)
+        self.assertIn('FitShare 서버를 재시작하고 있어요', helper)
+        self.assertIn('FitShare 서버가 실행 중이에요', helper)
+        self.assertIn('FitShare 서버를 다시 시작하지 못했어요', helper)
+
+    def test_restart_script_prints_urls_and_completion_in_korean(self):
+        script = RESTART_SCRIPT.read_text(encoding='utf-8-sig')
+        self.assertIn('FitShare 서버가 실행 중이에요', script)
+        self.assertIn('접속 주소 (HTTP)', script)
+        self.assertIn('접속 주소 (HTTPS)', script)
 
     def test_one_click_launcher_calls_the_managed_restart_script_and_keeps_window_open(self):
         launcher = ONE_CLICK_LAUNCHER.read_text(encoding='ascii')
@@ -89,7 +103,7 @@ class RestartServerScriptTests(unittest.TestCase):
         self.assertIsNotNone(executable, 'Windows PowerShell is required for this integration test.')
         return subprocess.run(
             [executable, '-NoProfile', '-ExecutionPolicy', 'Bypass', *map(str, args)],
-            cwd=ROOT, capture_output=True, text=True, timeout=40,
+            cwd=ROOT, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=40,
         )
 
     def create_certificate(self, data_dir):

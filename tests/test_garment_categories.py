@@ -20,6 +20,10 @@ class GarmentCategoryTests(unittest.TestCase):
         self.assertEqual(width_kind, 'waist')
         self.assertEqual(_category_classes(6, 'skirt'), {6, 7, 8})
 
+    def test_shorts_detection_uses_the_deepfashion_shorts_class(self):
+        self.assertEqual(_category_classes(5, 'shorts'), {6})
+        self.assertEqual(_category_classes(5, 'pants'), {6, 7})
+
 
 if __name__ == '__main__':
     unittest.main()
