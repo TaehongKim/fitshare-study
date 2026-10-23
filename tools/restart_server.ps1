@@ -5,7 +5,8 @@ param(
     [ValidateRange(1, 65535)][int]$HttpsPort = 8443,
     [string]$DataDir = 'server-data\nanum-demo',
     [string]$PythonPath,
-    [ValidateRange(1, 120)][int]$ReadyTimeoutSeconds = 20
+    [ValidateRange(1, 120)][int]$ReadyTimeoutSeconds = 20,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,7 +47,12 @@ if (-not $IPAddress) {
 }
 
 $setupScript = Join-Path $PSScriptRoot 'setup_lan_https.ps1'
-& $setupScript -IPAddress $IPAddress -DataDir $resolvedDataDir
+$setupParameters = @{
+    IPAddress = $IPAddress
+    DataDir = $resolvedDataDir
+}
+if ($Force) { $setupParameters.Force = $true }
+& $setupScript @setupParameters
 if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
     throw 'LAN HTTPS certificate setup failed. The existing server has not been stopped.'
 }

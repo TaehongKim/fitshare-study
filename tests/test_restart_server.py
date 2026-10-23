@@ -39,6 +39,14 @@ class RestartLauncherTests(unittest.TestCase):
         self.assertIn('172\\.(1[6-9]|2\\d|3[01])', script)
         self.assertIn('HasDefaultGateway', script)
 
+    def test_restart_script_passes_force_to_certificate_setup_when_requested(self):
+        script = RESTART_SCRIPT.read_text(encoding='utf-8')
+
+        self.assertIn('[switch]$Force', script)
+        self.assertIn('IPAddress = $IPAddress', script)
+        self.assertIn('DataDir = $resolvedDataDir', script)
+        self.assertIn('if ($Force) { $setupParameters.Force = $true }', script)
+
 
 @unittest.skipUnless(os.name == 'nt', 'The restart script controls Windows processes.')
 class RestartServerScriptTests(unittest.TestCase):
@@ -59,6 +67,42 @@ class RestartServerScriptTests(unittest.TestCase):
         result = self.powershell('-File', SETUP_SCRIPT, '-IPAddress', '127.0.0.1', '-DataDir', data_dir)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return data_dir / 'certs' / 'fitshare-demo-ca.crt'
+
+    def test_setup_refreshes_server_certificate_for_new_ip_and_preserves_demo_ca(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            data_dir = Path(temp_dir)
+            ca_path = self.create_certificate(data_dir)
+            original_ca = ca_path.read_bytes()
+            server_certificate = data_dir / 'certs' / 'fitshare-demo-server.crt'
+            program_files = Path(os.environ.get('ProgramFiles', r'C:\Program Files'))
+            openssl_candidates = (
+                program_files / 'Git' / 'usr' / 'bin' / 'openssl.exe',
+                program_files / 'Git' / 'mingw64' / 'bin' / 'openssl.exe',
+            )
+            openssl = next((str(path) for path in openssl_candidates if path.exists()), None)
+            openssl = openssl or shutil.which('openssl.exe') or shutil.which('openssl')
+            self.assertIsNotNone(openssl, 'OpenSSL is required to inspect demo certificates.')
+
+            result = self.powershell(
+                '-File', SETUP_SCRIPT, '-IPAddress', '127.0.0.2', '-DataDir', data_dir
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(ca_path.read_bytes(), original_ca)
+            self.assertEqual(
+                subprocess.run(
+                    [openssl, 'x509', '-in', server_certificate, '-checkip', '127.0.0.2', '-noout'],
+                    capture_output=True, text=True,
+                ).returncode,
+                0,
+            )
+            self.assertEqual(
+                subprocess.run(
+                    [openssl, 'verify', '-CAfile', ca_path, server_certificate],
+                    capture_output=True, text=True,
+                ).returncode,
+                0,
+            )
 
     def start_fitshare(self, data_dir, http_port, https_port):
         env = os.environ.copy()
@@ -104,6 +148,7 @@ class RestartServerScriptTests(unittest.TestCase):
         self.addCleanup(folder.cleanup)
         data_dir = Path(folder.name)
         ca_file = self.create_certificate(data_dir)
+        original_ca = ca_file.read_bytes()
         http_port, https_port = self.free_port(), self.free_port()
         old = self.start_fitshare(data_dir, http_port, https_port)
         self.wait_for_http(http_port)
@@ -112,7 +157,7 @@ class RestartServerScriptTests(unittest.TestCase):
         executable = shutil.which('powershell.exe') or shutil.which('powershell')
         result = subprocess.run(
             [executable, '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', str(RESTART_SCRIPT),
-             '-IPAddress', '127.0.0.1', '-HttpPort', str(http_port), '-HttpsPort', str(https_port),
+             '-IPAddress', '127.0.0.2', '-HttpPort', str(http_port), '-HttpsPort', str(https_port),
              '-DataDir', str(data_dir), '-PythonPath', sys.executable],
             cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=40,
         )
@@ -121,10 +166,11 @@ class RestartServerScriptTests(unittest.TestCase):
         new_pid = int((data_dir / 'fitshare-server.pid').read_text(encoding='ascii'))
         self.addCleanup(self.stop_pid, new_pid)
         self.assertNotEqual(new_pid, old.pid)
+        self.assertEqual(ca_file.read_bytes(), original_ca)
         old.wait(timeout=5)
         self.wait_for_http(http_port)
         context = ssl.create_default_context(cafile=str(ca_file))
-        connection = http.client.HTTPSConnection('127.0.0.1', https_port, context=context, timeout=3)
+        connection = http.client.HTTPSConnection('127.0.0.2', https_port, context=context, timeout=3)
         connection.request('GET', '/api/auth/me')
         response = connection.getresponse()
         response.read()

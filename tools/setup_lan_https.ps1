@@ -45,6 +45,43 @@ if (-not $OpenSslPath -or -not (Test-Path -LiteralPath $OpenSslPath)) {
     throw 'OpenSSL was not found. Git for Windows includes openssl.exe.'
 }
 
+function Invoke-OpenSsl([string[]]$Arguments) {
+    & $OpenSslPath @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "OpenSSL command failed: openssl $($Arguments -join ' ')"
+    }
+}
+
+function New-DemoServerCertificate([string]$Address) {
+    $serverCsr = Join-Path $certificateDirectory 'fitshare-demo-server.csr'
+    $extensionsPath = Join-Path $certificateDirectory 'fitshare-demo-extensions.cnf'
+    Invoke-OpenSsl @(
+        'req', '-new', '-newkey', 'rsa:2048', '-nodes',
+        '-keyout', $serverKey,
+        '-out', $serverCsr,
+        '-subj', "/CN=$Address"
+    )
+
+    @"
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+subjectAltName=IP:$Address
+authorityKeyIdentifier=keyid,issuer
+"@ | Set-Content -LiteralPath $extensionsPath -Encoding ASCII
+
+    Invoke-OpenSsl @(
+        'x509', '-req',
+        '-in', $serverCsr,
+        '-CA', $caCertificate, '-CAkey', $caKey, '-CAcreateserial',
+        '-out', $serverCertificate, '-days', '365', '-sha256',
+        '-extfile', $extensionsPath
+    )
+    Remove-Item -LiteralPath $serverCsr, $extensionsPath -Force
+    $serial = Join-Path $certificateDirectory 'fitshare-demo-ca.srl'
+    if (Test-Path -LiteralPath $serial) { Remove-Item -LiteralPath $serial -Force }
+}
+
 New-Item -ItemType Directory -Path $certificateDirectory -Force | Out-Null
 $existingFiles = @($caKey, $caCertificate, $serverKey, $serverCertificate) |
     Where-Object { Test-Path -LiteralPath $_ }
@@ -61,25 +98,31 @@ if ($existingFiles.Count -eq 4 -and -not $Force) {
         Write-Output 'Before trusting the CA, compare its SHA-256 fingerprint on the phone with the value printed above.'
         return
     }
-    throw 'Existing demo certificates target a different IP. Re-run with -Force to replace only these demo certificate files.'
+    Write-Output "IP $IPAddress does NOT match the existing server certificate; renewing only the server certificate and preserving the demo CA."
+    New-DemoServerCertificate $IPAddress
+    $fingerprint = (& $OpenSslPath x509 -in $caCertificate -noout -fingerprint -sha256) -join ''
+    Write-Output "LAN IP: $IPAddress"
+    Write-Output "HTTPS server certificate: $serverCertificate"
+    Write-Output "HTTPS server private key: $serverKey"
+    Write-Output ("Phone CA download: http://{0}:8001/api/demo-ca" -f $IPAddress)
+    Write-Output ("FitShare HTTPS URL: https://{0}:8443/" -f $IPAddress)
+    Write-Output "CA fingerprint: $fingerprint"
+    Write-Output 'The existing demo CA was preserved, so a previously trusted CA does not need to be installed again.'
+    return
 }
 if ($existingFiles.Count -gt 0 -and -not $Force) {
     throw 'Some demo certificate files already exist. Re-run with -Force to replace only the listed demo certificate files.'
 }
 if ($Force) {
+    if ($existingFiles.Count -gt 0) {
+        Write-Warning 'Force replaces the demo CA and server certificate; reinstall the downloaded CA on phones that use HTTPS camera access.'
+    }
     @($caKey, $caCertificate, $serverKey, $serverCertificate,
       (Join-Path $certificateDirectory 'fitshare-demo-server.csr'),
       (Join-Path $certificateDirectory 'fitshare-demo-extensions.cnf'),
       (Join-Path $certificateDirectory 'fitshare-demo-ca.srl')) |
         Where-Object { Test-Path -LiteralPath $_ } |
         ForEach-Object { Remove-Item -LiteralPath $_ -Force }
-}
-
-function Invoke-OpenSsl([string[]]$Arguments) {
-    & $OpenSslPath @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "OpenSSL command failed: openssl $($Arguments -join ' ')"
-    }
 }
 
 Invoke-OpenSsl @(
@@ -89,33 +132,7 @@ Invoke-OpenSsl @(
     '-addext', 'basicConstraints=critical,CA:TRUE',
     '-addext', 'keyUsage=critical,keyCertSign,cRLSign'
 )
-Invoke-OpenSsl @(
-    'req', '-new', '-newkey', 'rsa:2048', '-nodes',
-    '-keyout', $serverKey,
-    '-out', (Join-Path $certificateDirectory 'fitshare-demo-server.csr'),
-    '-subj', "/CN=$IPAddress"
-)
-
-$extensionsPath = Join-Path $certificateDirectory 'fitshare-demo-extensions.cnf'
-@"
-basicConstraints=critical,CA:FALSE
-keyUsage=critical,digitalSignature,keyEncipherment
-extendedKeyUsage=serverAuth
-subjectAltName=IP:$IPAddress
-authorityKeyIdentifier=keyid,issuer
-"@ | Set-Content -LiteralPath $extensionsPath -Encoding ASCII
-
-Invoke-OpenSsl @(
-    'x509', '-req',
-    '-in', (Join-Path $certificateDirectory 'fitshare-demo-server.csr'),
-    '-CA', $caCertificate, '-CAkey', $caKey, '-CAcreateserial',
-    '-out', $serverCertificate, '-days', '365', '-sha256',
-    '-extfile', $extensionsPath
-)
-Remove-Item -LiteralPath (Join-Path $certificateDirectory 'fitshare-demo-server.csr'),
-    $extensionsPath -Force
-$serial = Join-Path $certificateDirectory 'fitshare-demo-ca.srl'
-if (Test-Path -LiteralPath $serial) { Remove-Item -LiteralPath $serial -Force }
+New-DemoServerCertificate $IPAddress
 
 $fingerprint = (& $OpenSslPath x509 -in $caCertificate -noout -fingerprint -sha256) -join ''
 Write-Output "LAN IP: $IPAddress"
