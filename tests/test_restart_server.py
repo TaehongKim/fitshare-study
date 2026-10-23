@@ -56,6 +56,20 @@ class RestartLauncherTests(unittest.TestCase):
         self.assertIn("$ipInterface.ConnectionState -eq 'Connected'", script)
         self.assertIn('Set-Content -LiteralPath $ipFile -Value $IPAddress', script)
 
+    def test_restart_script_falls_back_to_active_private_ip_when_saved_ip_is_stale(self):
+        script = RESTART_SCRIPT.read_text(encoding='utf-8')
+
+        stale_ip_check = script.index('if (-not $savedAddressIsActive)')
+        auto_select = script.index('if (-not $IPAddress) {', stale_ip_check)
+        stale_ip_branch = script[stale_ip_check:auto_select]
+
+        self.assertIn('$IPAddress = $null', stale_ip_branch)
+        self.assertNotIn('throw ', stale_ip_branch)
+        self.assertIn('Get-NetIPConfiguration', script[auto_select:])
+        self.assertIn('10\\.\\d{1,3}', script)
+        self.assertIn('172\\.(1[6-9]|2\\d|3[01])', script)
+        self.assertIn('192\\.168\\.', script)
+
     def test_restart_script_can_identify_this_projects_server_when_pid_file_is_stale(self):
         script = RESTART_SCRIPT.read_text(encoding='utf-8')
 

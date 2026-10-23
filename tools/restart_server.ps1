@@ -35,9 +35,11 @@ if (-not $IPAddress) {
             }
         }
         if (-not $savedAddressIsActive) {
-            throw "The saved FitShare IP $savedAddress is not assigned to an active adapter. Reserve this IP in the router or pass -IPAddress to select a new one."
+            Write-Warning "Saved FitShare IP $savedAddress is no longer active. Selecting an active private IPv4 address automatically."
+            $IPAddress = $null
+        } else {
+            $IPAddress = $savedAddress
         }
-        $IPAddress = $savedAddress
     }
 }
 
