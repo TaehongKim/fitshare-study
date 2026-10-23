@@ -12,7 +12,8 @@ const GARMENT_TYPES = [
   { id: 3, name: '원피스' },
   { id: 4, name: '점퍼' },
   { id: 5, name: '바지' },
-  { id: 6, name: '치마' }
+  { id: 6, name: '치마' },
+  { id: 7, name: '기타' }
 ];
 const GENDER_OPTIONS = [
   { id: 'unknown', name: '모름' },
@@ -167,6 +168,10 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
 
     const title = document.createElement('strong');
     title.textContent = garment.name;
+    const itemCode = document.createElement('span');
+    itemCode.className = 'closet-item-code';
+    itemCode.textContent = garment.garmentTypeCode && garment.garmentNumber
+      ? `${garment.garmentTypeCode}_${String(garment.garmentNumber).padStart(3, '0')}` : '번호 확인 중';
     const shareStatus = document.createElement('span');
     shareStatus.className = 'closet-share-status';
     shareStatus.dataset.garmentStatus = '';
@@ -223,7 +228,7 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
       demoBadge.setAttribute('aria-label', '데모용 가상 옷');
       card.append(demoBadge);
     }
-    card.append(title, kind, size, estimatedSize, actions);
+    card.append(itemCode, title, kind, size, estimatedSize, actions);
     updateShareStatus(garment, shareStatus, actions.querySelector('[data-closet-open]'));
     return card;
   }
@@ -291,7 +296,7 @@ export function createGarmentCloset({ list, status, pagination, filterControls =
     const metadataBox = document.createElement('section');
     const metadataFields = createGarmentMetadataFields(metadataBox, garment);
     fields.append(metadataBox);
-    const categoryForType = id => id === 3 ? 'dress' : id === 5 ? 'pants' : id === 6 ? 'skirt' : 'top';
+    const categoryForType = id => id === 3 ? 'dress' : id === 5 ? 'pants' : id === 6 ? 'skirt' : id === 7 ? 'other' : 'top';
     const suggest = () => metadataFields.suggest({name:name.value,garmentTypeId:Number(type.value),category:categoryForType(Number(type.value))});
     name.addEventListener('input', suggest);
     type.addEventListener('change', suggest);

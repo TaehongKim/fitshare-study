@@ -18,6 +18,25 @@ class RegistrationPageTests(unittest.TestCase):
     def test_registration_type_list_includes_skirts(self):
         html = (ROOT / 'measure' / 'register.html').read_text(encoding='utf-8')
         self.assertIn('<option value="6">6. 치마</option>', html)
+        self.assertIn('<option value="7">7. 기타</option>', html)
+
+    def test_registration_carries_the_selected_school_code(self):
+        app = (ROOT / 'js' / 'app.js').read_text(encoding='utf-8')
+        registration = (ROOT / 'js' / 'measurement' / 'register.js').read_text(encoding='utf-8')
+        self.assertIn("localStorage.setItem('fitshare.schoolCode', result.code)", app)
+        self.assertIn("localStorage.getItem('fitshare.schoolCode')", registration)
+        self.assertIn('schoolCode,', registration)
+        self.assertIn('Number(garmentTypeInput.value) === 7', registration)
+        self.assertIn('analyzeButton.disabled = Number(garmentTypeInput.value) === 7', registration)
+        self.assertIn("if (garmentId === 7) return 'other'", registration)
+
+    def test_closet_and_teacher_handoff_show_the_requested_garment_codes(self):
+        closet = (ROOT / 'js' / 'measurement' / 'garmentCloset.js').read_text(encoding='utf-8')
+        today = (ROOT / 'modules' / 'todaySharing.js').read_text(encoding='utf-8')
+        self.assertIn('garment.garmentTypeCode', closet)
+        self.assertIn('garment.garmentNumber', closet)
+        self.assertIn('garment?.garmentCode', today)
+        self.assertIn('garment?.donorId', today)
 
     def test_camera_action_opens_video_instead_of_only_a_file_picker(self):
         from html.parser import HTMLParser

@@ -29,12 +29,44 @@ MAX_BODY_BYTES = 18 * 1024 * 1024
 MAX_PHOTO_BYTES = 12 * 1024 * 1024
 VALID_CATEGORIES = {'top', 'bottom', 'dress', 'pants', 'skirt', 'other'}
 VALID_GENDERS = {'male', 'female', 'unisex', 'unknown'}
-GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지', 6: '치마'}
-GARMENT_TYPE_CATEGORIES = {1: 'top', 2: 'top', 3: 'dress', 4: 'top', 5: 'pants', 6: 'skirt'}
+GARMENT_TYPE_NAMES = {1: '상의 외투', 2: '크롭 티셔츠', 3: '원피스', 4: '점퍼', 5: '바지', 6: '치마', 7: '기타'}
+GARMENT_TYPE_CATEGORIES = {1: 'top', 2: 'top', 3: 'dress', 4: 'top', 5: 'pants', 6: 'skirt', 7: 'other'}
+GARMENT_TYPE_CODES = {1: 'o', 2: 't', 3: 'd', 4: 'j', 5: 'p', 6: 's', 7: 'e'}
+DEFAULT_SCHOOL_CODE = '나눔초등학교'
 VALID_MATS = {'M1', 'M2', 'M3', 'M4'}
 SAFE_GARMENT_ID = re.compile(r'^garment-[1-9][0-9]?$')
 SAFE_PHOTO_NAME = re.compile(r'^[A-Za-z0-9_-]{1,100}\.jpg$')
 PRODUCT_MASK_PIPELINE_VERSION = 'yolo-sam-vit-b-v1'
+
+
+def clean_school_code(value):
+    if not isinstance(value, str):
+        value = DEFAULT_SCHOOL_CODE
+    cleaned = re.sub(r'[^A-Za-z0-9가-힣.-]', '-', value.strip())
+    cleaned = re.sub(r'-+', '-', cleaned).strip('-')[:30]
+    return cleaned or DEFAULT_SCHOOL_CODE
+
+
+def allocate_garment_code(item, sequences):
+    school_code = clean_school_code(item.get('schoolCode'))
+    type_code = GARMENT_TYPE_CODES.get(item.get('garmentTypeId'), 'e')
+    sequence_key = f'{school_code}|{type_code}'
+    try:
+        previous_number = int(sequences.get(sequence_key, 0))
+    except (TypeError, ValueError):
+        previous_number = 0
+    number = max(0, previous_number) + 1
+    sequences[sequence_key] = number
+    donor_id = item.get('donorId') or item.get('ownerUsername') or 'unknown'
+    donor_id = re.sub(r'[^\w가-힣.-]', '-', str(donor_id), flags=re.UNICODE)[:60] or 'unknown'
+    item.update({
+        'schoolCode': school_code,
+        'garmentTypeCode': type_code,
+        'garmentNumber': number,
+        'donorId': donor_id,
+        'garmentCode': f'{school_code}_{type_code}_{number:03d}_{donor_id}',
+    })
+    return item
 
 
 def owns_garment(user, garment):
@@ -565,7 +597,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
             if not isinstance(background_id, str) or background_id not in VALID_MATS:
                 return self.send_json(400, {'error': '배경 종류를 골라 주세요.'})
             garment_id = payload.get('garmentId')
-            if isinstance(garment_id, bool) or garment_id not in GARMENT_TYPE_NAMES:
+            if isinstance(garment_id, bool) or garment_id not in GARMENT_TYPE_NAMES or garment_id == 7:
                 return self.send_json(400, {'error': '옷 종류를 먼저 골라 주세요.'})
             photo_bytes = decode_photo_data(payload.get('photoDataUrl'))
             if photo_bytes is None:
@@ -689,8 +721,52 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 write_json_safely(storage / 'ranking.json', {'rev': current + 1, 'state': next_state})
             return self.send_json(200, {'rev': current + 1, 'state': next_state})
 
+        def ensure_garment_codes(self, items):
+            sequence_path = garments_dir / '.sequences.json'
+            sequences = read_json(sequence_path)
+            if not isinstance(sequences, dict):
+                sequences = {}
+            changed = False
+            sequences_changed = not sequence_path.exists()
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                school_code = clean_school_code(item.get('schoolCode'))
+                type_code = GARMENT_TYPE_CODES.get(item.get('garmentTypeId'), 'e')
+                number = item.get('garmentNumber')
+                if isinstance(number, int) and not isinstance(number, bool) and number > 0:
+                    key = f'{school_code}|{type_code}'
+                    try:
+                        previous_number = int(sequences.get(key, 0))
+                    except (TypeError, ValueError):
+                        previous_number = 0
+                    if number > previous_number:
+                        sequences[key] = number
+                        sequences_changed = True
+            legacy = sorted(
+                ((index, item) for index, item in enumerate(items)
+                 if isinstance(item, dict) and not (isinstance(item.get('garmentNumber'), int)
+                                                    and isinstance(item.get('garmentCode'), str))),
+                key=lambda pair: (str(pair[1].get('createdAt', '')), pair[0]),
+            )
+            for _, item in legacy:
+                allocate_garment_code(item, sequences)
+                sequences_changed = True
+                item_path = garments_dir / str(item.get('id', '')) / 'garment.json'
+                if valid_garment_record_id(item.get('id')) and item_path.is_file():
+                    write_json_safely(item_path, item)
+                changed = True
+            if changed:
+                write_json_safely(garments_dir / 'index.json', items)
+            if sequences_changed:
+                write_json_safely(sequence_path, sequences)
+            return items
+
         def list_garments(self):
-            items = read_json(garments_dir / 'index.json') or []
+            with lock:
+                items = read_json(garments_dir / 'index.json') or []
+                if isinstance(items, list):
+                    items = self.ensure_garment_codes(items)
             return self.send_json(200, items if isinstance(items, list) else [])
 
         def get_garment(self, garment_id):
@@ -699,6 +775,11 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
             item = read_json(garments_dir / garment_id / 'garment.json')
             if not item:
                 return self.send_json(404, {'error': '등록한 옷을 찾지 못했어요.'})
+            with lock:
+                index = read_json(garments_dir / 'index.json') or []
+                if isinstance(index, list):
+                    self.ensure_garment_codes(index)
+                    item = read_json(garments_dir / garment_id / 'garment.json') or item
             return self.send_json(200, item)
 
         def get_garment_photo(self, garment_id):
@@ -979,17 +1060,26 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 latest = read_json(item_path)
                 if not isinstance(latest, dict):
                     return self.send_json(404, {'error': '수정할 옷을 찾지 못했어요.'})
+                garment_index = read_json(garments_dir / 'index.json') or []
+                if not isinstance(garment_index, list):
+                    garment_index = []
+                self.ensure_garment_codes(garment_index)
+                latest = read_json(item_path)
                 try:
                     metadata_update = clean_metadata(payload, latest)
                 except ValueError:
                     return self.send_json(409, {'error': '다른 곳에서 옷 정보가 변경됐어요. 목록을 새로고침한 뒤 다시 수정해 주세요.'})
+                type_changed = latest.get('garmentTypeId') != updated['garmentTypeId']
                 for key in ('name', 'category', 'gender', 'garmentTypeId', 'colorName', 'lengthCm',
                             'widthCm', 'garmentTypeName', 'photoUrl', 'closetPhotoUrl'):
                     latest[key] = updated[key]
                 latest.update(metadata_update)
+                if type_changed:
+                    sequences = read_json(garments_dir / '.sequences.json') or {}
+                    allocate_garment_code(latest, sequences)
+                    write_json_safely(garments_dir / '.sequences.json', sequences)
                 updated = latest
                 write_json_safely(item_path, updated)
-                garment_index = read_json(garments_dir / 'index.json') or []
                 list_item = {key: value for key, value in updated.items() if key != 'photoUrl'}
                 for position, old in enumerate(garment_index):
                     if old.get('id') == garment_id:
@@ -1075,6 +1165,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
             photo_bytes = decode_photo_data(payload.get('photoDataUrl'))
             closet_image = decode_png_data(payload.get('closetImageDataUrl'))
             background_id = payload.get('backgroundId', 'M4')
+            school_code = clean_school_code(payload.get('schoolCode'))
             owner_name = payload.get('ownerName', '')
             measurement_method = payload.get('measurementMethod', 'provided')
             if not isinstance(measurement_method, str) or measurement_method not in {'manual','photo-analysis','provided'}:
@@ -1114,6 +1205,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 'id': record_id, 'name': name.strip(), 'category': category, 'gender': gender,
                 'garmentTypeId': garment_type_id,
                 'garmentTypeName': GARMENT_TYPE_NAMES[garment_type_id],
+                'schoolCode': school_code,
                 'ownerName': owner_name.strip(),
                 'colorName': color_name.strip(), 'lengthCm': round(float(length), 1),
                 'widthCm': round(float(width), 1), 'createdAt': created_at,
@@ -1125,6 +1217,7 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
             }
             if user is not None:
                 item['ownerUsername'] = user['username']
+                item['donorId'] = user['username']
             temporary_dir = garments_dir / f'.tmp-{record_id}'
             final_dir = garments_dir / record_id
             try:
@@ -1133,12 +1226,18 @@ def create_server(host='0.0.0.0', port=8000, data_dir=DEFAULT_DATA_DIR, tls_cert
                 if closet_image is not None:
                     (temporary_dir / 'closet.png').write_bytes(closet_image)
                     (temporary_dir / 'closet-thumbnail.png').write_bytes(thumbnail)
-                write_json_safely(temporary_dir / 'garment.json', item)
                 with lock:
-                    temporary_dir.replace(final_dir)
                     index = read_json(garments_dir / 'index.json') or []
+                    if not isinstance(index, list):
+                        index = []
+                    self.ensure_garment_codes(index)
+                    sequences = read_json(garments_dir / '.sequences.json') or {}
+                    allocate_garment_code(item, sequences)
+                    write_json_safely(temporary_dir / 'garment.json', item)
+                    temporary_dir.replace(final_dir)
                     index.insert(0, {key: value for key, value in item.items() if key != 'photoUrl'})
                     write_json_safely(garments_dir / 'index.json', index)
+                    write_json_safely(garments_dir / '.sequences.json', sequences)
             except OSError:
                 shutil.rmtree(temporary_dir, ignore_errors=True)
                 return self.send_json(500, {'error': '옷 사진을 저장하지 못했어요. 서버 저장 공간을 확인해 주세요.'})

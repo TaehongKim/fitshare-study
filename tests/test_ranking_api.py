@@ -691,6 +691,58 @@ class RankingApiTests(unittest.TestCase):
         self.call('/api/auth/logout', {})
         self.assertEqual(self.call('/api/garments', legacy)[1].get('ownerName'), '')
 
+    def test_garment_codes_are_sequenced_by_school_and_type_and_include_donor_username(self):
+        self.login('minsu', '민수')
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(bytes([255, 216, 255]) + b'sample').decode('ascii')
+
+        def register(name, garment_type_id, category, school_code='나눔초등학교'):
+            status, item = self.call('/api/garments', {
+                'name': name, 'category': category, 'garmentTypeId': garment_type_id, 'gender': 'unknown',
+                'lengthCm': 45, 'widthCm': 35, 'colorName': '파랑', 'photoDataUrl': photo,
+                'schoolCode': school_code,
+            })
+            self.assertEqual(status, 201, item)
+            return item
+
+        first_skirt = register('치마 1', 6, 'skirt')
+        second_skirt = register('치마 2', 6, 'skirt')
+        other = register('기타 옷', 7, 'other')
+        other_school_skirt = register('다른 학교 치마', 6, 'skirt', '서원초등학교')
+
+        self.assertEqual(first_skirt['garmentCode'], '나눔초등학교_s_001_minsu')
+        self.assertEqual(second_skirt['garmentCode'], '나눔초등학교_s_002_minsu')
+        self.assertEqual(other['garmentCode'], '나눔초등학교_e_001_minsu')
+        self.assertEqual(other_school_skirt['garmentCode'], '서원초등학교_s_001_minsu')
+        listed = {item['name']: item for item in self.call('/api/garments')[1]}
+        self.assertEqual(listed['치마 1']['garmentNumber'], 1)
+        self.assertEqual(listed['치마 2']['garmentNumber'], 2)
+        self.assertEqual(listed['기타 옷']['garmentNumber'], 1)
+        self.assertEqual(listed['다른 학교 치마']['garmentNumber'], 1)
+        request = urllib.request.Request(self.base_url + f"/api/garments/{first_skirt['id']}", method='DELETE')
+        with self.opener.open(request) as response:
+            self.assertEqual(response.status, 200)
+        third_skirt = register('치마 3', 6, 'skirt')
+        self.assertEqual(third_skirt['garmentCode'], '나눔초등학교_s_003_minsu')
+
+    def test_listing_existing_garments_backfills_stable_school_and_type_codes(self):
+        garment_id = 'a4831e58-d3d0-4e96-a7c8-b12734037a6c'
+        root = Path(self.temp_dir.name) / 'garments'
+        folder = root / garment_id
+        folder.mkdir(parents=True)
+        legacy = {'id': garment_id, 'name': '이전 치마', 'garmentTypeId': 6, 'garmentTypeName': '치마',
+                  'category': 'skirt', 'ownerName': '예전 학생 이름', 'ownerUsername': 'oldstudent',
+                  'createdAt': '2020-01-01T00:00:00Z'}
+        (folder / 'garment.json').write_text(json.dumps(legacy, ensure_ascii=False), encoding='utf-8')
+        (root / 'index.json').write_text(json.dumps([legacy], ensure_ascii=False), encoding='utf-8')
+
+        status, listed = self.call('/api/garments')
+
+        self.assertEqual(status, 200)
+        self.assertEqual(listed[0]['garmentCode'], '나눔초등학교_s_001_oldstudent')
+        saved = json.loads((folder / 'garment.json').read_text(encoding='utf-8'))
+        self.assertEqual(saved['garmentCode'], listed[0]['garmentCode'])
+        self.assertEqual(json.loads((root / '.sequences.json').read_text(encoding='utf-8'))['나눔초등학교|s'], 1)
+
 
 
 

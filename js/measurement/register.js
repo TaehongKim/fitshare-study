@@ -1,5 +1,5 @@
 ﻿import { readRegistrationPhoto } from './registrationPhoto.js?v=garment-registration-2';
-import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-13';
+import { createGarmentCloset } from './garmentCloset.js?v=closet-tools-14';
 import { fetchMe } from '../auth.js?v=auth-3';
 import { createRegistrationCamera } from './registrationCamera.js?v=registration-camera-1';
 import { createGarmentMetadataFields } from '../garmentMetadata.js?v=skirt-1';
@@ -20,6 +20,10 @@ const garmentClosetView = createGarmentCloset({
 });
 const garmentTypeInput = document.querySelector('#garment-type');
 const backgroundInput = document.querySelector('#background-id');
+const schoolCode = (() => {
+  try { return (localStorage.getItem('fitshare.schoolCode') || '나눔초등학교').slice(0, 30); }
+  catch { return '나눔초등학교'; }
+})();
 let photoDataUrl = '';
 let closetImageDataUrl = '';
 let generatedName = '';
@@ -68,7 +72,7 @@ async function handlePhotoSelection(input) {
     photoDataUrl = await readRegistrationPhoto(file);
     photoPreview.src = URL.createObjectURL(file);
     photoPreview.hidden = false;
-    analyzeButton.disabled = !garmentTypeInput.value;
+    analyzeButton.disabled = !garmentTypeInput.value || Number(garmentTypeInput.value) === 7;
     manualButton.hidden = false;
     manualButton.disabled = !garmentTypeInput.value;
     showStatus(analysisStatus, '사진을 골랐어요. 다음 버튼을 눌러 옷을 찾아봐요.');
@@ -83,16 +87,31 @@ analyzeButton.addEventListener('click', runAnalysis);
 
 backgroundInput.addEventListener('change', () => {
   analysisVersion++;
-  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value;
+  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value || Number(garmentTypeInput.value) === 7;
   if(manualMode)return;
+  if (Number(garmentTypeInput.value) === 7) return;
   if (!form.hidden && photoDataUrl) runAnalysis();
   else if(photoDataUrl)showStatus(analysisStatus,'분석 조건이 바뀌었어요. 사진 살펴보기를 다시 눌러 주세요.');
 });
 
 garmentTypeInput.addEventListener('change', () => {
   analysisVersion++;
-  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value;
+  const garmentTypeId = Number(garmentTypeInput.value);
+  analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value || garmentTypeId === 7;
   manualButton.disabled = analyzeButton.disabled;
+  if (garmentTypeId === 7) {
+    manualButton.hidden = false;
+    manualButton.disabled = !photoDataUrl;
+    if (!form.hidden) {
+      manualMode = true;
+      closetImageDataUrl = '';
+      document.querySelector('#analysis-preview').hidden = true;
+      document.querySelector('#review-note').textContent = '기타 옷은 자동 실측값을 사용하지 않아요. 실제 자로 길이와 너비를 다시 확인해 주세요.';
+    }
+    suggestMetadata();
+    if (photoDataUrl) showStatus(analysisStatus, '기타 옷은 자동 실측 기준이 없어요. 실제 자로 길이와 너비를 재어 직접 등록해 주세요.');
+    return;
+  }
   if(manualMode){suggestMetadata();manualButton.click();return;}
   if (!form.hidden && photoDataUrl) runAnalysis();
   else if(photoDataUrl)showStatus(analysisStatus,'옷 종류가 바뀌었어요. 사진 살펴보기를 다시 눌러 주세요.');
@@ -102,7 +121,7 @@ manualButton.addEventListener('click', () => {
   if(!photoDataUrl||!garmentTypeInput.value)return;
   analysisVersion++;
   manualMode=true;
-  analyzeButton.disabled=false;
+  analyzeButton.disabled = Number(garmentTypeInput.value) === 7;
   if(form.hidden){
     form.elements.lengthCm.value='';form.elements.widthCm.value='';form.elements.colorName.value='';
     closetImageDataUrl='';
@@ -137,7 +156,7 @@ async function runAnalysis() {
   } catch (error) {
     if(version===analysisVersion)showStatus(analysisStatus, error.message, true);
   } finally {
-    if(version===analysisVersion)analyzeButton.disabled = !photoDataUrl||!garmentTypeInput.value;
+    if(version===analysisVersion)analyzeButton.disabled = !photoDataUrl || !garmentTypeInput.value || Number(garmentTypeInput.value) === 7;
   }
 }
 
@@ -150,6 +169,7 @@ form.addEventListener('submit', async (event) => {
     ...metadataFields.read(),
     measurementMethod: manualMode ? 'manual' : 'photo-analysis',
     name: values.get('name'), category: categoryForId(garmentTypeId), garmentTypeId, gender: values.get('gender'),
+    schoolCode,
     lengthCm: Number(values.get('lengthCm')), widthCm: Number(values.get('widthCm')),
     colorName: values.get('colorName'), photoDataUrl, closetImageDataUrl, backgroundId: backgroundInput.value
   };
@@ -212,6 +232,7 @@ function categoryForId(garmentId) {
   if (garmentId === 3) return 'dress';
   if (garmentId === 5) return 'pants';
   if (garmentId === 6) return 'skirt';
+  if (garmentId === 7) return 'other';
   return 'top';
 }
 
